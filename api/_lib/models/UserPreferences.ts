@@ -43,8 +43,8 @@ function arrayLimit(val: ISearchEntry[]) {
   return val.length <= 30;
 }
 
-// Ensure unique index on userId
-userPreferencesSchema.index({ userId: 1 }, { unique: true });
+// Index already defined by unique: true in schema
+// userPreferencesSchema.index({ userId: 1 }, { unique: true });
 
 export const UserPreferences = mongoose.models.UserPreferences ||
   mongoose.model<IUserPreferences>('UserPreferences', userPreferencesSchema);
