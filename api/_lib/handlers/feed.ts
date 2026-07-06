@@ -1,17 +1,17 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db.js';
-import { getUserFromRequest } from '../_lib/auth.js';
-import UserPreferences from '../_lib/models/UserPreferences.js';
-import Product from '../_lib/models/Product.js';
+import { connectDB } from '../db.js';
+import { getUserFromRequest } from '../auth.js';
+import UserPreferences from '../models/UserPreferences.js';
+import Product from '../models/Product.js';
 import {
   scoreAndSortProducts,
   productToProductData,
   prefsToUserPrefs,
-} from '../_lib/personalization.js';
-import type { ScoredProduct } from '../_lib/personalization.js';
+} from '../personalization.js';
+import type { ScoredProduct } from '../personalization.js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function personalized(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   await connectDB();
@@ -27,13 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ products: [], hasMore: false, page, noPreferences: true });
   }
 
-  // Fetch last 200 products for scoring
   const rawProducts = await Product.find({})
     .sort({ createdAt: -1 })
     .limit(200)
     .lean();
 
-  // Convert to pure ProductData for scoring
   const productDataList = rawProducts.map((p) => productToProductData(p as any));
   const userPrefs = prefsToUserPrefs(preferences as any);
   const searchHistory = (preferences.searchHistory || []).map((entry: any) => ({
@@ -41,13 +39,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     timestamp: new Date(entry.timestamp),
   }));
 
-  // Score, sort, and randomize within bands
   const scored: ScoredProduct[] = scoreAndSortProducts(productDataList, userPrefs, searchHistory);
 
-  // Paginate
   const start = (page - 1) * limit;
   const paginated = scored.slice(start, start + limit);
   const hasMore = start + limit < scored.length;
 
   return res.json({ products: paginated, hasMore, page });
+}
+
+export async function handleFeed(req: VercelRequest, res: VercelResponse, subpath: string) {
+  switch (subpath) {
+    case 'personalized': return personalized(req, res);
+    default: return res.status(404).json({ error: 'Not found' });
+  }
 }

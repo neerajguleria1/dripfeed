@@ -1,14 +1,9 @@
+// @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db.js';
-import AffiliateClick from '../_lib/models/AffiliateClick.js';
-import { buildAffiliateUrl } from '../_lib/affiliate.js';
-import { getUserFromRequest } from '../_lib/auth.js';
-
-/**
- * Affiliate redirect — logs click and returns affiliate URL.
- * NEVER throws error. If affiliate tag missing, returns original URL with UTM.
- * Includes retry logic for affiliate URL generation failures.
- */
+import { connectDB } from '../db.js';
+import AffiliateClick from '../models/AffiliateClick.js';
+import { buildAffiliateUrl } from '../affiliate.js';
+import { getUserFromRequest } from '../auth.js';
 
 function appendUtmParams(url: string): string {
   try {
@@ -21,7 +16,6 @@ function appendUtmParams(url: string): string {
     }
     return parsed.toString();
   } catch {
-    // If URL parsing fails, append manually
     const separator = url.includes('?') ? '&' : '?';
     return `${url}${separator}utm_source=dripfeed&utm_medium=affiliate`;
   }
@@ -46,19 +40,17 @@ async function generateAffiliateUrlWithRetry(platform: string, productUrl: strin
     const url = buildAffiliateUrl(platform, productUrl);
     return appendUtmParams(url);
   } catch {
-    // Retry once after 200ms delay
     await delay(200);
     try {
       const url = buildAffiliateUrl(platform, productUrl);
       return appendUtmParams(url);
     } catch {
-      // Fallback: return original URL with UTM params
       return appendUtmParams(productUrl);
     }
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function redirect(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { platform, productUrl, productName, device, sessionId } = req.body || {};
@@ -71,7 +63,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userAgent = req.headers['user-agent'];
     const browser = parseBrowser(userAgent);
 
-    // Log click (non-blocking — don't let DB failure block the redirect)
     try {
       await connectDB();
       const user = getUserFromRequest(req);
@@ -91,7 +82,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.json({ affiliateUrl });
   } catch {
-    // Never-fail guarantee: return original URL with UTM on any exception
     return res.json({ affiliateUrl: appendUtmParams(productUrl) });
+  }
+}
+
+export async function handleAffiliate(req: VercelRequest, res: VercelResponse, subpath: string) {
+  switch (subpath) {
+    case 'redirect': return redirect(req, res);
+    default: return res.status(404).json({ error: 'Not found' });
   }
 }

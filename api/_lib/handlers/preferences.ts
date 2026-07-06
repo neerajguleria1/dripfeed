@@ -1,8 +1,8 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db.js';
-import { getUserFromRequest } from '../_lib/auth.js';
-import UserPreferences from '../_lib/models/UserPreferences.js';
+import { connectDB } from '../db.js';
+import { getUserFromRequest } from '../auth.js';
+import UserPreferences from '../models/UserPreferences.js';
 
 const DEFAULTS = {
   categories: [] as string[],
@@ -13,7 +13,7 @@ const DEFAULTS = {
   searchHistory: [] as { query: string; timestamp: Date }[],
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function preferencesHandler(req: VercelRequest, res: VercelResponse) {
   await connectDB();
 
   const user = getUserFromRequest(req);
@@ -42,7 +42,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (occasions !== undefined) update.occasions = occasions;
     if (onboardingCompleted !== undefined) update.onboardingCompleted = onboardingCompleted;
     if (searchHistory !== undefined) {
-      // Enforce max 30 entries — keep most recent
       const history = Array.isArray(searchHistory) ? searchHistory.slice(-30) : [];
       update.searchHistory = history;
     }
@@ -64,4 +63,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+export async function handlePreferences(req: VercelRequest, res: VercelResponse, subpath: string) {
+  // /api/preferences only has the index route
+  const cleaned = subpath.startsWith('/') ? subpath.slice(1) : subpath;
+
+  if (!cleaned || cleaned === '') {
+    return preferencesHandler(req, res);
+  }
+
+  return res.status(404).json({ error: 'Not found' });
 }
