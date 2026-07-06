@@ -18,7 +18,8 @@ export default function RegisterPage() {
       await register(form.name, form.email, form.password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Registration failed. Please try again.';
+      setError(typeof msg === 'string' ? msg : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

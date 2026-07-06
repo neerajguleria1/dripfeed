@@ -17,7 +17,8 @@ export default function LoginPage() {
       await login(form.email, form.password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Login failed. Please try again.';
+      setError(typeof msg === 'string' ? msg : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
