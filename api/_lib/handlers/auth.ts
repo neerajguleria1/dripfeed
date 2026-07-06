@@ -44,19 +44,24 @@ async function login(req: VercelRequest, res: VercelResponse) {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  await connectDB();
+  try {
+    await connectDB();
 
-  const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const payload = { userId: user._id.toString(), email: user.email, role: user.role };
-  const accessToken = signToken(payload);
-  const refreshToken = signRefreshToken(payload);
+    const payload = { userId: user._id.toString(), email: user.email, role: user.role };
+    const accessToken = signToken(payload);
+    const refreshToken = signRefreshToken(payload);
 
-  res.json({ accessToken, refreshToken, user: { id: user._id, email: user.email, name: user.name, role: user.role } });
+    res.json({ accessToken, refreshToken, user: { id: user._id, email: user.email, name: user.name, role: user.role } });
+  } catch (e: any) {
+    console.error('Login error:', e);
+    res.status(500).json({ error: 'Login failed', message: e.message || 'Internal error' });
+  }
 }
 
 async function me(req: VercelRequest, res: VercelResponse) {
