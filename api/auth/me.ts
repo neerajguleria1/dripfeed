@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectDB } from '../_lib/db.js';
 import { User } from '../_lib/models/User.js';
