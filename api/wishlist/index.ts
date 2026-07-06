@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import { WishlistItem } from '../_lib/models/WishlistItem';
-import { getUserFromRequest } from '../_lib/auth';
+import { connectDB } from '../_lib/db.js';
+import { WishlistItem } from '../_lib/models/WishlistItem.js';
+import { getUserFromRequest } from '../_lib/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = getUserFromRequest(req);

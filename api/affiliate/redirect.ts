@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import AffiliateClick from '../_lib/models/AffiliateClick';
-import { buildAffiliateUrl } from '../_lib/affiliate';
-import { getUserFromRequest } from '../_lib/auth';
+import { connectDB } from '../_lib/db.js';
+import AffiliateClick from '../_lib/models/AffiliateClick.js';
+import { buildAffiliateUrl } from '../_lib/affiliate.js';
+import { getUserFromRequest } from '../_lib/auth.js';
 
 /**
  * Affiliate redirect — logs click and returns affiliate URL.

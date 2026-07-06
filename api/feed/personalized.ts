@@ -1,14 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import { getUserFromRequest } from '../_lib/auth';
-import UserPreferences from '../_lib/models/UserPreferences';
-import Product from '../_lib/models/Product';
+import { connectDB } from '../_lib/db.js';
+import { getUserFromRequest } from '../_lib/auth.js';
+import UserPreferences from '../_lib/models/UserPreferences.js';
+import Product from '../_lib/models/Product.js';
 import {
   scoreAndSortProducts,
   productToProductData,
   prefsToUserPrefs,
-} from '../_lib/personalization';
-import type { ScoredProduct } from '../_lib/personalization';
+} from '../_lib/personalization.js';
+import type { ScoredProduct } from '../_lib/personalization.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });

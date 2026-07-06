@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import Product from '../_lib/models/Product';
+import { connectDB } from '../_lib/db.js';
+import Product from '../_lib/models/Product.js';
 
 const TRENDING_SEARCHES = [
   'kurta',

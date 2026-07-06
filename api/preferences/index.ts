@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import { getUserFromRequest } from '../_lib/auth';
-import UserPreferences from '../_lib/models/UserPreferences';
+import { connectDB } from '../_lib/db.js';
+import { getUserFromRequest } from '../_lib/auth.js';
+import UserPreferences from '../_lib/models/UserPreferences.js';
 
 const DEFAULTS = {
   categories: [] as string[],

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { buildAffiliateUrl } from './affiliate';
+import { buildAffiliateUrl } from './affiliate.js';
 
 export interface SearchProduct {
   id: string;

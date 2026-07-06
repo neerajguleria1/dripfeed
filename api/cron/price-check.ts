@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import WishlistItem from '../_lib/models/WishlistItem';
-import Deal from '../_lib/models/Deal';
+import { connectDB } from '../_lib/db.js';
+import WishlistItem from '../_lib/models/WishlistItem.js';
+import Deal from '../_lib/models/Deal.js';
 
 /**
  * GET /api/cron/price-check

@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { OAuth2Client } from 'google-auth-library';
-import { connectDB } from '../_lib/db';
-import { User } from '../_lib/models/User';
-import { signToken, signRefreshToken } from '../_lib/auth';
+import { connectDB } from '../_lib/db.js';
+import { User } from '../_lib/models/User.js';
+import { signToken, signRefreshToken } from '../_lib/auth.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 

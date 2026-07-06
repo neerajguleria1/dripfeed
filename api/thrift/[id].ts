@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../_lib/db';
-import { getUserFromRequest } from '../_lib/auth';
-import ThriftListing from '../_lib/models/ThriftListing';
+import { connectDB } from '../_lib/db.js';
+import { getUserFromRequest } from '../_lib/auth.js';
+import ThriftListing from '../_lib/models/ThriftListing.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   await connectDB();
