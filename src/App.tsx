@@ -7,7 +7,6 @@ import ScrollToTop from './components/ScrollToTop';
 import PersistentBg from './components/PersistentBg';
 import AppHeader from './components/AppHeader';
 import BottomNav from './components/layout/BottomNav';
-import LiquidCursor from './components/common/LiquidCursor';
 
 // Marketing pages (existing)
 import HomePage from './pages/HomePage';
@@ -57,7 +56,6 @@ function App() {
     <AuthProvider>
       <PreferencesProvider>
       <ToastProvider>
-      <LiquidCursor />
       <ScrollToTop />
       <Routes>
         {/* Auth — no header */}
