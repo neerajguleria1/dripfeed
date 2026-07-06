@@ -1,0 +1,14 @@
+export { ProductCard } from './ProductCard';
+export { ProductGrid } from './ProductGrid';
+export { CompareCard } from './CompareCard';
+export { PriceHistory } from './PriceHistory';
+export { AIAdviceCard } from './AIAdviceCard';
+export { SocialProof } from './SocialProof';
+export { SaveButton } from './SaveButton';
+export type { ProductCardProps } from './ProductCard';
+export type { ProductGridProps } from './ProductGrid';
+export type { CompareCardProps } from './CompareCard';
+export type { PriceHistoryProps, PriceHistoryPoint } from './PriceHistory';
+export type { AIAdviceCardProps, AIAdvice } from './AIAdviceCard';
+export type { SocialProofProps } from './SocialProof';
+export type { SaveButtonProps } from './SaveButton';

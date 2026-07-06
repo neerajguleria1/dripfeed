@@ -1,0 +1,260 @@
+import axios from 'axios';
+import { buildAffiliateUrl } from './affiliate';
+
+export interface SearchProduct {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  imageUrl: string;
+  platform: string;
+  url: string;
+  brand?: string;
+  rating?: number;
+  affiliateUrl?: string;
+}
+
+const cache = new Map<string, { data: SearchProduct[]; ts: number }>();
+const CACHE_TTL = 15 * 60 * 1000;
+
+function getCached(key: string): SearchProduct[] | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL) { cache.delete(key); return null; }
+  return entry.data;
+}
+
+function setCache(key: string, data: SearchProduct[]) {
+  cache.set(key, { data, ts: Date.now() });
+}
+
+function cleanText(t: string): string {
+  return t.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
+}
+
+function parsePrice(t: string | number): number {
+  if (typeof t === 'number') return t;
+  const m = String(t).match(/(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)/);
+  return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0;
+}
+
+function platformFrom(url: string): string {
+  if (!url) return 'Online';
+  if (url.includes('flipkart')) return 'Flipkart';
+  if (url.includes('myntra')) return 'Myntra';
+  if (url.includes('amazon')) return 'Amazon India';
+  if (url.includes('ajio')) return 'Ajio';
+  if (url.includes('meesho')) return 'Meesho';
+  if (url.includes('nykaa')) return 'Nykaa Fashion';
+  if (url.includes('tatacliq')) return 'Tata CLiQ';
+  if (url.includes('snapdeal')) return 'Snapdeal';
+  return 'Online';
+}
+
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept': 'text/html',
+  'Accept-Language': 'en-IN,en;q=0.9',
+};
+
+async function searchGoogleShopping(query: string): Promise<SearchProduct[]> {
+  try {
+    const { data: html } = await axios.get(
+      `https://www.google.com/search?q=${encodeURIComponent(query + ' buy online India')}&tbm=shop&num=20&hl=en&gl=in`,
+      { headers: HEADERS, timeout: 8000 }
+    );
+
+    const results: SearchProduct[] = [];
+    const ldPattern = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = ldPattern.exec(html)) !== null) {
+      try {
+        const d = JSON.parse(m[1]);
+        if (d['@type'] === 'Product' || d?.offers) {
+          const price = d.offers?.lowPrice || d.offers?.price;
+          if (price && d.name) {
+            const url = d.url || d.offers?.url || '';
+            results.push({
+              id: `gs_${results.length}`,
+              title: d.name,
+              price: typeof price === 'string' ? parseFloat(price) : price,
+              imageUrl: d.image || '',
+              platform: platformFrom(url),
+              url,
+              brand: d.brand?.name || d.brand || undefined,
+              rating: d.aggregateRating?.ratingValue || undefined,
+            });
+          }
+        }
+      } catch { /* skip */ }
+    }
+
+    if (results.length < 4) {
+      const titles = [...html.matchAll(/<(?:h3|span)[^>]*class="[^"]*(?:tAxDx|BNeawe)[^"]*"[^>]*>([^<]+)/gi)].map(x => cleanText(x[1]));
+      const prices = [...html.matchAll(/₹\s*(\d{1,3}(?:,\d{3})*)/gi)].map(x => parsePrice(x[1])).filter(p => p > 50 && p < 500000);
+      const imgs = [...html.matchAll(/src="(https?:\/\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)].map(x => x[1]).filter(u => !u.includes('google') && !u.includes('gstatic'));
+      const links = [...html.matchAll(/href="((?:https?:\/\/)(?:[^"]*(?:amazon|myntra|flipkart|ajio|meesho)[^"]*))/gi)].map(x => x[1]);
+
+      for (let i = 0; i < Math.min(titles.length, 20); i++) {
+        const price = prices[i] || prices[0] || 0;
+        if (price > 0 && titles[i]?.length > 5) {
+          results.push({
+            id: `gs_${results.length}`,
+            title: titles[i],
+            price,
+            imageUrl: imgs[i % Math.max(imgs.length, 1)] || '',
+            platform: platformFrom(links[i] || ''),
+            url: links[i] || `https://www.google.com/search?q=${encodeURIComponent(titles[i])}`,
+          });
+        }
+      }
+    }
+
+    return results.slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+async function searchFlipkart(query: string): Promise<SearchProduct[]> {
+  try {
+    const { data: html } = await axios.get(
+      `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
+      { headers: HEADERS, timeout: 8000 }
+    );
+
+    const titles = [...html.matchAll(/class="_4rR01T"[^>]*>([^<]+)/gi)].map(x => cleanText(x[1]));
+    const prices = [...html.matchAll(/class="_30jeq3"[^>]*>₹([\d,]+)/gi)].map(x => parsePrice(x[1]));
+    const origPrices = [...html.matchAll(/class="_3I9_wc"[^>]*>₹([\d,]+)/gi)].map(x => parsePrice(x[1]));
+    const imgs = [...html.matchAll(/class="_396cs4"[^>]*src="([^"]+)"/gi)].map(x => x[1]);
+    const links = [...html.matchAll(/class="_1fQZEK"[^>]*href="([^"]+)"/gi)].map(x => x[1]);
+    const ratings = [...html.matchAll(/class="_3LWZlK"[^>]*>([^<]+)/gi)].map(x => parseFloat(x[1]));
+
+    const results: SearchProduct[] = [];
+    for (let i = 0; i < Math.min(titles.length, prices.length, 10); i++) {
+      if (prices[i] > 0 && titles[i]) {
+        const url = `https://www.flipkart.com${links[i] || ''}`;
+        const orig = origPrices[i] || 0;
+        results.push({
+          id: `fk_${i}`,
+          title: titles[i],
+          price: prices[i],
+          originalPrice: orig > prices[i] ? orig : undefined,
+          discount: orig > prices[i] ? Math.round(((orig - prices[i]) / orig) * 100) : undefined,
+          imageUrl: imgs[i] || '',
+          platform: 'Flipkart',
+          url,
+          rating: ratings[i] || undefined,
+        });
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+async function searchMyntra(query: string): Promise<SearchProduct[]> {
+  try {
+    const slug = query.toLowerCase().replace(/\s+/g, '-');
+    const { data: html } = await axios.get(`https://www.myntra.com/${slug}`, {
+      headers: HEADERS,
+      timeout: 8000,
+    });
+
+    const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
+    if (stateMatch) {
+      try {
+        const state = JSON.parse(stateMatch[1]);
+        const products = state?.search?.results || state?.products || [];
+        return products.slice(0, 10).map((p: any, i: number) => ({
+          id: `mn_${p.id || i}`,
+          title: `${p.brand || ''} ${p.product || p.name || ''}`.trim(),
+          price: p.price?.selling || p.sellingPrice || 0,
+          originalPrice: p.price?.mrp || p.mrp || undefined,
+          discount: p.discount || undefined,
+          imageUrl: p.searchImage || p.image || '',
+          platform: 'Myntra',
+          url: `https://www.myntra.com/${p.id || i}`,
+          brand: p.brand || undefined,
+        }));
+      } catch { /* fall through */ }
+    }
+
+    const imgs = [...html.matchAll(/src="(https?:\/\/assets\.myntassets\.com[^"]*)"/gi)].map(x => x[1]);
+    const prices = [...html.matchAll(/₹([\d,]+)/gi)].map(x => parsePrice(x[1])).filter(p => p > 0);
+    return imgs.slice(0, 8).map((img, i) => ({
+      id: `mn_${i}`,
+      title: query,
+      price: prices[i] || 0,
+      imageUrl: img,
+      platform: 'Myntra',
+      url: `https://www.myntra.com/${slug}`,
+    })).filter(p => p.price > 0);
+  } catch {
+    return [];
+  }
+}
+
+function mergeResults(arrays: SearchProduct[][]): SearchProduct[] {
+  const seen = new Set<string>();
+  const merged: SearchProduct[] = [];
+  for (const arr of arrays) {
+    for (const p of arr) {
+      const key = p.title.toLowerCase().slice(0, 40);
+      if (!seen.has(key) && p.title && p.price > 0) {
+        seen.add(key);
+        merged.push(p);
+      }
+    }
+  }
+  return merged.sort((a, b) => a.price - b.price);
+}
+
+export async function searchProducts(query: string): Promise<SearchProduct[]> {
+  const key = `search:${query.toLowerCase().trim()}`;
+  const cached = getCached(key);
+  if (cached) return cached;
+
+  const [gs, fk, mn] = await Promise.allSettled([
+    searchGoogleShopping(query),
+    searchFlipkart(query),
+    searchMyntra(query),
+  ]);
+
+  const results = mergeResults([
+    gs.status === 'fulfilled' ? gs.value : [],
+    fk.status === 'fulfilled' ? fk.value : [],
+    mn.status === 'fulfilled' ? mn.value : [],
+  ]);
+
+  const withAffiliate = results.map(p => ({
+    ...p,
+    affiliateUrl: buildAffiliateUrl(p.platform, p.url),
+  }));
+
+  setCache(key, withAffiliate);
+  return withAffiliate;
+}
+
+const TRENDING_QUERIES = ['kurta sets women', 'sneakers men india', 'sarees silk', 'watches men under 5000'];
+
+export async function getTrending(): Promise<SearchProduct[]> {
+  const key = 'trending';
+  const cached = getCached(key);
+  if (cached) return cached;
+
+  const all = (await Promise.all(TRENDING_QUERIES.map(q => searchProducts(q).catch(() => [])))).flat();
+
+  const seen = new Set<string>();
+  const unique = all.filter(p => {
+    const k = p.title.toLowerCase().slice(0, 40);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).slice(0, 24);
+
+  setCache(key, unique);
+  return unique;
+}

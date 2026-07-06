@@ -1,0 +1,118 @@
+/* ============================================================
+   DripFeed India — Design System Tokens
+   Premium, warm, India-first design language
+   ============================================================ */
+
+/* Colors */
+:root {
+  /* Primary Background */
+  --df-bg-warm: #F8F5F2;
+  --df-bg-surface: #FFFFFF;
+
+  /* Primary Accent — Deep Navy */
+  --df-accent-navy: #1A1A2E;
+  --df-accent-navy-90: rgba(26, 26, 46, 0.9);
+  --df-accent-navy-20: rgba(26, 26, 46, 0.2);
+
+  /* Secondary Accent — Warm Gold */
+  --df-accent-gold: #C9A96E;
+  --df-accent-gold-light: #E8D5A8;
+
+  /* Semantic */
+  --df-success: #22C55E;
+  --df-success-light: #DCFCE7;
+  --df-error: #EF4444;
+  --df-error-light: #FEE2E2;
+  --df-warning: #F59E0B;
+  --df-warning-light: #FEF3C7;
+  --df-info: #3B82F6;
+  --df-info-light: #DBEAFE;
+
+  /* Neutral Gray Scale */
+  --df-gray-50: #F9FAFB;
+  --df-gray-100: #F3F4F6;
+  --df-gray-200: #E5E7EB;
+  --df-gray-300: #D1D5DB;
+  --df-gray-400: #9CA3AF;
+  --df-gray-500: #6B7280;
+  --df-gray-600: #4B5563;
+  --df-gray-700: #374151;
+  --df-gray-800: #1F2937;
+  --df-gray-900: #111827;
+
+  /* Platform Colors */
+  --df-platform-myntra: #FF3F6C;
+  --df-platform-ajio: #000000;
+  --df-platform-amazon: #FF9900;
+  --df-platform-flipkart: #2874F0;
+  --df-platform-nykaa: #FC2779;
+  --df-platform-meesho: #570A57;
+  --df-platform-bewakoof: #FDD835;
+  --df-platform-shein: #000000;
+
+  /* Spacing (4px base) */
+  --df-space-1: 4px;
+  --df-space-2: 8px;
+  --df-space-3: 12px;
+  --df-space-4: 16px;
+  --df-space-5: 20px;
+  --df-space-6: 24px;
+  --df-space-8: 32px;
+  --df-space-10: 40px;
+  --df-space-12: 48px;
+  --df-space-16: 64px;
+  --df-space-20: 80px;
+  --df-space-24: 96px;
+
+  /* Typography */
+  --df-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --df-font-display: 48px;
+  --df-lh-display: 56px;
+  --df-font-h1: 36px;
+  --df-lh-h1: 44px;
+  --df-font-h2: 30px;
+  --df-lh-h2: 36px;
+  --df-font-h3: 24px;
+  --df-lh-h3: 32px;
+  --df-font-h4: 20px;
+  --df-lh-h4: 28px;
+  --df-font-body-lg: 18px;
+  --df-lh-body-lg: 28px;
+  --df-font-body: 16px;
+  --df-lh-body: 24px;
+  --df-font-body-sm: 14px;
+  --df-lh-body-sm: 20px;
+  --df-font-caption: 12px;
+  --df-lh-caption: 16px;
+
+  /* Shadows */
+  --df-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --df-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --df-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --df-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --df-shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+
+  /* Border Radius */
+  --df-radius-none: 0;
+  --df-radius-sm: 4px;
+  --df-radius-md: 8px;
+  --df-radius-lg: 12px;
+  --df-radius-xl: 16px;
+  --df-radius-2xl: 24px;
+  --df-radius-full: 9999px;
+
+  /* Animation */
+  --df-duration-fast: 150ms;
+  --df-duration-normal: 250ms;
+  --df-duration-slow: 400ms;
+  --df-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --df-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --df-ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Z-index scale */
+  --df-z-dropdown: 50;
+  --df-z-sticky: 100;
+  --df-z-modal: 200;
+  --df-z-toast: 300;
+  --df-z-tooltip: 400;
+}
