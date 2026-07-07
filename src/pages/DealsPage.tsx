@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TrendingDown, ArrowRight } from 'lucide-react';
 import { SEOHead } from '../components/common/SEOHead';
-import SiteNav from '../components/SiteNav';
 import { PlatformBadge } from '../components/ui/PlatformBadge';
 import { formatINR } from '../utils/format';
 import { staggerChildren } from '../design-system/animations';
@@ -252,10 +251,8 @@ export default function DealsPage() {
         description="Real-time price tracking across Myntra, Ajio, Amazon, Flipkart and more. Data-driven deals, no noise."
       />
 
-      <SiteNav />
-
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
-      <section className="pt-24 pb-6 sm:pt-36 sm:pb-10 bg-white border-b border-neutral-100">
+      <section className="pt-6 pb-6 sm:pt-10 sm:pb-10 bg-white border-b border-neutral-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 12 }}

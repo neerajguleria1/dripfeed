@@ -6,7 +6,6 @@ import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
-import SiteNav from '../components/SiteNav';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
@@ -369,10 +368,8 @@ export default function SearchPage() {
         }
       />
 
-      <SiteNav />
-
       {/* ── Hero Search ──────────────────────────────────────────────────────── */}
-      <section className="pt-24 pb-8 sm:pt-36 sm:pb-12 bg-white border-b border-neutral-100">
+      <section className="pt-6 pb-8 sm:pt-10 sm:pb-12 bg-white border-b border-neutral-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           {!query && (
             <motion.h1

@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Plus, SlidersHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
-import SiteNav from '../components/SiteNav';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import api from '../services/api';
 
@@ -106,10 +105,8 @@ export default function ThriftBrowsePage() {
         description="A curated archive of pre-loved fashion from verified sellers across India. Sustainable luxury at considered prices."
       />
 
-      <SiteNav />
-
       {/* ─── Header ─────────────────────────────────── */}
-      <section className="pt-24 pb-10 sm:pt-36 sm:pb-16 px-4 sm:px-10 lg:px-20">
+      <section className="pt-6 pb-10 sm:pt-10 sm:pb-16 px-4 sm:px-10 lg:px-20">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-[24px] sm:text-[28px] font-semibold text-neutral-900 tracking-[-0.02em]">
             Pre-loved Fashion

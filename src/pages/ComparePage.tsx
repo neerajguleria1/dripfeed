@@ -12,7 +12,6 @@ import { SaveButton } from '../components/product/SaveButton';
 import { ProductCard } from '../components/product/ProductCard';
 import { PriceCounter } from '../components/common/PriceCounter';
 import AffiliateButton from '../components/ui/AffiliateButton';
-import SiteNav from '../components/SiteNav';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import { formatPrice } from '../utils/formatPrice';
 import api from '../services/api';
@@ -157,10 +156,8 @@ export default function ComparePage() {
         description={`Compare ${productTitle} prices across ${platforms.length} platforms. Find the best deal on DripFeed India.`}
       />
 
-      <SiteNav />
-
       <div className="min-h-screen bg-[#FAFAFA]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-40 sm:pb-16">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-40 sm:pb-16">
 
           {/* ─── Breadcrumb — restrained, editorial ─── */}
           <button
