@@ -90,21 +90,21 @@ export default function SiteNav() {
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 transition-all duration-300 ease-out ${
-        scrolled ? 'py-2.5 bg-[#0F0F1A]/95 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.25)]' : 'pt-3 sm:pt-4'
+      className={`fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 transition-all duration-300 ease-out bg-[#0F0F1A] ${
+        scrolled ? 'py-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.35)]' : 'py-3 sm:py-4'
       }`}
     >
       <div className="flex items-center justify-between max-w-7xl mx-auto gap-3">
         {/* Logo — light variant for dark hero backgrounds */}
         <Logo variant="light" size="md" />
 
-        {/* Center nav links - hidden on mobile, no bubble, direct on dark bg */}
+        {/* Center nav links - hidden on mobile, solid dark bar guarantees contrast regardless of scroll/page content */}
         <div className="hidden md:flex items-center gap-1">
           {navItems.map((item) => (
             <button
               key={item.label}
               onClick={() => handleNav(item)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full font-semibold transition-all duration-200 ease-out no-underline cursor-pointer ${
+              className={`whitespace-nowrap px-4 min-h-[44px] flex items-center rounded-full font-extrabold transition-all duration-200 ease-out no-underline cursor-pointer ${
                 scrolled ? 'text-xs' : 'text-sm'
               } text-white hover:text-[#C9A96E] hover:bg-white/10`}
             >
@@ -144,8 +144,8 @@ export default function SiteNav() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={`flex items-center gap-1.5 rounded-full bg-white/15 text-white border border-white/30 font-medium transition-all min-h-[44px] ${
-                  scrolled ? 'px-3 py-1.5 text-xs' : 'px-3 sm:px-4 py-2 text-sm'
+                className={`flex items-center gap-1.5 rounded-full bg-white/10 text-white border border-white/25 font-medium transition-all min-h-[44px] hover:bg-white/15 ${
+                  scrolled ? 'px-3 text-xs' : 'px-3 sm:px-4 text-sm'
                 }`}
               >
                 <User className="w-3.5 h-3.5" />
@@ -235,11 +235,11 @@ export default function SiteNav() {
               )}
             </div>
           ) : (
-            /* Not logged in — show Sign In */
+            /* Not logged in — show Sign In. Border-only treatment so it doesn't outweigh the logo/nav. */
             <button
               onClick={() => navigate('/login')}
-              className={`flex items-center gap-1.5 rounded-full bg-[#C9A96E] text-white font-medium transition-all min-h-[44px] ${
-                scrolled ? 'px-3 py-1.5 text-xs' : 'px-3 sm:px-4 py-2 text-sm'
+              className={`flex items-center gap-1.5 rounded-full border border-[#C9A96E]/60 text-[#C9A96E] font-semibold transition-all min-h-[44px] hover:bg-[#C9A96E]/10 ${
+                scrolled ? 'px-3 text-xs' : 'px-3 sm:px-4 text-sm'
               }`}
             >
               <User className="w-3.5 h-3.5" />

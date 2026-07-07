@@ -13,9 +13,9 @@ interface LogoProps {
 }
 
 const sizeMap = {
-  sm: { icon: 20, text: 'text-base', gap: 'gap-1.5' },
-  md: { icon: 24, text: 'text-lg', gap: 'gap-2' },
-  lg: { icon: 30, text: 'text-2xl', gap: 'gap-2.5' },
+  sm: { icon: 22, text: 'text-lg', gap: 'gap-1.5' },
+  md: { icon: 26, text: 'text-xl', gap: 'gap-2' },
+  lg: { icon: 32, text: 'text-3xl', gap: 'gap-2.5' },
 };
 
 /**
@@ -32,8 +32,8 @@ export default function Logo({ variant = 'dark', size = 'md', asLink = true, cla
     <span className={`inline-flex items-center ${gap} ${className}`}>
       <DropletMark size={icon} />
       <span
-        className={`font-bold tracking-tight leading-none whitespace-nowrap ${text} ${textColor}`}
-        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+        className={`font-extrabold tracking-tight leading-none whitespace-nowrap ${text} ${textColor}`}
+        style={{ fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 800 }}
       >
         DripFeed
       </span>

@@ -47,7 +47,7 @@ export default function AppHeader() {
             </>
           ) : (
             <>
-              <Link to="/login" className="bg-[#C9A96E] text-white text-sm px-5 py-2.5 rounded-full hover:bg-[#B8964F] transition-colors font-medium min-h-[44px] flex items-center">
+              <Link to="/login" className="bg-[#C9A96E] text-white text-sm px-5 py-2.5 rounded-full hover:bg-[#B8964F] transition-colors font-semibold min-h-[44px] flex items-center">
                 Sign In
               </Link>
             </>
