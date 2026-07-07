@@ -93,7 +93,7 @@ export function OnboardingModal({ open, onClose, onComplete }: OnboardingModalPr
               key={i}
               className={[
                 'h-2.5 rounded-full transition-all duration-200',
-                i === step ? 'bg-[#051F45] w-6' : 'bg-gray-200 w-2.5',
+                i === step ? 'bg-[#0F0F1A] w-6' : 'bg-gray-200 w-2.5',
               ].join(' ')}
             />
           ))}
@@ -150,3 +150,4 @@ export function OnboardingModal({ open, onClose, onComplete }: OnboardingModalPr
 }
 
 export default OnboardingModal;
+

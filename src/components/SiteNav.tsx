@@ -104,7 +104,7 @@ export default function SiteNav() {
 
         {/* Center nav links - hidden on mobile */}
         <div
-          className={`hidden md:flex items-center liquid-glass rounded-full transition-all duration-300 ease-out ${
+          className={`hidden md:flex items-center bg-white/90 backdrop-blur-md border-b border-neutral-100 rounded-full transition-all duration-300 ease-out ${
             scrolled ? 'gap-1 px-1.5 py-1' : 'gap-1.5 px-1.5 py-1.5'
           }`}
         >
@@ -257,6 +257,7 @@ export default function SiteNav() {
     </nav>
   );
 }
+
 
 
 

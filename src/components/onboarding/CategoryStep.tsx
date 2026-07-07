@@ -28,7 +28,7 @@ export function CategoryStep({ selected, onSelect }: CategoryStepProps) {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-[#051F45] mb-2">What do you shop for?</h3>
+      <h3 className="text-lg font-semibold text-[#0F0F1A] mb-2">What do you shop for?</h3>
       <p className="text-sm text-gray-500 mb-6">Select all that interest you</p>
 
       <motion.div
@@ -48,17 +48,17 @@ export function CategoryStep({ selected, onSelect }: CategoryStepProps) {
               className={[
                 'relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200',
                 isSelected
-                  ? 'border-[#051F45] bg-[#051F45]/5'
+                  ? 'border-[#0F0F1A] bg-[#0F0F1A]/5'
                   : 'border-gray-200 hover:border-gray-300 bg-white',
               ].join(' ')}
             >
               {isSelected && (
-                <div className="absolute top-2 right-2 w-5 h-5 bg-[#051F45] rounded-full flex items-center justify-center">
+                <div className="absolute top-2 right-2 w-5 h-5 bg-[#0F0F1A] rounded-full flex items-center justify-center">
                   <Check className="w-3 h-3 text-white" />
                 </div>
               )}
               <span className="text-2xl">{cat.emoji}</span>
-              <span className="text-xs font-medium text-[#051F45]">{cat.label}</span>
+              <span className="text-xs font-medium text-[#0F0F1A]">{cat.label}</span>
             </motion.button>
           );
         })}
@@ -68,3 +68,4 @@ export function CategoryStep({ selected, onSelect }: CategoryStepProps) {
 }
 
 export default CategoryStep;
+

@@ -43,7 +43,7 @@ export default function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#051F45]/10 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col">
+    <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col">
       <div className="relative aspect-square bg-[#F8F5F2] overflow-hidden">
         {product.imageUrl ? (
           <img
@@ -60,7 +60,7 @@ export default function ProductCard({ product }: { product: Product }) {
           onClick={handleSave}
           className="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors"
         >
-          <Heart className={`w-4 h-4 ${saved ? 'fill-[#F2C4CD] text-[#F2C4CD]' : 'text-gray-400'}`} />
+          <Heart className={`w-4 h-4 ${saved ? 'fill-[#C9A96E] text-[#C9A96E]' : 'text-gray-400'}`} />
         </button>
       </div>
 
@@ -73,7 +73,7 @@ export default function ProductCard({ product }: { product: Product }) {
           <AffiliateButton platform={product.platform} url={product.url} productTitle={product.title} fullWidth />
           <button
             onClick={() => navigate(`/compare?q=${encodeURIComponent(product.title)}`)}
-            className="w-full text-xs text-[#051F45]/70 hover:text-[#051F45] flex items-center justify-center gap-1 py-1"
+            className="w-full text-xs text-[#0F0F1A]/70 hover:text-[#0F0F1A] flex items-center justify-center gap-1 py-1"
           >
             <GitCompare className="w-3 h-3" /> Compare prices
           </button>
@@ -82,3 +82,5 @@ export default function ProductCard({ product }: { product: Product }) {
     </div>
   );
 }
+
+

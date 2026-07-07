@@ -47,7 +47,7 @@ export function ThriftCard({ title, brand, images, price, condition, city, size,
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {brand && <p className="text-xs text-gray-400 uppercase tracking-wide">{brand}</p>}
-            <p className="text-sm font-medium text-[#051F45] line-clamp-2">{title}</p>
+            <p className="text-sm font-medium text-[#0F0F1A] line-clamp-2">{title}</p>
           </div>
           <Badge variant={conditionColors[condition]} size="sm">
             {conditionLabels[condition]}
@@ -55,7 +55,7 @@ export function ThriftCard({ title, brand, images, price, condition, city, size,
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-base font-bold text-[#051F45]">{formatINR(price)}</span>
+          <span className="text-base font-bold text-[#0F0F1A]">{formatINR(price)}</span>
           <span className="text-xs text-gray-400">Size {size}</span>
         </div>
 
@@ -77,3 +77,4 @@ export function ThriftCard({ title, brand, images, price, condition, city, size,
 }
 
 export default ThriftCard;
+

@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 function LegalPage({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-[#051F45] mb-8" style={{ fontFamily: 'Instrument Serif, serif' }}>{title}</h1>
-      <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#051F45]/10 p-6 sm:p-8 space-y-4 text-sm text-[#051F45]/80 leading-relaxed">
+      <h1 className="text-3xl font-bold text-[#0F0F1A] mb-8" style={{ fontFamily: 'Instrument Serif, serif' }}>{title}</h1>
+      <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-6 sm:p-8 space-y-4 text-sm text-[#0F0F1A]/80 leading-relaxed">
         {children}
       </div>
     </div>
@@ -12,11 +12,11 @@ function LegalPage({ title, children }: { title: string; children: ReactNode }) 
 }
 
 function H2({ children }: { children: ReactNode }) {
-  return <h2 className="font-semibold text-[#051F45] text-lg mt-6 mb-2">{children}</h2>;
+  return <h2 className="font-semibold text-[#0F0F1A] text-lg mt-6 mb-2">{children}</h2>;
 }
 
 function H3({ children }: { children: ReactNode }) {
-  return <h3 className="font-semibold text-[#051F45]/90 text-[15px] mt-4 mb-1">{children}</h3>;
+  return <h3 className="font-semibold text-[#0F0F1A]/90 text-[15px] mt-4 mb-1">{children}</h3>;
 }
 
 function UL({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ function UL({ children }: { children: ReactNode }) {
 export function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy">
-      <p className="text-[13px] text-[#051F45]/50">Last updated: July 2026</p>
+      <p className="text-[13px] text-[#0F0F1A]/50">Last updated: July 2026</p>
 
       <p>
         DripFeed India ("DripFeed", "we", "us", "our") is a sole proprietorship operating a fashion price comparison platform at dripfeed.in. We are committed to protecting your personal data in accordance with the Digital Personal Data Protection Act, 2023 (DPDPA) and applicable Indian law.
@@ -115,7 +115,7 @@ export function PrivacyPage() {
 
       <H2>10. Grievance Officer</H2>
       <p>In accordance with DPDPA 2023 and the Information Technology Act, 2000, we have appointed a Grievance Officer:</p>
-      <div className="bg-[#051F45]/5 rounded-xl p-4 mt-2">
+      <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mt-2">
         <p><strong>Name:</strong> Neeraj Guleria</p>
         <p><strong>Email:</strong> grievance@dripfeed.in</p>
         <p><strong>Response time:</strong> Within 72 hours of receiving a complaint</p>
@@ -139,7 +139,7 @@ export function PrivacyPage() {
 export function TermsPage() {
   return (
     <LegalPage title="Terms of Service">
-      <p className="text-[13px] text-[#051F45]/50">Last updated: July 2026</p>
+      <p className="text-[13px] text-[#0F0F1A]/50">Last updated: July 2026</p>
 
       <p>
         These Terms of Service ("Terms") govern your use of DripFeed India ("DripFeed", "we", "us"), a fashion price comparison platform operated as a sole proprietorship. By accessing or using DripFeed, you agree to be bound by these Terms.
@@ -165,7 +165,7 @@ export function TermsPage() {
 
       <H2>3. Affiliate Disclosure</H2>
       <p>
-        DripFeed earns commissions from affiliate programs when you purchase products through our links. This is how we keep the platform free. Commissions never affect the price you pay. See our full <a href="/affiliate-disclosure" className="underline hover:text-[#051F45]">Affiliate Disclosure</a> for details.
+        DripFeed earns commissions from affiliate programs when you purchase products through our links. This is how we keep the platform free. Commissions never affect the price you pay. See our full <a href="/affiliate-disclosure" className="underline hover:text-[#0F0F1A]">Affiliate Disclosure</a> for details.
       </p>
 
       <H2>4. User Accounts</H2>
@@ -246,7 +246,7 @@ export function TermsPage() {
       </UL>
 
       <H2>13. Grievance Officer</H2>
-      <div className="bg-[#051F45]/5 rounded-xl p-4 mt-2">
+      <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mt-2">
         <p><strong>Name:</strong> Neeraj Guleria</p>
         <p><strong>Email:</strong> grievance@dripfeed.in</p>
         <p><strong>Response time:</strong> Acknowledgment within 24 hours, resolution within 15 days</p>
@@ -269,10 +269,10 @@ export function TermsPage() {
 export function AffiliateDisclosurePage() {
   return (
     <LegalPage title="Affiliate Disclosure">
-      <p className="text-[13px] text-[#051F45]/50">Last updated: July 2026</p>
+      <p className="text-[13px] text-[#0F0F1A]/50">Last updated: July 2026</p>
 
-      <div className="bg-[#051F45]/5 rounded-xl p-4 mb-4">
-        <p className="text-[15px] font-medium text-[#051F45]">
+      <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mb-4">
+        <p className="text-[15px] font-medium text-[#0F0F1A]">
           DripFeed is a participant in affiliate programs including Amazon Associates India, Flipkart Affiliate Program, VCommission, CueLinks, and other affiliate networks.
         </p>
       </div>
@@ -284,7 +284,7 @@ export function AffiliateDisclosurePage() {
 
       <H2>How to Identify Affiliate Links</H2>
       <UL>
-        <li>Links marked with <span className="inline-block bg-[#051F45]/10 px-2 py-0.5 rounded text-[12px] font-medium">#Ad</span> are affiliate links</li>
+        <li>Links marked with <span className="inline-block bg-[#0F0F1A]/10 px-2 py-0.5 rounded text-[12px] font-medium">#Ad</span> are affiliate links</li>
         <li>All "Buy on [Platform]" buttons lead to affiliate-tracked URLs</li>
         <li>Links leading to external shopping platforms (Amazon, Flipkart, Myntra, Ajio, etc.) are affiliate links</li>
       </UL>
@@ -331,12 +331,13 @@ export function AffiliateDisclosurePage() {
 export function NotFoundPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-      <p className="text-8xl mb-4 font-bold text-[#051F45]/10">404</p>
-      <h1 className="text-2xl font-bold text-[#051F45] mb-2" style={{ fontFamily: 'Instrument Serif, serif' }}>Page not found</h1>
-      <p className="text-[#051F45]/60 mb-6">The page you're looking for doesn't exist.</p>
-      <a href="/" className="bg-[#051F45] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#051F45]/90">
+      <p className="text-8xl mb-4 font-bold text-[#0F0F1A]/10">404</p>
+      <h1 className="text-2xl font-bold text-[#0F0F1A] mb-2" style={{ fontFamily: 'Instrument Serif, serif' }}>Page not found</h1>
+      <p className="text-[#0F0F1A]/60 mb-6">The page you're looking for doesn't exist.</p>
+      <a href="/" className="bg-[#0F0F1A] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#0F0F1A]/90">
         Go Home
       </a>
     </div>
   );
 }
+

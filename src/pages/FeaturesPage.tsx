@@ -18,33 +18,34 @@ export default function FeaturesPage() {
   }, { scope: pageRef });
 
   return (
-    <div ref={pageRef} className="text-[#051F45]">
+    <div ref={pageRef} className="text-[#0F0F1A]">
       {/* Hero */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 pt-20 md:pt-28 pb-10 text-center">
         <div ref={heroRef} className="max-w-4xl mx-auto">
           <span
             ref={badgeRef}
-            className="inline-block px-6 py-2 rounded-full border border-[#051F45]/10 bg-white/60 text-xs font-mono font-bold tracking-[0.2em] uppercase mb-6"
+            className="inline-block px-6 py-2 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-xs font-mono font-bold tracking-[0.2em] uppercase mb-6"
           >
             <span className="text-[#FF9933]">Build</span>{' '}
-            <span className="text-[#051F45]">for</span>{' '}
+            <span className="text-[#0F0F1A]">for</span>{' '}
             <span className="text-[#138808]">India</span>
           </span>
           <div className="text-center">
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.05em] text-[#051F45]">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.05em] text-[#0F0F1A]">
               Everything you need to shop smarter.
             </h2>
           </div>
-          <p ref={sublineRef} className="text-[#051F45] text-sm sm:text-base max-w-lg mx-auto mt-6">
+          <p ref={sublineRef} className="text-[#0F0F1A] text-sm sm:text-base max-w-lg mx-auto mt-6">
             Smart tools designed for the Indian fashion ecosystem. Compare, track, and discover across your favourite platforms — all in one place.
           </p>
           <div className="flex items-center justify-center gap-2 mt-5">
-            <span className="px-3 py-1 rounded-full border border-[#051F45]/10 bg-white/60 text-[10px] font-mono tracking-[0.15em] uppercase text-[#051F45]">Thrift</span>
-            <span className="text-[#051F45] text-xs">+</span>
-            <span className="px-3 py-1 rounded-full border border-[#051F45]/10 bg-white/60 text-[10px] font-mono tracking-[0.15em] uppercase text-[#051F45]">New</span>
+            <span className="px-3 py-1 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.15em] uppercase text-[#0F0F1A]">Thrift</span>
+            <span className="text-[#0F0F1A] text-xs">+</span>
+            <span className="px-3 py-1 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.15em] uppercase text-[#0F0F1A]">New</span>
           </div>
         </div>
       </section>
     </div>
   );
 }
+

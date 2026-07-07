@@ -121,7 +121,7 @@ export default function HowItWorksPage() {
   }, []);
 
   return (
-    <div ref={pageRef} className="w-full bg-[#F2C4CD]">
+    <div ref={pageRef} className="w-full bg-[#C9A96E]">
       {/* Hero */}
       <div className="w-full min-h-screen flex items-center justify-center p-3 md:p-5">
         <section className="relative w-full max-w-[1536px] h-full min-h-screen rounded-[1.5rem] md:rounded-[3rem] overflow-hidden flex flex-col items-center">
@@ -134,11 +134,11 @@ export default function HowItWorksPage() {
             className="absolute inset-0 w-full h-full object-cover object-[65%] lg:object-center z-0"
             src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260428_193507_4286c423-2fd9-4efd-92bd-91a939453fc1.mp4"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#F2C4CD]/40 via-transparent to-[#F2C4CD]/60 z-[1]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#C9A96E]/40 via-transparent to-[#C9A96E]/60 z-[1]" />
 
           <div className="relative z-10 w-full h-full flex flex-col items-center">
             <nav className="flex items-center justify-between py-6 px-6 md:px-10 w-full">
-              <span className="tracking-tighter text-xl text-[#051F45]">DripFeed</span>
+              <span className="tracking-tighter text-xl text-[#0F0F1A]">DripFeed</span>
             </nav>
 
             <div ref={textRef} className="w-full flex flex-col items-center pt-12 md:pt-20 px-6 text-center max-w-4xl">
@@ -148,19 +148,19 @@ export default function HowItWorksPage() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 backdrop-blur-md border border-white/30 mb-6"
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#051F45]" />
-                <span className="text-xs text-[#051F45]/80">AI-Powered Price Intelligence</span>
+                <Sparkles className="w-3.5 h-3.5 text-[#0F0F1A]" />
+                <span className="text-xs text-[#0F0F1A]/80">AI-Powered Price Intelligence</span>
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-5xl sm:text-6xl md:text-7xl lg:text-[90px] font-normal text-[#051F45] mb-4 tracking-tight leading-[1.02]"
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-[90px] font-normal text-[#0F0F1A] mb-4 tracking-tight leading-[1.02]"
               >
                 {displayed}
                 {!done && (
-                  <span className="inline-block w-[3px] h-[1.1em] bg-[#051F45] align-middle ml-[2px] animate-blink" />
+                  <span className="inline-block w-[3px] h-[1.1em] bg-[#0F0F1A] align-middle ml-[2px] animate-blink" />
                 )}
               </motion.h1>
 
@@ -168,7 +168,7 @@ export default function HowItWorksPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-base md:text-lg text-[#051F45]/70 leading-relaxed max-w-lg font-normal mb-10"
+                className="text-base md:text-lg text-[#0F0F1A]/70 leading-relaxed max-w-lg font-normal mb-10"
               >
                 Stop overpaying. Compare prices across every major e-commerce platform in real-time.
               </motion.p>
@@ -180,7 +180,7 @@ export default function HowItWorksPage() {
               >
                 <button
                   onClick={() => navigate('/', { state: { scrollTo: 'early-join' } })}
-                  className="group flex items-center gap-3 bg-[#051F45] text-white px-8 py-4 rounded-full text-sm font-medium hover:bg-[#051F45]/90 transition-all hover:gap-4"
+                  className="group flex items-center gap-3 bg-[#0F0F1A] text-white px-8 py-4 rounded-full text-sm font-medium hover:bg-[#0F0F1A]/90 transition-all hover:gap-4"
                 >
                   Start Saving
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -200,8 +200,8 @@ export default function HowItWorksPage() {
                       <TrendingUp className="w-4 h-4 text-green-600" />
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] text-[#051F45]/50">Price Drop</div>
-                      <div className="text-sm font-medium text-[#051F45]">-42%</div>
+                      <div className="text-[10px] text-[#0F0F1A]/50">Price Drop</div>
+                      <div className="text-sm font-medium text-[#0F0F1A]">-42%</div>
                     </div>
                   </div>
                 </motion.div>
@@ -219,8 +219,8 @@ export default function HowItWorksPage() {
                       <Globe className="w-4 h-4 text-blue-600" />
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] text-[#051F45]/50">Tracking</div>
-                      <div className="text-sm font-medium text-[#051F45]">24/7</div>
+                      <div className="text-[10px] text-[#0F0F1A]/50">Tracking</div>
+                      <div className="text-sm font-medium text-[#0F0F1A]">24/7</div>
                     </div>
                   </div>
                 </motion.div>
@@ -238,8 +238,8 @@ export default function HowItWorksPage() {
                       <Smartphone className="w-4 h-4 text-purple-600" />
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] text-[#051F45]/50">Platforms</div>
-                      <div className="text-sm font-medium text-[#051F45]">20+</div>
+                      <div className="text-[10px] text-[#0F0F1A]/50">Platforms</div>
+                      <div className="text-sm font-medium text-[#0F0F1A]">20+</div>
                     </div>
                   </div>
                 </motion.div>
@@ -257,8 +257,8 @@ export default function HowItWorksPage() {
                       <Lock className="w-4 h-4 text-amber-600" />
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] text-[#051F45]/50">Privacy</div>
-                      <div className="text-sm font-medium text-[#051F45]">100%</div>
+                      <div className="text-[10px] text-[#0F0F1A]/50">Privacy</div>
+                      <div className="text-sm font-medium text-[#0F0F1A]">100%</div>
                     </div>
                   </div>
                 </motion.div>
@@ -272,7 +272,7 @@ export default function HowItWorksPage() {
       <div className="w-full py-8 overflow-hidden border-y border-white/20">
         <div ref={marqueeRef} className="flex items-center gap-12 whitespace-nowrap w-max">
           {[...platforms, ...platforms].map((p, i) => (
-            <span key={i} className="text-lg text-[#051F45]/30 font-medium tracking-wide">{p}</span>
+            <span key={i} className="text-lg text-[#0F0F1A]/30 font-medium tracking-wide">{p}</span>
           ))}
         </div>
       </div>
@@ -280,21 +280,21 @@ export default function HowItWorksPage() {
       {/* Steps - Bento Grid */}
       <div ref={stepsRef} className="w-full max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-white/30 backdrop-blur-sm text-xs text-[#051F45]/60 mb-4">Simple Process</span>
-          <h2 className="text-4xl md:text-5xl font-normal text-[#051F45]">Four Steps to Savings</h2>
+          <span className="inline-block px-4 py-1.5 rounded-full bg-white/30 backdrop-blur-sm text-xs text-[#0F0F1A]/60 mb-4">Simple Process</span>
+          <h2 className="text-4xl md:text-5xl font-normal text-[#0F0F1A]">Four Steps to Savings</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {steps.map((step) => {
             const Icon = step.icon;
             return (
-              <div key={step.num} className="step-card group relative p-6 rounded-3xl bg-white/50 backdrop-blur-md border border-white/40 hover:bg-white/70 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#051F45]/5 overflow-hidden">
+              <div key={step.num} className="step-card group relative p-6 rounded-3xl bg-white/50 backdrop-blur-md border border-white/40 hover:bg-white/70 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#0F0F1A]/5 overflow-hidden">
                 <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${step.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
                 <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-5`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-[10px] text-[#051F45]/40 font-medium tracking-widest uppercase">Step {step.num}</span>
-                <h3 className="text-xl font-medium text-[#051F45] mt-1 mb-2">{step.title}</h3>
-                <p className="text-sm text-[#051F45]/60 leading-relaxed">{step.desc}</p>
+                <span className="text-[10px] text-[#0F0F1A]/40 font-medium tracking-widest uppercase">Step {step.num}</span>
+                <h3 className="text-xl font-medium text-[#0F0F1A] mt-1 mb-2">{step.title}</h3>
+                <p className="text-sm text-[#0F0F1A]/60 leading-relaxed">{step.desc}</p>
               </div>
             );
           })}
@@ -304,9 +304,9 @@ export default function HowItWorksPage() {
       {/* Features - Bento Layout */}
       <div ref={featuresRef} className="w-full max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-white/30 backdrop-blur-sm text-xs text-[#051F45]/60 mb-4">Core Features</span>
-          <h2 className="text-4xl md:text-5xl font-normal text-[#051F45] mb-4">Everything You Need</h2>
-          <p className="text-[#051F45]/50 max-w-md mx-auto">One app replaces five. Shop smarter, not harder.</p>
+          <span className="inline-block px-4 py-1.5 rounded-full bg-white/30 backdrop-blur-sm text-xs text-[#0F0F1A]/60 mb-4">Core Features</span>
+          <h2 className="text-4xl md:text-5xl font-normal text-[#0F0F1A] mb-4">Everything You Need</h2>
+          <p className="text-[#0F0F1A]/50 max-w-md mx-auto">One app replaces five. Shop smarter, not harder.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map((f) => {
@@ -314,10 +314,10 @@ export default function HowItWorksPage() {
             return (
               <div key={f.title} className={`feature-item group p-6 rounded-3xl bg-gradient-to-br ${f.gradient} backdrop-blur-md border border-white/40 hover:border-white/60 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg`}>
                 <div className="w-11 h-11 rounded-2xl bg-white/40 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Icon className="w-5 h-5 text-[#051F45]" />
+                  <Icon className="w-5 h-5 text-[#0F0F1A]" />
                 </div>
-                <h3 className="text-lg font-medium text-[#051F45] mb-2">{f.title}</h3>
-                <p className="text-sm text-[#051F45]/60 leading-relaxed">{f.desc}</p>
+                <h3 className="text-lg font-medium text-[#0F0F1A] mb-2">{f.title}</h3>
+                <p className="text-sm text-[#0F0F1A]/60 leading-relaxed">{f.desc}</p>
               </div>
             );
           })}
@@ -332,17 +332,17 @@ export default function HowItWorksPage() {
           <div className="relative z-10">
             <div className="flex justify-center mb-5">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 text-[#051F45] fill-[#051F45]" />
+                <Star key={i} className="w-5 h-5 text-[#0F0F1A] fill-[#0F0F1A]" />
               ))}
             </div>
-            <p className="text-lg md:text-xl text-[#051F45] leading-relaxed mb-8">
+            <p className="text-lg md:text-xl text-[#0F0F1A] leading-relaxed mb-8">
               "Saved ₹12,000 on my last wardrobe upgrade. One app, five platforms, zero effort."
             </p>
             <div className="flex items-center justify-center gap-3">
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center text-white font-medium text-sm">PS</div>
               <div className="text-left">
-                <div className="text-sm font-medium text-[#051F45]">Priya Sharma</div>
-                <div className="text-xs text-[#051F45]/50">Mumbai</div>
+                <div className="text-sm font-medium text-[#0F0F1A]">Priya Sharma</div>
+                <div className="text-xs text-[#0F0F1A]/50">Mumbai</div>
               </div>
             </div>
           </div>
@@ -351,11 +351,11 @@ export default function HowItWorksPage() {
 
       {/* Bottom CTA */}
       <div className="w-full max-w-4xl mx-auto px-6 py-20 text-center">
-        <h2 className="text-4xl md:text-5xl font-normal text-[#051F45] mb-4">Start Saving Today</h2>
-        <p className="text-[#051F45]/50 mb-8">Free forever. No credit card required.</p>
+        <h2 className="text-4xl md:text-5xl font-normal text-[#0F0F1A] mb-4">Start Saving Today</h2>
+        <p className="text-[#0F0F1A]/50 mb-8">Free forever. No credit card required.</p>
         <button
           onClick={() => navigate('/', { state: { scrollTo: 'early-join' } })}
-          className="group inline-flex items-center gap-3 bg-[#051F45] text-white px-10 py-4 rounded-full text-sm font-medium hover:bg-[#051F45]/90 transition-all hover:gap-4"
+          className="group inline-flex items-center gap-3 bg-[#0F0F1A] text-white px-10 py-4 rounded-full text-sm font-medium hover:bg-[#0F0F1A]/90 transition-all hover:gap-4"
         >
           Get Started
           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -364,3 +364,5 @@ export default function HowItWorksPage() {
     </div>
   );
 }
+
+

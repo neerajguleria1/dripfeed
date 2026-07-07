@@ -57,14 +57,14 @@ export default function WishlistPage() {
           <button
             onClick={() => setActiveTab('wishlist')}
             className={['flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors',
-              activeTab === 'wishlist' ? 'bg-white text-[#051F45] shadow-sm' : 'text-gray-500'
+              activeTab === 'wishlist' ? 'bg-white text-[#0F0F1A] shadow-sm' : 'text-gray-500'
             ].join(' ')}
           >
             <Heart className="w-4 h-4" /> Wishlist
           </button>
           <Link
             to="/collections"
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-[#051F45] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-[#0F0F1A] transition-colors"
           >
             <FolderHeart className="w-4 h-4" /> Collections
           </Link>
@@ -72,10 +72,10 @@ export default function WishlistPage() {
 
         {/* Wishlist header */}
         <h1
-          className="text-2xl font-bold text-[#051F45] mb-6 flex items-center gap-2"
+          className="text-2xl font-bold text-[#0F0F1A] mb-6 flex items-center gap-2"
           style={{ fontFamily: 'Instrument Serif, serif' }}
         >
-          <Heart className="w-6 h-6 text-[#F2C4CD] fill-[#F2C4CD]" />
+          <Heart className="w-6 h-6 text-[#C9A96E] fill-[#C9A96E]" />
           Saved Items ({items.length})
         </h1>
 
@@ -92,11 +92,11 @@ export default function WishlistPage() {
         {!loading && items.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <p className="text-5xl mb-4">🛍️</p>
-            <p className="font-medium text-[#051F45] text-lg">Nothing saved yet</p>
+            <p className="font-medium text-[#0F0F1A] text-lg">Nothing saved yet</p>
             <p className="text-sm mt-1 mb-6">Save products to track prices and get alerts.</p>
             <Link
               to="/"
-              className="bg-[#051F45] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#051F45]/90 inline-block"
+              className="bg-[#0F0F1A] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#0F0F1A]/90 inline-block"
             >
               Browse Trending
             </Link>
@@ -123,7 +123,7 @@ export default function WishlistPage() {
                 <motion.div
                   key={item.id}
                   variants={staggerItem}
-                  className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#051F45]/10 p-4 flex gap-4 items-start"
+                  className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-4 flex gap-4 items-start"
                 >
                   {/* Image */}
                   {item.imageUrl ? (
@@ -142,11 +142,11 @@ export default function WishlistPage() {
                     {item.brand && (
                       <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">{item.brand}</p>
                     )}
-                    <p className="font-semibold text-[#051F45] text-sm line-clamp-2 mb-1">{item.productTitle}</p>
+                    <p className="font-semibold text-[#0F0F1A] text-sm line-clamp-2 mb-1">{item.productTitle}</p>
 
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       {item.lowestPrice && (
-                        <span className="font-bold text-[#051F45]">{formatINR(item.lowestPrice)}</span>
+                        <span className="font-bold text-[#0F0F1A]">{formatINR(item.lowestPrice)}</span>
                       )}
                       {dropped && (
                         <span className="flex items-center gap-0.5 text-xs text-green-600 font-semibold">
@@ -188,7 +188,7 @@ export default function WishlistPage() {
                       )}
                       <Link
                         to={`/compare?q=${encodeURIComponent(item.productTitle)}`}
-                        className="flex items-center gap-1 text-xs text-[#051F45]/70 hover:text-[#051F45] border border-[#051F45]/15 px-3 py-2 rounded-lg"
+                        className="flex items-center gap-1 text-xs text-[#0F0F1A]/70 hover:text-[#0F0F1A] border border-[#0F0F1A]/15 px-3 py-2 rounded-lg"
                       >
                         <GitCompare className="w-3 h-3" /> Compare
                       </Link>
@@ -209,3 +209,5 @@ export default function WishlistPage() {
     </>
   );
 }
+
+

@@ -84,14 +84,14 @@ export function ForYouFeed({ className = '' }: ForYouFeedProps) {
   if (!user || !preferences?.onboardingCompleted) {
     return (
       <div className={`bg-gradient-to-br from-[#F8F5F2] to-white rounded-2xl p-8 text-center ${className}`}>
-        <Sparkles className="w-10 h-10 text-[#051F45] mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-[#051F45] mb-2">Personalised picks, just for you</h3>
+        <Sparkles className="w-10 h-10 text-[#0F0F1A] mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-[#0F0F1A] mb-2">Personalised picks, just for you</h3>
         <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
           Complete your style profile so we can find deals that match your taste.
         </p>
         <Link
           to="/get-started"
-          className="inline-flex items-center gap-1 bg-[#051F45] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#051F45]/90 transition-colors"
+          className="inline-flex items-center gap-1 bg-[#0F0F1A] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#0F0F1A]/90 transition-colors"
         >
           Set Up Profile <ChevronRight className="w-4 h-4" />
         </Link>
@@ -104,8 +104,8 @@ export function ForYouFeed({ className = '' }: ForYouFeedProps) {
       <div className={className}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#051F45]" />
-            <h2 className="text-xl font-bold text-[#051F45]">For You ✨</h2>
+            <Sparkles className="w-5 h-5 text-[#0F0F1A]" />
+            <h2 className="text-xl font-bold text-[#0F0F1A]">For You ✨</h2>
           </div>
         </div>
         <div className="columns-2 md:columns-3 gap-4">
@@ -123,7 +123,7 @@ export function ForYouFeed({ className = '' }: ForYouFeedProps) {
     return (
       <div className={`text-center py-12 text-gray-400 ${className}`}>
         <p className="text-4xl mb-3">✨</p>
-        <p className="font-medium text-[#051F45]">We're curating your feed</p>
+        <p className="font-medium text-[#0F0F1A]">We're curating your feed</p>
         <p className="text-sm mt-1">Check back soon for personalised recommendations.</p>
       </div>
     );
@@ -134,13 +134,13 @@ export function ForYouFeed({ className = '' }: ForYouFeedProps) {
       {/* Section Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-[#051F45]" />
-          <h2 className="text-xl font-bold text-[#051F45]">For You ✨</h2>
+          <Sparkles className="w-5 h-5 text-[#0F0F1A]" />
+          <h2 className="text-xl font-bold text-[#0F0F1A]">For You ✨</h2>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 text-sm text-[#051F45]/60 hover:text-[#051F45] transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-sm text-[#0F0F1A]/60 hover:text-[#0F0F1A] transition-colors disabled:opacity-50"
           aria-label="Refresh feed"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -244,9 +244,9 @@ function FeedProductCard({ product }: FeedProductCardProps) {
 
             {/* Tooltip */}
             {showReason && (
-              <div className="absolute bottom-full right-0 mb-2 z-10 bg-[#051F45] text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+              <div className="absolute bottom-full right-0 mb-2 z-10 bg-[#0F0F1A] text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
                 {product.reason}
-                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#051F45]" />
+                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#0F0F1A]" />
               </div>
             )}
           </div>
@@ -262,3 +262,4 @@ function FeedProductCard({ product }: FeedProductCardProps) {
 }
 
 export default ForYouFeed;
+

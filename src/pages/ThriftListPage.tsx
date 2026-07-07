@@ -90,10 +90,10 @@ export default function ThriftListPage() {
       <SEOHead title="List an Item" description="Sell your pre-loved fashion on DripFeed" />
       <div className="max-w-lg mx-auto px-4 py-8">
         {/* Header */}
-        <button onClick={() => navigate('/thrift')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#051F45] mb-4 transition-colors">
+        <button onClick={() => navigate('/thrift')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#0F0F1A] mb-4 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Thrift Store
         </button>
-        <h1 className="text-2xl font-bold text-[#051F45] mb-6">Sell Your Item</h1>
+        <h1 className="text-2xl font-bold text-[#0F0F1A] mb-6">Sell Your Item</h1>
 
         {/* Step indicator */}
         <div className="flex items-center gap-1 mb-8">
@@ -105,7 +105,7 @@ export default function ThriftListPage() {
               <div key={s.id} className="flex-1 flex items-center">
                 <div className={[
                   'w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors',
-                  isActive ? 'bg-[#051F45] text-white' : isDone ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500',
+                  isActive ? 'bg-[#0F0F1A] text-white' : isDone ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500',
                 ].join(' ')}>
                   {isDone ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                 </div>
@@ -122,7 +122,7 @@ export default function ThriftListPage() {
           <motion.div key={step} variants={slideVariants} initial="enter" animate="center" exit="exit">
             {step === 0 && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[#051F45]">Add photos</h2>
+                <h2 className="text-lg font-semibold text-[#0F0F1A]">Add photos</h2>
                 <p className="text-sm text-gray-500">Up to 5 images (paste URLs for now)</p>
                 <div className="grid grid-cols-3 gap-3">
                   {images.map((url, i) => (
@@ -137,7 +137,7 @@ export default function ThriftListPage() {
                   {images.length < 5 && (
                     <button
                       onClick={handleImageUrl}
-                      className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-[#051F45] hover:text-[#051F45] transition-colors"
+                      className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-[#0F0F1A] hover:text-[#0F0F1A] transition-colors"
                     >
                       <Camera className="w-6 h-6 mb-1" />
                       <span className="text-xs">Add</span>
@@ -149,14 +149,14 @@ export default function ThriftListPage() {
 
             {step === 1 && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[#051F45]">Item details</h2>
+                <h2 className="text-lg font-semibold text-[#0F0F1A]">Item details</h2>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Title *</label>
-                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Floral maxi dress" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20" />
+                  <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Floral maxi dress" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Brand</label>
-                  <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Zara" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20" />
+                  <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Zara" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Category *</label>
@@ -183,17 +183,17 @@ export default function ThriftListPage() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Description</label>
-                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Any details about the item..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#051F45]/20" />
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Any details about the item..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20" />
                 </div>
               </div>
             )}
 
             {step === 2 && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[#051F45]">Set your price</h2>
+                <h2 className="text-lg font-semibold text-[#0F0F1A]">Set your price</h2>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Price (₹) *</label>
-                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="500" min="1" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20" />
+                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="500" min="1" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20" />
                 </div>
                 <p className="text-xs text-gray-400">Tip: Check similar items on the Thrift Store to price competitively.</p>
               </div>
@@ -201,14 +201,14 @@ export default function ThriftListPage() {
 
             {step === 3 && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[#051F45]">Contact info</h2>
+                <h2 className="text-lg font-semibold text-[#0F0F1A]">Contact info</h2>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">City *</label>
-                  <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Mumbai" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20" />
+                  <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Mumbai" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">WhatsApp Number *</label>
-                  <input type="tel" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+91 9876543210" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20" />
+                  <input type="tel" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="+91 9876543210" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20" />
                 </div>
                 <p className="text-xs text-gray-400">Buyers will contact you directly via WhatsApp.</p>
               </div>
@@ -238,3 +238,4 @@ export default function ThriftListPage() {
     </>
   );
 }
+

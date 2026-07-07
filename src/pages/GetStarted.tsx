@@ -72,7 +72,7 @@ export default function GetStarted() {
   }, { scope: pageRef });
 
   return (
-    <div ref={pageRef} className="text-[#051F45] flex flex-col relative overflow-hidden">
+    <div ref={pageRef} className="text-[#0F0F1A] flex flex-col relative overflow-hidden">
       {/* Main Content Centered */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-24">
         <div className="w-full max-w-4xl">
@@ -80,16 +80,16 @@ export default function GetStarted() {
           <div ref={heroRef} className="text-center mb-12">
             <span
               ref={badgeRef}
-              className="inline-block px-4 py-1.5 rounded-full border border-[#051F45]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#051F45]/40 mb-6"
+              className="inline-block px-4 py-1.5 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/40 mb-6"
             >
               DripFeed
             </span>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-center text-[#051F45]">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-center text-[#0F0F1A]">
               Your Fashion Companion Awaits.
             </h2>
             <p
               ref={sublineRef}
-              className="text-[#051F45]/40 text-sm sm:text-base md:text-lg max-w-lg mx-auto mt-6 leading-relaxed"
+              className="text-[#0F0F1A]/40 text-sm sm:text-base md:text-lg max-w-lg mx-auto mt-6 leading-relaxed"
             >
               Compare prices, track drops, and discover trends across India's top fashion platforms — all in one place. Free forever.
             </p>
@@ -103,7 +103,7 @@ export default function GetStarted() {
             {benefits.map((b, i) => (
               <div
                 key={b.title}
-                className={`group relative bg-white rounded-3xl p-3 pb-4 w-56 shrink-0 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#051F45]/10 ${i > 0 ? '-ml-10' : ''}`}
+                className={`group relative bg-white rounded-3xl p-3 pb-4 w-56 shrink-0 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#0F0F1A]/10 ${i > 0 ? '-ml-10' : ''}`}
                 style={{ zIndex: i }}
               >
                 {/* 2x2 Photo Grid */}
@@ -120,9 +120,9 @@ export default function GetStarted() {
                 </div>
                 {/* Title + Count */}
                 <div className="px-1">
-                  <span className="text-sm font-bold text-[#051F45]">{b.title}</span>
+                  <span className="text-sm font-bold text-[#0F0F1A]">{b.title}</span>
                   <span className="ml-1">{b.emoji}</span>
-                  <p className="text-[10px] text-[#051F45]/40 mt-0.5">{b.count}</p>
+                  <p className="text-[10px] text-[#0F0F1A]/40 mt-0.5">{b.count}</p>
                 </div>
               </div>
             ))}
@@ -135,14 +135,14 @@ export default function GetStarted() {
           >
             <button
               onClick={() => document.getElementById('early-join')?.scrollIntoView({ behavior: 'smooth' })}
-              className="group inline-flex items-center gap-2 bg-[#F2C4CD] text-black rounded-full px-6 py-3 font-medium text-sm transition-all duration-300 hover:gap-3 cursor-pointer"
+              className="group inline-flex items-center gap-2 bg-[#C9A96E] text-black rounded-full px-6 py-3 font-medium text-sm transition-all duration-300 hover:gap-3 cursor-pointer"
             >
               Join the Waitlist
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => navigate('/how-it-works')}
-              className="inline-flex items-center gap-2 border border-[#051F45]/20 text-[#051F45]/80 rounded-full px-6 py-3 font-medium text-sm hover:bg-white/60 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 border border-[#0F0F1A]/20 text-[#0F0F1A]/80 rounded-full px-6 py-3 font-medium text-sm hover:bg-white/60 transition-colors cursor-pointer"
             >
               See How It Works
             </button>
@@ -152,3 +152,5 @@ export default function GetStarted() {
     </div>
   );
 }
+
+

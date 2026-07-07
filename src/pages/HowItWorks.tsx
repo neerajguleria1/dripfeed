@@ -104,24 +104,24 @@ export default function HowItWorks() {
   }, { scope: pageRef });
 
   return (
-    <div ref={pageRef} className="text-[#051F45] flex flex-col relative overflow-hidden">
+    <div ref={pageRef} className="text-[#0F0F1A] flex flex-col relative overflow-hidden">
       {/* Hero */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 pt-28 md:pt-36 pb-10 text-center">
         <div ref={heroRef} className="max-w-4xl mx-auto">
           <span
             ref={badgeRef}
-            className="inline-block px-4 py-1.5 rounded-full border border-[#051F45]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#051F45]/40 mb-6"
+            className="inline-block px-4 py-1.5 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/40 mb-6"
           >
             How It Works
           </span>
           <div className="text-center">
-            <h2 ref={headlineRef} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-[#051F45]">
+            <h2 ref={headlineRef} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-[#0F0F1A]">
               Shopping, Reimagined for India.
             </h2>
           </div>
           <p
             ref={sublineRef}
-            className="text-[#051F45]/40 text-sm sm:text-base md:text-lg max-w-xl mx-auto mt-6 leading-relaxed"
+            className="text-[#0F0F1A]/40 text-sm sm:text-base md:text-lg max-w-xl mx-auto mt-6 leading-relaxed"
           >
             DripFeed scans thousands of products across India's top fashion platforms so you can compare, track, and save — all from one place.
           </p>
@@ -132,7 +132,7 @@ export default function HowItWorks() {
       <section ref={stepsRef} className="relative z-10 flex-1 px-4 sm:px-6 lg:px-16 pb-24">
         <div className="max-w-5xl mx-auto">
           {/* Timeline line (desktop) */}
-          <div className="hidden lg:block absolute left-1/2 top-0 bottom-0 w-[1px] bg-gradient-to-b from-[#F2C4CD]/20 via-[#F2C4CD]/5 to-transparent -translate-x-1/2" />
+          <div className="hidden lg:block absolute left-1/2 top-0 bottom-0 w-[1px] bg-gradient-to-b from-[#C9A96E]/20 via-[#C9A96E]/5 to-transparent -translate-x-1/2" />
 
           <div className="space-y-16 md:space-y-24">
             {steps.map((step, i) => {
@@ -144,32 +144,32 @@ export default function HowItWorks() {
                 >
                   {/* Content card */}
                   <div className="w-full lg:w-1/2 group">
-                    <div className="relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-[#051F45]/15 hover:border-[#051F45]/25 transition-all duration-500 bg-white/70 backdrop-blur-sm p-6 md:p-8">
+                    <div className="relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-[#0F0F1A]/15 hover:border-[#0F0F1A]/25 transition-all duration-500 bg-white/70 backdrop-blur-sm p-6 md:p-8">
                       {/* Top accent */}
-                      <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#F2C4CD]/20 to-transparent" />
+                      <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/20 to-transparent" />
 
                       {/* Number + Icon */}
                       <div className="flex items-center gap-4 mb-5">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#F2C4CD]/10 border border-[#F2C4CD]/15">
-                          <Icon className="w-5 h-5 text-[#051F45]" />
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#C9A96E]/10 border border-[#C9A96E]/15">
+                          <Icon className="w-5 h-5 text-[#0F0F1A]" />
                         </div>
-                        <span className="text-[11px] font-mono tracking-widest text-[#051F45]/30">
+                        <span className="text-[11px] font-mono tracking-widest text-[#0F0F1A]/30">
                           {step.number}
                         </span>
                       </div>
 
-                      <h3 className="text-xl sm:text-2xl font-medium tracking-[-0.03em] leading-[1.1] mb-3 text-[#051F45]/90">
+                      <h3 className="text-xl sm:text-2xl font-medium tracking-[-0.03em] leading-[1.1] mb-3 text-[#0F0F1A]/90">
                         {step.title}
                       </h3>
-                      <p className="text-[#051F45]/50 text-sm leading-relaxed mb-4">
+                      <p className="text-[#0F0F1A]/50 text-sm leading-relaxed mb-4">
                         {step.desc}
                       </p>
 
                       {/* Detail bullets */}
                       <ul className="space-y-2 mb-5">
                         {step.details.map((d) => (
-                          <li key={d} className="flex items-start gap-2.5 text-[#051F45]/40 text-xs">
-                            <span className="w-1 h-1 rounded-full bg-[#F2C4CD]/40 mt-1.5 shrink-0" />
+                          <li key={d} className="flex items-start gap-2.5 text-[#0F0F1A]/40 text-xs">
+                            <span className="w-1 h-1 rounded-full bg-[#C9A96E]/40 mt-1.5 shrink-0" />
                             {d}
                           </li>
                         ))}
@@ -181,13 +181,13 @@ export default function HowItWorks() {
                           {step.highlights.map((h) => (
                             <span
                               key={h}
-                              className="inline-block px-3 py-1 rounded-full bg-white/60 border border-[#051F45]/10 text-[10px] font-mono tracking-wide text-[#051F45]/40"
+                              className="inline-block px-3 py-1 rounded-full bg-white/60 border border-[#0F0F1A]/10 text-[10px] font-mono tracking-wide text-[#0F0F1A]/40"
                             >
                               {h}
                             </span>
                           ))}
                         </div>
-                        <span className="text-[10px] font-mono tracking-wider text-[#051F45]/30 whitespace-nowrap">
+                        <span className="text-[10px] font-mono tracking-wider text-[#0F0F1A]/30 whitespace-nowrap">
                           {step.stat}
                         </span>
                       </div>
@@ -204,20 +204,20 @@ export default function HowItWorks() {
       </section>
 
       {/* Decorative divider */}
-      <div className="relative z-10 h-[1px] bg-gradient-to-r from-transparent via-[#F2C4CD]/10 to-transparent max-w-2xl mx-auto" />
+      <div className="relative z-10 h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/10 to-transparent max-w-2xl mx-auto" />
 
       {/* CTA */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-16 py-16 md:py-20 text-center">
         <div ref={ctaRef}>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium tracking-[-0.04em] leading-[0.9] mb-3 text-[#051F45]">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium tracking-[-0.04em] leading-[0.9] mb-3 text-[#0F0F1A]">
             Ready to shop smarter?
           </h2>
-          <p className="text-[#051F45]/40 text-sm sm:text-base max-w-md mx-auto mb-8">
+          <p className="text-[#0F0F1A]/40 text-sm sm:text-base max-w-md mx-auto mb-8">
             Join the waitlist and be the first to experience DripFeed.
           </p>
           <button
             onClick={() => document.getElementById('early-join')?.scrollIntoView({ behavior: 'smooth' })}
-            className="group inline-flex items-center gap-2 bg-[#F2C4CD] text-black rounded-full px-6 py-3 font-bold text-sm transition-all duration-300 hover:gap-3 cursor-pointer"
+            className="group inline-flex items-center gap-2 bg-[#C9A96E] text-black rounded-full px-6 py-3 font-bold text-sm transition-all duration-300 hover:gap-3 cursor-pointer"
           >
             Join the Waitlist
             <ArrowRight className="w-4 h-4" />
@@ -227,3 +227,5 @@ export default function HowItWorks() {
     </div>
   );
 }
+
+

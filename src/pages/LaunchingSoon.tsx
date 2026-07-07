@@ -37,12 +37,12 @@ function CountdownTimer() {
     <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-5 mt-6">
       {boxes.map(({ label, value }) => (
         <div key={label} className="text-center">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl bg-white/60 backdrop-blur-sm border border-[#051F45]/10 flex items-center justify-center">
-            <span className="text-2xl sm:text-3xl md:text-4xl font-mono font-medium tracking-tight text-[#051F45]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl bg-white/60 backdrop-blur-sm border border-[#0F0F1A]/10 flex items-center justify-center">
+            <span className="text-2xl sm:text-3xl md:text-4xl font-mono font-medium tracking-tight text-[#0F0F1A]">
               {String(value).padStart(2, '0')}
             </span>
           </div>
-          <div className="text-[10px] font-mono tracking-wider text-[#051F45]/25 uppercase mt-2">{label}</div>
+          <div className="text-[10px] font-mono tracking-wider text-[#0F0F1A]/25 uppercase mt-2">{label}</div>
         </div>
       ))}
     </div>
@@ -112,21 +112,21 @@ export default function LaunchingSoon() {
   }, { scope: pageRef });
 
   return (
-    <div ref={pageRef} className="text-[#051F45] flex flex-col relative overflow-hidden">
+    <div ref={pageRef} className="text-[#0F0F1A] flex flex-col relative overflow-hidden">
       {/* Main content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pt-28 pb-16">
         <div ref={heroRef} className="max-w-4xl mx-auto text-center">
           {/* Tag */}
           <span
             ref={badgeRef}
-            className="inline-block px-4 py-1.5 rounded-full border border-[#051F45]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#051F45]/40 mb-8"
+            className="inline-block px-4 py-1.5 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/40 mb-8"
           >
             Coming Soon
           </span>
 
           {/* Main headline */}
           <div className="text-center">
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-[#051F45]">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-[#0F0F1A]">
               Launching Before you can Expect.
             </h2>
           </div>
@@ -134,7 +134,7 @@ export default function LaunchingSoon() {
           {/* Sub-line */}
           <p
             ref={sublineRef}
-            className="text-[#051F45]/40 text-sm sm:text-base md:text-lg max-w-lg mx-auto mt-6 leading-relaxed"
+            className="text-[#0F0F1A]/40 text-sm sm:text-base md:text-lg max-w-lg mx-auto mt-6 leading-relaxed"
           >
             Changing how India feels fashion.
           </p>
@@ -147,7 +147,7 @@ export default function LaunchingSoon() {
           {/* Decorative line */}
           <div
             ref={dividerRef}
-            className="h-[1px] bg-gradient-to-r from-transparent via-[#F2C4CD]/20 to-transparent max-w-xs mx-auto mt-8"
+            className="h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/20 to-transparent max-w-xs mx-auto mt-8"
           />
         </div>
 
@@ -156,21 +156,21 @@ export default function LaunchingSoon() {
           ref={teasersRef}
           className="w-full max-w-2xl mx-auto mt-16"
         >
-          <div className="h-[1px] bg-gradient-to-r from-transparent via-[#F2C4CD]/10 to-transparent mb-8" />
+          <div className="h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/10 to-transparent mb-8" />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {teasers.map((t) => {
               const Icon = t.icon;
               return (
                 <div
                   key={t.label}
-                  className="teaser-card rounded-xl border border-[#051F45]/10 bg-white/40 backdrop-blur-sm p-4 text-center hover:border-[#051F45]/15 transition-all duration-500"
+                  className="teaser-card rounded-xl border border-[#0F0F1A]/10 bg-white/40 backdrop-blur-sm p-4 text-center hover:border-[#0F0F1A]/15 transition-all duration-500"
                 >
-                  <Icon className="w-5 h-5 text-[#051F45] mx-auto mb-2" />
-                  <h4 className="text-sm font-medium text-[#051F45]/80 mb-1">{t.label}</h4>
-                  <p className="text-xs text-[#051F45]/40 mb-2.5">{t.desc}</p>
+                  <Icon className="w-5 h-5 text-[#0F0F1A] mx-auto mb-2" />
+                  <h4 className="text-sm font-medium text-[#0F0F1A]/80 mb-1">{t.label}</h4>
+                  <p className="text-xs text-[#0F0F1A]/40 mb-2.5">{t.desc}</p>
                   <div className="flex flex-wrap justify-center gap-1.5">
                     {t.bullets.map((b) => (
-                      <span key={b} className="text-[9px] font-mono tracking-wide text-[#051F45]/25 bg-white/50 border border-[#051F45]/10 rounded-full px-2 py-0.5">
+                      <span key={b} className="text-[9px] font-mono tracking-wide text-[#0F0F1A]/25 bg-white/50 border border-[#0F0F1A]/10 rounded-full px-2 py-0.5">
                         {b}
                       </span>
                     ))}
@@ -184,7 +184,7 @@ export default function LaunchingSoon() {
         {/* Small footer text */}
         <p
           ref={footerRef}
-          className="text-[#051F45]/15 text-xs mt-8"
+          className="text-[#0F0F1A]/15 text-xs mt-8"
         >
           Stay tuned.
         </p>
@@ -192,3 +192,5 @@ export default function LaunchingSoon() {
     </div>
   );
 }
+
+

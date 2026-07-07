@@ -1,6 +1,6 @@
 export default function SkeletonCard() {
   return (
-    <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-[#051F45]/10 overflow-hidden">
+    <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 overflow-hidden">
       <div className="aspect-square skeleton" />
       <div className="p-3 flex flex-col gap-2">
         <div className="h-3 w-16 skeleton rounded" />
@@ -13,3 +13,4 @@ export default function SkeletonCard() {
     </div>
   );
 }
+

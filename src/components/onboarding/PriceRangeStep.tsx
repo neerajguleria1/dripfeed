@@ -21,7 +21,7 @@ export function PriceRangeStep({ range, onRangeChange }: PriceRangeStepProps) {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-[#051F45] mb-2">What's your budget?</h3>
+      <h3 className="text-lg font-semibold text-[#0F0F1A] mb-2">What's your budget?</h3>
       <p className="text-sm text-gray-500 mb-6">Pick your usual shopping range</p>
 
       <motion.div
@@ -41,16 +41,16 @@ export function PriceRangeStep({ range, onRangeChange }: PriceRangeStepProps) {
               className={[
                 'relative p-4 rounded-xl border-2 text-left transition-all duration-200',
                 active
-                  ? 'border-[#051F45] bg-[#051F45]/5'
+                  ? 'border-[#0F0F1A] bg-[#0F0F1A]/5'
                   : 'border-gray-200 hover:border-gray-300 bg-white',
               ].join(' ')}
             >
               {active && (
-                <div className="absolute top-3 right-3 w-5 h-5 bg-[#051F45] rounded-full flex items-center justify-center">
+                <div className="absolute top-3 right-3 w-5 h-5 bg-[#0F0F1A] rounded-full flex items-center justify-center">
                   <Check className="w-3 h-3 text-white" />
                 </div>
               )}
-              <p className="font-semibold text-[#051F45] text-sm">{option.label}</p>
+              <p className="font-semibold text-[#0F0F1A] text-sm">{option.label}</p>
               <p className="text-xs text-gray-500 mt-1">{option.price}</p>
               <p className="text-xs text-gray-400 mt-0.5">{option.description}</p>
             </motion.button>
@@ -62,3 +62,4 @@ export function PriceRangeStep({ range, onRangeChange }: PriceRangeStepProps) {
 }
 
 export default PriceRangeStep;
+

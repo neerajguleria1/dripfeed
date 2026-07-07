@@ -13,7 +13,7 @@ export interface SaveButtonProps {
   className?: string;
 }
 
-const blushPink = '#F2C4CD';
+const blushPink = '#C9A96E';
 
 const dripVariants = {
   initial: { y: -8, opacity: 0, scale: 0.4 },
@@ -114,7 +114,7 @@ export function SaveButton({
             <Heart
               className={[
                 'w-5 h-5 transition-colors duration-200',
-                state === 'saved' ? 'fill-[#F2C4CD] text-[#F2C4CD]' : 'text-gray-400',
+                state === 'saved' ? 'fill-[#C9A96E] text-[#C9A96E]' : 'text-gray-400',
               ].join(' ')}
             />
           </motion.div>
@@ -125,3 +125,4 @@ export function SaveButton({
 }
 
 export default SaveButton;
+

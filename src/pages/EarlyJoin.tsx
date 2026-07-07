@@ -106,7 +106,7 @@ export default function EarlyJoin() {
   }, { scope: pageRef, dependencies: [submitted] });
 
   return (
-    <div ref={pageRef} className="text-[#051F45] flex flex-col relative overflow-hidden">
+    <div ref={pageRef} className="text-[#0F0F1A] flex flex-col relative overflow-hidden">
       {/* Content */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-24">
         <div ref={heroRef} className="w-full max-w-4xl">
@@ -115,25 +115,25 @@ export default function EarlyJoin() {
             <div ref={successRef} className="text-center max-w-lg mx-auto">
               <div
                 ref={checkmarkRef}
-                className="w-16 h-16 rounded-full bg-[#F2C4CD]/10 flex items-center justify-center mx-auto mb-6"
+                className="w-16 h-16 rounded-full bg-[#C9A96E]/10 flex items-center justify-center mx-auto mb-6"
               >
-                <Check className="w-7 h-7 text-[#051F45]" />
+                <Check className="w-7 h-7 text-[#0F0F1A]" />
               </div>
 
               {/* Decorative rings */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-32 h-32 rounded-full border border-[#F2C4CD]/5 animate-ping" style={{ animationDuration: '3s' }} />
+                <div className="w-32 h-32 rounded-full border border-[#C9A96E]/5 animate-ping" style={{ animationDuration: '3s' }} />
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-medium tracking-[-0.04em] leading-[0.9] mb-3 text-[#051F45]">
+              <h1 className="text-3xl sm:text-4xl font-medium tracking-[-0.04em] leading-[0.9] mb-3 text-[#0F0F1A]">
                 You're on the List
               </h1>
-              <p className="text-[#051F45] text-sm sm:text-base max-w-sm mx-auto">
+              <p className="text-[#0F0F1A] text-sm sm:text-base max-w-sm mx-auto">
                 Thanks for your interest. We'll keep you posted on the launch and send early access details straight to your inbox.
               </p>
               <button
                 onClick={() => document.getElementById('home')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center gap-2 mt-8 bg-[#F2C4CD] text-black rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-300 hover:gap-3 cursor-pointer"
+                className="inline-flex items-center gap-2 mt-8 bg-[#C9A96E] text-black rounded-full px-5 py-2.5 text-sm font-medium transition-all duration-300 hover:gap-3 cursor-pointer"
               >
                 Back Home
                 <ArrowRight className="w-4 h-4" />
@@ -144,13 +144,13 @@ export default function EarlyJoin() {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 items-start">
               {/* Perks - left side */}
               <div ref={perksRef} className="lg:col-span-2 pt-2">
-                <span className="inline-block px-3 py-1 rounded-full border border-[#051F45]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#051F45] mb-4">
+                <span className="inline-block px-3 py-1 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A] mb-4">
                   Why Join Early?
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-medium tracking-[-0.03em] leading-[1.1] mb-4 text-[#051F45]">
+                <h2 className="text-2xl sm:text-3xl font-medium tracking-[-0.03em] leading-[1.1] mb-4 text-[#0F0F1A]">
                   Be the First to Experience DripFeed
                 </h2>
-                <p className="text-[#051F45] text-sm leading-relaxed mb-6">
+                <p className="text-[#0F0F1A] text-sm leading-relaxed mb-6">
                   Early joiners get exclusive access, special perks, and a direct line to shape the product.
                 </p>
                 <div className="space-y-4">
@@ -161,10 +161,10 @@ export default function EarlyJoin() {
                         key={p.text}
                         className="perk-item flex items-start gap-3"
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#F2C4CD]/10 border border-[#F2C4CD]/15 shrink-0 mt-0.5">
-                          <Icon className="w-4 h-4 text-[#051F45]" />
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#C9A96E]/10 border border-[#C9A96E]/15 shrink-0 mt-0.5">
+                          <Icon className="w-4 h-4 text-[#0F0F1A]" />
                         </div>
-                        <p className="text-[#051F45] text-sm">{p.text}</p>
+                        <p className="text-[#0F0F1A] text-sm">{p.text}</p>
                       </div>
                     );
                   })}
@@ -173,19 +173,19 @@ export default function EarlyJoin() {
 
               {/* Form - right side */}
               <div ref={formRef} className="lg:col-span-3">
-                <div className="rounded-2xl border border-[#051F45]/10 bg-white/40 backdrop-blur-sm p-6 md:p-8 relative">
+                <div className="rounded-2xl border border-[#0F0F1A]/10 bg-white/40 backdrop-blur-sm p-6 md:p-8 relative">
                   {/* Top accent */}
-                  <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#F2C4CD]/20 to-transparent" />
+                  <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/20 to-transparent" />
 
                   <div className="text-center mb-6">
-                    <h3 className="text-lg font-bold text-[#051F45]">Join the Waitlist</h3>
-                    <p className="text-[#051F45] text-xs mt-1">Drop your details and we'll reach out.</p>
+                    <h3 className="text-lg font-bold text-[#0F0F1A]">Join the Waitlist</h3>
+                    <p className="text-[#0F0F1A] text-xs mt-1">Drop your details and we'll reach out.</p>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Name */}
                     <div>
-                      <label htmlFor="name" className="block text-[11px] font-mono tracking-wider text-[#051F45] uppercase mb-1.5">
+                      <label htmlFor="name" className="block text-[11px] font-mono tracking-wider text-[#0F0F1A] uppercase mb-1.5">
                         Name
                       </label>
                       <input
@@ -196,13 +196,13 @@ export default function EarlyJoin() {
                         value={form.name}
                         onChange={handleChange}
                         placeholder="Your full name"
-                        className="w-full bg-white/80 border border-[#051F45]/20 rounded-xl px-4 py-3 text-sm text-[#051F45] placeholder:text-[#051F45]/40 outline-none focus:border-[#F2C4CD]/50 focus:bg-white transition-all duration-300"
+                        className="w-full bg-white/80 border border-[#0F0F1A]/20 rounded-xl px-4 py-3 text-sm text-[#0F0F1A] placeholder:text-[#0F0F1A]/40 outline-none focus:border-[#C9A96E]/50 focus:bg-white transition-all duration-300"
                       />
                     </div>
 
                     {/* Email */}
                     <div>
-                      <label htmlFor="email" className="block text-[11px] font-mono tracking-wider text-[#051F45] uppercase mb-1.5">
+                      <label htmlFor="email" className="block text-[11px] font-mono tracking-wider text-[#0F0F1A] uppercase mb-1.5">
                         Email
                       </label>
                       <input
@@ -213,17 +213,17 @@ export default function EarlyJoin() {
                         value={form.email}
                         onChange={handleChange}
                         placeholder="you@example.com"
-                        className="w-full bg-white/80 border border-[#051F45]/20 rounded-xl px-4 py-3 text-sm text-[#051F45] placeholder:text-[#051F45]/40 outline-none focus:border-[#F2C4CD]/50 focus:bg-white transition-all duration-300"
+                        className="w-full bg-white/80 border border-[#0F0F1A]/20 rounded-xl px-4 py-3 text-sm text-[#0F0F1A] placeholder:text-[#0F0F1A]/40 outline-none focus:border-[#C9A96E]/50 focus:bg-white transition-all duration-300"
                       />
                     </div>
 
                     {/* Phone */}
                     <div>
-                      <label htmlFor="phone" className="block text-[11px] font-mono tracking-wider text-[#051F45] uppercase mb-1.5">
+                      <label htmlFor="phone" className="block text-[11px] font-mono tracking-wider text-[#0F0F1A] uppercase mb-1.5">
                         Phone Number
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#051F45] text-sm font-mono pointer-events-none">+91</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0F0F1A] text-sm font-mono pointer-events-none">+91</span>
                         <input
                           id="phone"
                           name="phone"
@@ -232,14 +232,14 @@ export default function EarlyJoin() {
                           value={form.phone}
                           onChange={handleChange}
                           placeholder="98765 43210"
-                          className="w-full bg-white/80 border border-[#051F45]/20 rounded-xl pl-12 pr-4 py-3 text-sm text-[#051F45] placeholder:text-[#051F45]/40 outline-none focus:border-[#F2C4CD]/50 focus:bg-white transition-all duration-300"
+                          className="w-full bg-white/80 border border-[#0F0F1A]/20 rounded-xl pl-12 pr-4 py-3 text-sm text-[#0F0F1A] placeholder:text-[#0F0F1A]/40 outline-none focus:border-[#C9A96E]/50 focus:bg-white transition-all duration-300"
                         />
                       </div>
                     </div>
 
                     {/* Review / Feedback */}
                     <div>
-                      <label htmlFor="review" className="block text-[11px] font-mono tracking-wider text-[#051F45] uppercase mb-1.5">
+                      <label htmlFor="review" className="block text-[11px] font-mono tracking-wider text-[#0F0F1A] uppercase mb-1.5">
                         Review / Feedback
                       </label>
                       <textarea
@@ -249,7 +249,7 @@ export default function EarlyJoin() {
                         value={form.review}
                         onChange={handleChange}
                         placeholder="What features would you like to see? Any feedback?"
-                        className="w-full bg-white/80 border border-[#051F45]/20 rounded-xl px-4 py-3 text-sm text-[#051F45] placeholder:text-[#051F45]/40 outline-none focus:border-[#F2C4CD]/50 focus:bg-white transition-all duration-300 resize-none"
+                        className="w-full bg-white/80 border border-[#0F0F1A]/20 rounded-xl px-4 py-3 text-sm text-[#0F0F1A] placeholder:text-[#0F0F1A]/40 outline-none focus:border-[#C9A96E]/50 focus:bg-white transition-all duration-300 resize-none"
                       />
                     </div>
 
@@ -262,7 +262,7 @@ export default function EarlyJoin() {
                     <button
                       type="submit"
                       disabled={sending}
-                      className="w-full group inline-flex items-center justify-center gap-2 bg-[#F2C4CD] text-black rounded-full px-5 py-3 text-sm font-bold transition-all duration-300 hover:gap-3 hover:scale-[1.02] active:scale-[0.98] cursor-pointer mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full group inline-flex items-center justify-center gap-2 bg-[#C9A96E] text-black rounded-full px-5 py-3 text-sm font-bold transition-all duration-300 hover:gap-3 hover:scale-[1.02] active:scale-[0.98] cursor-pointer mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {sending ? (
                         <>
@@ -286,3 +286,5 @@ export default function EarlyJoin() {
     </div>
   );
 }
+
+

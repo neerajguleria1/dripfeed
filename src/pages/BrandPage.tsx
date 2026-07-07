@@ -61,11 +61,11 @@ export default function BrandPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Brand header */}
         <div className="bg-gradient-to-br from-[#F8F5F2] to-white rounded-2xl p-8 mb-8">
-          <h1 className="text-3xl font-bold text-[#051F45]">{brandName}</h1>
+          <h1 className="text-3xl font-bold text-[#0F0F1A]">{brandName}</h1>
           <p className="text-sm text-gray-500 mt-2">Compare prices across 7+ platforms</p>
           <div className="flex gap-4 mt-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#051F45]">{products.length}</p>
+              <p className="text-2xl font-bold text-[#0F0F1A]">{products.length}</p>
               <p className="text-xs text-gray-400">Products</p>
             </div>
             {avgDiscount > 0 && (
@@ -84,7 +84,7 @@ export default function BrandPage() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortOption)}
-              className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#051F45]/20"
+              className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -102,7 +102,7 @@ export default function BrandPage() {
         ) : sortedProducts.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">🏷️</p>
-            <p className="font-medium text-[#051F45]">No products found for {brandName}</p>
+            <p className="font-medium text-[#0F0F1A]">No products found for {brandName}</p>
             <p className="text-sm mt-1">Try searching for this brand on the search page.</p>
           </div>
         ) : (
@@ -118,9 +118,9 @@ export default function BrandPage() {
                       <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-2xl">🛍️</div>
                     )}
                     <div className="p-3">
-                      <p className="text-sm font-medium text-[#051F45] line-clamp-2 mb-1">{product.title}</p>
+                      <p className="text-sm font-medium text-[#0F0F1A] line-clamp-2 mb-1">{product.title}</p>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold text-[#051F45]">{formatINR(product.price)}</span>
+                        <span className="text-sm font-bold text-[#0F0F1A]">{formatINR(product.price)}</span>
                         {product.originalPrice && product.originalPrice > product.price && (
                           <span className="text-xs text-gray-400 line-through">{formatINR(product.originalPrice)}</span>
                         )}
@@ -140,3 +140,4 @@ export default function BrandPage() {
     </>
   );
 }
+

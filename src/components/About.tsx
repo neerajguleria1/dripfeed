@@ -43,10 +43,10 @@ export default function About() {
 
   return (
     <section className="px-4 py-16 md:py-24">
-      <div ref={ref} className="rounded-2xl md:rounded-[2rem] p-8 md:p-16 max-w-6xl mx-auto text-center border border-[#051F45]/10 bg-white/40 backdrop-blur-sm">
+      <div ref={ref} className="rounded-2xl md:rounded-[2rem] p-8 md:p-16 max-w-6xl mx-auto text-center border border-[#0F0F1A]/10 bg-white/40 backdrop-blur-sm">
         <h2
           ref={headingRef}
-          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl max-w-5xl mx-auto leading-[0.95] sm:leading-[0.9] text-[#051F45]"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl max-w-5xl mx-auto leading-[0.95] sm:leading-[0.9] text-[#0F0F1A]"
         >
           <span className="inline">Meet DripFeed</span>
           <br />
@@ -59,8 +59,8 @@ export default function About() {
       {/* Explore Categories */}
       <div className="max-w-6xl mx-auto mt-20">
         <div className="text-center mb-10">
-          <span className="text-[#051F45] text-[10px] font-mono tracking-[0.2em] uppercase">Browse By</span>
-          <h3 className="text-2xl sm:text-3xl md:text-4xl font-medium tracking-[-0.03em] text-[#051F45] mt-2">Explore Categories</h3>
+          <span className="text-[#0F0F1A] text-[10px] font-mono tracking-[0.2em] uppercase">Browse By</span>
+          <h3 className="text-2xl sm:text-3xl md:text-4xl font-medium tracking-[-0.03em] text-[#0F0F1A] mt-2">Explore Categories</h3>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 auto-rows-[180px] md:auto-rows-[200px]">
@@ -80,7 +80,7 @@ export default function About() {
           ].map((cat) => (
             <div
               key={cat.name}
-              className={`group relative rounded-xl md:rounded-2xl overflow-hidden cursor-pointer border border-[#051F45]/10 ${cat.class}`}
+              className={`group relative rounded-xl md:rounded-2xl overflow-hidden cursor-pointer border border-[#0F0F1A]/10 ${cat.class}`}
             >
               <img
                 src={cat.image}
@@ -99,7 +99,7 @@ export default function About() {
 
       {/* For Brands */}
       <div className="max-w-6xl mx-auto mt-16">
-        <div className="rounded-2xl md:rounded-[2rem] overflow-hidden border border-[#051F45]/10 bg-white/40 backdrop-blur-sm grid grid-cols-1 md:grid-cols-2 min-h-[400px]">
+        <div className="rounded-2xl md:rounded-[2rem] overflow-hidden border border-[#0F0F1A]/10 bg-white/40 backdrop-blur-sm grid grid-cols-1 md:grid-cols-2 min-h-[400px]">
           {/* Image */}
           <div className="relative h-64 md:h-auto">
             <img
@@ -111,16 +111,16 @@ export default function About() {
           </div>
           {/* Content */}
           <div className="flex flex-col justify-center p-8 md:p-12 lg:p-16">
-            <span className="text-[#051F45] text-xs font-mono font-bold tracking-[0.2em] uppercase mb-4">For Brands</span>
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-[-0.02em] text-[#051F45] mb-4">
+            <span className="text-[#0F0F1A] text-xs font-mono font-bold tracking-[0.2em] uppercase mb-4">For Brands</span>
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif leading-[1.1] tracking-[-0.02em] text-[#0F0F1A] mb-4">
               Reach shoppers at the moment of purchase intent
             </h3>
-            <p className="text-[#051F45] text-sm sm:text-base leading-relaxed mb-8 max-w-md">
+            <p className="text-[#0F0F1A] text-sm sm:text-base leading-relaxed mb-8 max-w-md">
               Put your products where shoppers are actively searching — in trending feeds, exclusive deals, and curated collections that convert.
             </p>
             <button
               onClick={() => navigate('/brands')}
-              className="inline-flex items-center gap-2 text-[#051F45] text-sm font-medium border-b border-[#051F45]/30 pb-0.5 w-fit hover:border-[#051F45]/60 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 text-[#0F0F1A] text-sm font-medium border-b border-[#0F0F1A]/30 pb-0.5 w-fit hover:border-[#0F0F1A]/60 transition-colors cursor-pointer"
             >
               Learn more
               <ArrowRight className="w-4 h-4" />
@@ -132,7 +132,7 @@ export default function About() {
       {/* Save Your Favorite Finds */}
       <div className="max-w-7xl mx-auto mt-24 px-4">
         <div className="text-center mb-16">
-          <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] tracking-[-0.04em] text-[#051F45] mb-6 leading-[0.9]">
+          <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] tracking-[-0.04em] text-[#0F0F1A] mb-6 leading-[0.9]">
             Save your <span className="font-serif italic">favorite</span> finds.
           </h2>
           <p className="text-black text-sm sm:text-base max-w-lg mx-auto">
@@ -151,8 +151,8 @@ export default function About() {
                 <img src="https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=400&q=80&fit=crop&sat=-100" alt="" className="w-full aspect-square object-cover rounded-2xl" />
               </div>
               <div className="px-2 pb-1">
-                <p className="text-[#051F45] font-semibold text-sm">Fall faves 🍂</p>
-                <p className="text-[#051F45]/40 text-xs">44 items</p>
+                <p className="text-[#0F0F1A] font-semibold text-sm">Fall faves 🍂</p>
+                <p className="text-[#0F0F1A]/40 text-xs">44 items</p>
               </div>
             </div>
           </div>
@@ -167,8 +167,8 @@ export default function About() {
                 <img src="https://images.unsplash.com/photo-1544441893-675973e31985?w=400&h=400&q=80&fit=crop&sat=-100" alt="" className="w-full aspect-square object-cover rounded-2xl" />
               </div>
               <div className="px-2 pb-1">
-                <p className="text-[#051F45] font-semibold text-sm">Winter layers ❄️</p>
-                <p className="text-[#051F45]/40 text-xs">23 items</p>
+                <p className="text-[#0F0F1A] font-semibold text-sm">Winter layers ❄️</p>
+                <p className="text-[#0F0F1A]/40 text-xs">23 items</p>
               </div>
             </div>
           </div>
@@ -183,8 +183,8 @@ export default function About() {
                 <img src="https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=400&h=400&q=80&fit=crop&sat=-100" alt="" className="w-full aspect-square object-cover rounded-2xl" />
               </div>
               <div className="px-2 pb-1">
-                <p className="text-[#051F45] font-semibold text-sm">Holiday wishlist 🎄</p>
-                <p className="text-[#051F45]/40 text-xs">104 items</p>
+                <p className="text-[#0F0F1A] font-semibold text-sm">Holiday wishlist 🎄</p>
+                <p className="text-[#0F0F1A]/40 text-xs">104 items</p>
               </div>
             </div>
           </div>
@@ -199,8 +199,8 @@ export default function About() {
                 <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=400&q=80&fit=crop&sat=-100" alt="" className="w-full aspect-square object-cover rounded-2xl" />
               </div>
               <div className="px-2 pb-1">
-                <p className="text-[#051F45] font-semibold text-sm">Going out ✨</p>
-                <p className="text-[#051F45]/40 text-xs">96 items</p>
+                <p className="text-[#0F0F1A] font-semibold text-sm">Going out ✨</p>
+                <p className="text-[#0F0F1A]/40 text-xs">96 items</p>
               </div>
             </div>
           </div>
@@ -209,3 +209,4 @@ export default function About() {
     </section>
   );
 }
+

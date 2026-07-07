@@ -35,7 +35,7 @@ export function BrandStep({ selected, onSelect }: BrandStepProps) {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-[#051F45] mb-2">Your favourite brands</h3>
+      <h3 className="text-lg font-semibold text-[#0F0F1A] mb-2">Your favourite brands</h3>
       <p className="text-sm text-gray-500 mb-6">Pick brands you love — we'll prioritise them</p>
 
       <motion.div
@@ -55,8 +55,8 @@ export function BrandStep({ selected, onSelect }: BrandStepProps) {
               className={[
                 'px-3 py-2.5 rounded-lg text-sm font-medium border-2 transition-all duration-200 text-center',
                 isSelected
-                  ? 'bg-[#051F45] text-white border-[#051F45]'
-                  : 'bg-white text-[#051F45] border-gray-200 hover:border-gray-300',
+                  ? 'bg-[#0F0F1A] text-white border-[#0F0F1A]'
+                  : 'bg-white text-[#0F0F1A] border-gray-200 hover:border-gray-300',
               ].join(' ')}
             >
               {brand}
@@ -69,3 +69,4 @@ export function BrandStep({ selected, onSelect }: BrandStepProps) {
 }
 
 export default BrandStep;
+

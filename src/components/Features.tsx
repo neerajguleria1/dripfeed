@@ -60,7 +60,7 @@ function FeatureCard({ index, children }: FeatureCardProps) {
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="group rounded-2xl md:rounded-[2rem] overflow-hidden border border-[#051F45]/10 hover:border-[#051F45]/15 transition-[border-color] duration-500"
+      className="group rounded-2xl md:rounded-[2rem] overflow-hidden border border-[#0F0F1A]/10 hover:border-[#0F0F1A]/15 transition-[border-color] duration-500"
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
       {children}
@@ -77,34 +77,34 @@ interface ChecklistCardProps {
 
 function ChecklistCard({ title, number, iconUrl, items }: ChecklistCardProps) {
   return (
-    <div className="bg-white/40 backdrop-blur-sm border border-[#051F45]/10 h-full p-5 md:p-6 flex flex-col relative overflow-hidden rounded-2xl md:rounded-[2rem]">
+    <div className="bg-white/40 backdrop-blur-sm border border-[#0F0F1A]/10 h-full p-5 md:p-6 flex flex-col relative overflow-hidden rounded-2xl md:rounded-[2rem]">
       {/* Subtle top accent */}
-      <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#F2C4CD]/20 to-transparent" />
+      <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/20 to-transparent" />
 
       {/* Icon with ring */}
       <div className="relative mb-4" style={{ transform: 'translateZ(20px)' }}>
-        <div className="absolute inset-0 rounded-full bg-[#F2C4CD]/5 blur-sm" />
+        <div className="absolute inset-0 rounded-full bg-[#C9A96E]/5 blur-sm" />
         <img
           src={iconUrl}
           alt=""
-          className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full border border-[#051F45]/10 object-cover"
+          className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full border border-[#0F0F1A]/10 object-cover"
         />
       </div>
 
       {/* Title + Number */}
       <div className="flex items-baseline justify-between gap-2 mb-3" style={{ transform: 'translateZ(15px)' }}>
-        <h3 className="text-base font-semibold text-[#051F45]">{title}</h3>
-        <span className="shrink-0 text-[10px] font-mono text-[#051F45]/15 tracking-wider">{number}</span>
+        <h3 className="text-base font-semibold text-[#0F0F1A]">{title}</h3>
+        <span className="shrink-0 text-[10px] font-mono text-[#0F0F1A]/15 tracking-wider">{number}</span>
       </div>
 
       {/* List */}
       <ul className="space-y-2.5 flex-1" style={{ transform: 'translateZ(10px)' }}>
         {items.map((item) => (
-          <li key={item} className="flex items-start gap-2.5 text-[#051F45] text-xs sm:text-sm leading-relaxed">
-            <span className="flex items-center justify-center w-4 h-4 mt-0.5 shrink-0 rounded-full bg-[#F2C4CD]/10">
-              <Check className="w-2.5 h-2.5 text-[#051F45]" />
+          <li key={item} className="flex items-start gap-2.5 text-[#0F0F1A] text-xs sm:text-sm leading-relaxed">
+            <span className="flex items-center justify-center w-4 h-4 mt-0.5 shrink-0 rounded-full bg-[#C9A96E]/10">
+              <Check className="w-2.5 h-2.5 text-[#0F0F1A]" />
             </span>
-            <span className="text-[#051F45] group-hover:text-[#051F45] transition-colors duration-300">{item}</span>
+            <span className="text-[#0F0F1A] group-hover:text-[#0F0F1A] transition-colors duration-300">{item}</span>
           </li>
         ))}
       </ul>
@@ -124,7 +124,7 @@ export default function Features() {
           <WordsPullUpMultiStyle
             segments={[
               { text: 'Smart shopping tools for the style-conscious Indian shopper.', className: '' },
-              { text: 'Compare. Track. Save. Simplified.', className: 'text-[#051F45]' },
+              { text: 'Compare. Track. Save. Simplified.', className: 'text-[#0F0F1A]' },
             ]}
             className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-normal"
           />
@@ -134,7 +134,7 @@ export default function Features() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-2 md:gap-1 lg:h-[480px]" style={{ perspective: '1000px' }}>
           {/* Card 1 — Video */}
           <FeatureCard index={0}>
-            <div className="relative h-full min-h-[200px] lg:min-h-0 bg-[#051F45]/10 overflow-hidden group/video">
+            <div className="relative h-full min-h-[200px] lg:min-h-0 bg-[#0F0F1A]/10 overflow-hidden group/video">
               <video
                 autoPlay
                 loop
@@ -154,10 +154,10 @@ export default function Features() {
 
               {/* Badge */}
               <div className="absolute bottom-4 left-4 z-10" style={{ transform: 'translateZ(30px)' }}>
-                <span className="inline-block px-3 py-1 rounded-full bg-black/10 backdrop-blur-md border border-white/10 text-[10px] font-medium text-[#051F45] tracking-wide uppercase">
+                <span className="inline-block px-3 py-1 rounded-full bg-black/10 backdrop-blur-md border border-white/10 text-[10px] font-medium text-[#0F0F1A] tracking-wide uppercase">
                   Price Tracker
                 </span>
-                <p className="text-xs text-[#051F45] mt-1.5 ml-0.5">Your personal price tracker.</p>
+                <p className="text-xs text-[#0F0F1A] mt-1.5 ml-0.5">Your personal price tracker.</p>
               </div>
             </div>
           </FeatureCard>
@@ -211,3 +211,5 @@ export default function Features() {
     </section>
   );
 }
+
+

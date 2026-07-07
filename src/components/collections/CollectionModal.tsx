@@ -64,7 +64,7 @@ export function CollectionModal({ open, onClose, product }: CollectionModalProps
         {/* Save button */}
         <button
           onClick={handleSave}
-          className="w-full bg-[#051F45] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#051F45]/90 transition-colors"
+          className="w-full bg-[#0F0F1A] text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-[#0F0F1A]/90 transition-colors"
         >
           Save to Wishlist
         </button>
@@ -74,3 +74,4 @@ export function CollectionModal({ open, onClose, product }: CollectionModalProps
 }
 
 export default CollectionModal;
+

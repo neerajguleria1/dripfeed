@@ -80,7 +80,7 @@ export default function CategoryPage() {
         {/* Hero */}
         <div className="bg-gradient-to-br from-[#F8F5F2] to-white rounded-2xl p-8 mb-8">
           <span className="text-4xl mb-3 block">{meta.emoji}</span>
-          <h1 className="text-3xl font-bold text-[#051F45]">{categoryName}</h1>
+          <h1 className="text-3xl font-bold text-[#0F0F1A]">{categoryName}</h1>
           <p className="text-sm text-gray-500 mt-2 max-w-md">{meta.description}</p>
         </div>
 
@@ -90,7 +90,7 @@ export default function CategoryPage() {
             <button
               onClick={() => setSubFilter(null)}
               className={['px-4 py-2 rounded-full text-sm font-medium border whitespace-nowrap transition-colors',
-                !subFilter ? 'bg-[#051F45] text-white border-[#051F45]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                !subFilter ? 'bg-[#0F0F1A] text-white border-[#0F0F1A]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               ].join(' ')}
             >
               All
@@ -100,7 +100,7 @@ export default function CategoryPage() {
                 key={sub}
                 onClick={() => setSubFilter(sub)}
                 className={['px-4 py-2 rounded-full text-sm font-medium border whitespace-nowrap transition-colors',
-                  subFilter === sub ? 'bg-[#051F45] text-white border-[#051F45]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                  subFilter === sub ? 'bg-[#0F0F1A] text-white border-[#0F0F1A]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                 ].join(' ')}
               >
                 {sub}
@@ -118,7 +118,7 @@ export default function CategoryPage() {
             {/* Trending carousel */}
             {trendingProducts.length > 0 && (
               <section className="mb-8">
-                <h2 className="text-lg font-semibold text-[#051F45] mb-4">Trending in {categoryName}</h2>
+                <h2 className="text-lg font-semibold text-[#0F0F1A] mb-4">Trending in {categoryName}</h2>
                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                   {trendingProducts.map((product, idx) => (
                     <div key={idx} className="flex-shrink-0 w-44">
@@ -129,8 +129,8 @@ export default function CategoryPage() {
                           <div className="w-full h-36 bg-gray-100 flex items-center justify-center text-2xl">🛍️</div>
                         )}
                         <div className="p-2">
-                          <p className="text-xs font-medium text-[#051F45] line-clamp-2">{product.title}</p>
-                          <p className="text-xs font-bold text-[#051F45] mt-1">{formatINR(product.price)}</p>
+                          <p className="text-xs font-medium text-[#0F0F1A] line-clamp-2">{product.title}</p>
+                          <p className="text-xs font-bold text-[#0F0F1A] mt-1">{formatINR(product.price)}</p>
                         </div>
                       </Card>
                     </div>
@@ -142,7 +142,7 @@ export default function CategoryPage() {
             {/* Best deals */}
             {bestDeals.length > 0 && (
               <section className="mb-8">
-                <h2 className="text-lg font-semibold text-[#051F45] mb-4">Best Deals</h2>
+                <h2 className="text-lg font-semibold text-[#0F0F1A] mb-4">Best Deals</h2>
                 <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={staggerChildren} initial="hidden" animate="visible">
                   {bestDeals.map((product, idx) => {
                     const pct = discountPercent(product.originalPrice || product.price, product.price);
@@ -156,9 +156,9 @@ export default function CategoryPage() {
                           )}
                           <div className="p-3">
                             {product.brand && <p className="text-xs text-gray-400 uppercase">{product.brand}</p>}
-                            <p className="text-sm font-medium text-[#051F45] line-clamp-2 mb-1">{product.title}</p>
+                            <p className="text-sm font-medium text-[#0F0F1A] line-clamp-2 mb-1">{product.title}</p>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-[#051F45]">{formatINR(product.price)}</span>
+                              <span className="text-sm font-bold text-[#0F0F1A]">{formatINR(product.price)}</span>
                               {pct && <Badge variant="discount" size="sm">-{pct}%</Badge>}
                             </div>
                           </div>
@@ -172,7 +172,7 @@ export default function CategoryPage() {
 
             {/* All products */}
             <section>
-              <h2 className="text-lg font-semibold text-[#051F45] mb-4">All Products</h2>
+              <h2 className="text-lg font-semibold text-[#0F0F1A] mb-4">All Products</h2>
               <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={staggerChildren} initial="hidden" animate="visible">
                 {products.map((product, idx) => (
                   <motion.div key={idx} variants={staggerItem}>
@@ -184,9 +184,9 @@ export default function CategoryPage() {
                       )}
                       <div className="p-3">
                         {product.brand && <p className="text-xs text-gray-400 uppercase">{product.brand}</p>}
-                        <p className="text-sm font-medium text-[#051F45] line-clamp-2 mb-1">{product.title}</p>
+                        <p className="text-sm font-medium text-[#0F0F1A] line-clamp-2 mb-1">{product.title}</p>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-[#051F45]">{formatINR(product.price)}</span>
+                          <span className="text-sm font-bold text-[#0F0F1A]">{formatINR(product.price)}</span>
                           <Badge size="sm">{product.platform}</Badge>
                         </div>
                       </div>
@@ -204,3 +204,4 @@ export default function CategoryPage() {
     </>
   );
 }
+

@@ -39,7 +39,7 @@ export default function AIRecommendation({ productTitle, platforms }: Props) {
     <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl p-5 mt-6">
       <div className="flex items-center gap-2 mb-3">
         <Sparkles className="w-5 h-5 text-purple-600" />
-        <h3 className="font-semibold text-[#051F45] text-sm">AI Shopping Advisor</h3>
+        <h3 className="font-semibold text-[#0F0F1A] text-sm">AI Shopping Advisor</h3>
       </div>
 
       {data.summary && (
@@ -48,7 +48,7 @@ export default function AIRecommendation({ productTitle, platforms }: Props) {
 
       {data.recommendation && (
         <div className="bg-white/70 rounded-xl p-3 mb-3 border border-purple-100">
-          <p className="text-sm font-medium text-[#051F45]">💡 {data.recommendation}</p>
+          <p className="text-sm font-medium text-[#0F0F1A]">💡 {data.recommendation}</p>
         </div>
       )}
 
@@ -81,3 +81,4 @@ export default function AIRecommendation({ productTitle, platforms }: Props) {
     </div>
   );
 }
+

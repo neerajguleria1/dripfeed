@@ -24,9 +24,9 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
   }, { scope: contentRef });
 
   return (
-    <div className="min-h-screen text-[#051F45] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen text-[#0F0F1A] flex flex-col relative overflow-hidden">
       {/* Background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-b from-white/70 via-[#F2C4CD]/80 to-[#F2C4CD]" />
+      <div className="fixed inset-0 bg-gradient-to-b from-white/70 via-[#C9A96E]/80 to-[#C9A96E]" />
       <div className="noise-overlay" />
 
       {/* Top bar with back */}
@@ -34,12 +34,12 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-[#051F45]/60 hover:text-[#051F45] transition-colors text-sm"
+            className="inline-flex items-center gap-2 text-[#0F0F1A]/60 hover:text-[#0F0F1A] transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <Link to="/" className="text-[#051F45]/40 text-xs hover:text-[#051F45]/70 transition-colors">
+          <Link to="/" className="text-[#0F0F1A]/40 text-xs hover:text-[#0F0F1A]/70 transition-colors">
             DripFeed
           </Link>
         </div>
@@ -48,11 +48,11 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
       {/* Content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 text-center">
         <div ref={contentRef}>
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[-0.05em] leading-[0.85] mb-4 text-[#051F45]">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-[-0.05em] leading-[0.85] mb-4 text-[#0F0F1A]">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-[#051F45]/50 text-sm sm:text-base max-w-md mt-2">
+            <p className="text-[#0F0F1A]/50 text-sm sm:text-base max-w-md mt-2">
               {subtitle}
             </p>
           )}
@@ -61,9 +61,11 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
       </div>
 
       {/* Footer hint */}
-      <div className="relative z-10 text-center pb-6 text-[#051F45]/20 text-xs">
+      <div className="relative z-10 text-center pb-6 text-[#0F0F1A]/20 text-xs">
         DripFeed — AI Fashion Companion
       </div>
     </div>
   );
 }
+
+

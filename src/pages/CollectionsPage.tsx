@@ -135,14 +135,14 @@ export default function CollectionsPage() {
             <>
               <button
                 onClick={() => setActiveCollection(null)}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#051F45] mb-4 transition-colors"
+                className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#0F0F1A] mb-4 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to collections
               </button>
 
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold text-[#051F45]">{activeCollection.title}</h1>
+                  <h1 className="text-2xl font-bold text-[#0F0F1A]">{activeCollection.title}</h1>
                   {activeCollection.description && (
                     <p className="text-sm text-gray-500 mt-1">{activeCollection.description}</p>
                   )}
@@ -174,9 +174,9 @@ export default function CollectionsPage() {
                         )}
                         <div className="p-3">
                           {product.brand && <p className="text-xs text-gray-400 uppercase mb-0.5">{product.brand}</p>}
-                          <p className="text-sm font-medium text-[#051F45] line-clamp-2 mb-1">{product.productTitle}</p>
+                          <p className="text-sm font-medium text-[#0F0F1A] line-clamp-2 mb-1">{product.productTitle}</p>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-[#051F45]">{formatINR(product.price)}</span>
+                            <span className="text-sm font-bold text-[#0F0F1A]">{formatINR(product.price)}</span>
                             <Badge size="sm">{product.platform}</Badge>
                           </div>
                           {product.url && (
@@ -208,7 +208,7 @@ export default function CollectionsPage() {
       <SEOHead title="Collections" description="Your curated fashion collections" />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-[#051F45]">Collections</h1>
+          <h1 className="text-2xl font-bold text-[#0F0F1A]">Collections</h1>
           <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(!showCreate)}>
             Create
           </Button>
@@ -223,7 +223,7 @@ export default function CollectionsPage() {
               maxLength={50}
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20"
             />
             <input
               type="text"
@@ -231,7 +231,7 @@ export default function CollectionsPage() {
               maxLength={200}
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20"
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={handleCreate} loading={creating}>Save</Button>
@@ -247,7 +247,7 @@ export default function CollectionsPage() {
         ) : collections.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">📚</p>
-            <p className="font-medium text-[#051F45]">No collections yet</p>
+            <p className="font-medium text-[#0F0F1A]">No collections yet</p>
             <p className="text-sm mt-1">Create a collection to organise your favourite finds.</p>
           </div>
         ) : (
@@ -277,12 +277,12 @@ export default function CollectionsPage() {
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="font-semibold text-[#051F45] text-sm truncate">{collection.title}</p>
+                    <p className="font-semibold text-[#0F0F1A] text-sm truncate">{collection.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{collection.productCount} items</p>
                     <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleShare(collection); }}
-                        className="text-xs text-gray-400 hover:text-[#051F45] flex items-center gap-1"
+                        className="text-xs text-gray-400 hover:text-[#0F0F1A] flex items-center gap-1"
                       >
                         <Share2 className="w-3 h-3" /> Share
                       </button>
@@ -303,3 +303,4 @@ export default function CollectionsPage() {
     </>
   );
 }
+
