@@ -92,14 +92,14 @@ export default function SiteNav() {
       className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 pt-3 sm:pt-4"
     >
       <div className="flex items-center justify-between max-w-7xl mx-auto gap-3">
-        {/* Logo — consistent across pages */}
+        {/* Logo — white for dark hero backgrounds */}
         <button
           onClick={() => navigate('/')}
           className="flex-shrink-0 font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden"
           style={{ fontFamily: 'Instrument Serif, serif' }}
         >
-          <span className="text-[#0F0F1A]">Drip</span>
-          <span style={{ color: '#C9A96E' }}>Feed</span>
+          <span className="text-white">Drip</span>
+          <span className="text-[#C9A96E]">Feed</span>
         </button>
 
         {/* Center nav links - hidden on mobile */}
@@ -114,7 +114,7 @@ export default function SiteNav() {
               onClick={() => handleNav(item)}
               className={`whitespace-nowrap px-3 py-2 font-medium transition-all duration-300 ease-out no-underline cursor-pointer ${
                 scrolled ? 'text-xs' : 'text-sm'
-              } text-[#0F0F1A] hover:text-[#0F0F1A]/80`}
+              } text-white hover:text-white/80`}
             >
               {item.label}
             </button>
@@ -125,7 +125,7 @@ export default function SiteNav() {
         <div className="flex items-center gap-2">
           {/* Search bar - desktop */}
           <form onSubmit={handleSearch} className="relative hidden sm:block">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0F0F1A]/40" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -141,7 +141,7 @@ export default function SiteNav() {
             onClick={() => navigate('/search')}
             className="sm:hidden p-2 rounded-full bg-white/55 backdrop-blur-sm border border-neutral-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
-            <Search className="w-4 h-4 text-[#0F0F1A]" />
+            <Search className="w-4 h-4 text-white" />
           </button>
 
           {/* Auth section */}
@@ -257,5 +257,6 @@ export default function SiteNav() {
     </nav>
   );
 }
+
 
 
