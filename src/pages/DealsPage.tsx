@@ -74,7 +74,7 @@ function PriceSparkline({ drop }: { drop: number }) {
     >
       <polyline
         points={points}
-        stroke="#C08A3E"
+        stroke="#C9A96E"
         strokeWidth="1.2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -91,7 +91,7 @@ function PriceSparkline({ drop }: { drop: number }) {
 
 function DealCardSkeleton() {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] animate-pulse">
+    <div className="bg-white rounded-xl p-5 border border-neutral-100 animate-pulse">
       <div className="flex gap-4">
         <div className="w-[88px] h-[88px] bg-neutral-100 rounded-xl flex-shrink-0" />
         <div className="flex-1 space-y-2.5">
@@ -122,10 +122,10 @@ function DealCard({ deal, index }: { deal: Deal; index: number }) {
       transition={{ duration: 0.35, delay: index * 0.03, ease: [0.4, 0, 0.2, 1] }}
       className={[
         'group flex flex-col bg-white rounded-xl overflow-hidden',
-        'shadow-[0_1px_4px_rgba(0,0,0,0.04)]',
+        'border border-neutral-100 hover:border-[#C9A96E]/30',
         'hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_12px_24px_-8px_rgba(0,0,0,0.08)]',
-        'transition-shadow duration-300',
-        recent ? 'border-l-2 border-[#C08A3E]' : '',
+        'transition-all duration-300',
+        recent ? 'border-l-2 border-l-[#C9A96E]' : '',
       ].join(' ')}
     >
       <div className="p-5">
@@ -150,25 +150,25 @@ function DealCard({ deal, index }: { deal: Deal; index: number }) {
           <div className="flex-1 min-w-0">
             {/* Brand */}
             {deal.brand && (
-              <p className="text-[13px] sm:text-[11px] uppercase tracking-[0.08em] text-neutral-500 font-medium mb-1">
+              <p className="text-[13px] sm:text-[11px] uppercase tracking-[0.06em] text-neutral-500 font-medium mb-1">
                 {deal.brand}
               </p>
             )}
 
             {/* Title */}
-            <h3 className="text-[14px] sm:text-[15px] font-medium text-neutral-900 leading-snug line-clamp-2 mb-2.5">
+            <h3 className="text-[14px] sm:text-[15px] font-medium text-[#0F0F1A] leading-snug line-clamp-2 mb-2.5">
               {deal.title}
             </h3>
 
             {/* Price block */}
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-[16px] sm:text-[18px] font-semibold text-neutral-900 tabular-nums">
+              <span className="text-[16px] sm:text-[18px] font-serif font-bold text-[#0F0F1A] tabular-nums">
                 {formatINR(deal.currentPrice)}
               </span>
               <span className="text-[13px] text-neutral-400 line-through tabular-nums">
                 {formatINR(deal.originalPrice)}
               </span>
-              <span className="text-[13px] font-medium text-neutral-600">
+              <span className="inline-flex items-center bg-emerald-50 text-emerald-700 text-[12px] font-medium px-2 py-0.5 rounded-full">
                 {deal.dropPercent}% off
               </span>
               <PriceSparkline drop={deal.dropPercent} />
@@ -187,7 +187,7 @@ function DealCard({ deal, index }: { deal: Deal; index: number }) {
 
           {/* Scarcity copy — only on recent deals */}
           {recent && (
-            <span className="text-[13px] sm:text-[12px] text-neutral-500">
+            <span className="text-[13px] sm:text-[12px] text-[#C9A96E] font-medium">
               Limited availability
             </span>
           )}
@@ -252,14 +252,14 @@ export default function DealsPage() {
       />
 
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
-      <section className="pt-6 pb-6 sm:pt-10 sm:pb-10 bg-white border-b border-neutral-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="pb-6 sm:pb-10 bg-white border-b border-neutral-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
           >
-            <h1 className="text-[22px] font-semibold text-neutral-900 tracking-[-0.01em]">
+            <h1 className="text-[22px] font-bold text-[#0F0F1A] tracking-[-0.01em]">
               Price Drops
             </h1>
             <p className="text-[14px] text-neutral-500 mt-1.5">
@@ -281,8 +281,8 @@ export default function DealsPage() {
                 className={[
                   'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 flex-shrink-0',
                   platformFilter === platform
-                    ? 'bg-neutral-900 text-white shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
-                    : 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300 hover:text-neutral-900',
+                    ? 'bg-[#C9A96E] text-white shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
+                    : 'bg-white text-neutral-600 border border-neutral-200 hover:border-[#C9A96E]/30 hover:text-[#0F0F1A]',
                 ].join(' ')}
               >
                 {platform}
@@ -304,8 +304,8 @@ export default function DealsPage() {
                 className={[
                   'px-3.5 py-2 sm:py-1.5 rounded-full text-[13px] sm:text-[12px] font-medium transition-all duration-200 min-h-[44px] sm:min-h-0 flex-shrink-0',
                   minDiscount === disc
-                    ? 'bg-neutral-900 text-white'
-                    : 'bg-white text-neutral-500 border border-neutral-200 hover:border-neutral-300 hover:text-neutral-700',
+                    ? 'bg-[#C9A96E] text-white'
+                    : 'bg-white text-neutral-500 border border-neutral-200 hover:border-[#C9A96E]/30 hover:text-neutral-700',
                 ].join(' ')}
               >
                 {disc === 0 ? 'Any discount' : `${disc}%+ off`}
@@ -333,7 +333,7 @@ export default function DealsPage() {
               className="max-w-md mx-auto text-center py-20"
             >
               <TrendingDown className="w-7 h-7 text-neutral-300 mx-auto mb-5" />
-              <h2 className="text-[18px] font-medium text-neutral-900 mb-2 tracking-[-0.01em]">
+              <h2 className="text-[18px] font-medium text-[#0F0F1A] mb-2 tracking-[-0.01em]">
                 No matching price drops
               </h2>
               <p className="text-[14px] text-neutral-500 leading-relaxed mb-8">
@@ -342,13 +342,13 @@ export default function DealsPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
                   onClick={() => { setPlatformFilter('All'); setMinDiscount(0); }}
-                  className="inline-flex items-center gap-2 bg-neutral-900 text-white font-medium px-6 py-2.5 rounded-full text-[13px] hover:bg-neutral-800 transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#C9A96E] text-white font-medium px-6 py-2.5 rounded-full text-[13px] hover:bg-[#B8964F] transition-colors min-h-[44px]"
                 >
                   Clear filters
                 </button>
                 <button
                   onClick={() => navigate('/search')}
-                  className="inline-flex items-center gap-2 bg-white text-neutral-600 font-medium px-6 py-2.5 rounded-full text-[13px] border border-neutral-200 hover:border-neutral-300 transition-colors"
+                  className="inline-flex items-center gap-2 bg-white text-neutral-600 font-medium px-6 py-2.5 rounded-full text-[13px] border border-neutral-200 hover:border-[#C9A96E]/30 transition-colors min-h-[44px]"
                 >
                   Search products <ArrowRight className="w-3.5 h-3.5" />
                 </button>
@@ -391,19 +391,19 @@ export default function DealsPage() {
           <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
             <button
               onClick={() => navigate('/privacy')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Privacy
             </button>
             <button
               onClick={() => navigate('/terms')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Terms
             </button>
             <button
               onClick={() => navigate('/affiliate-disclosure')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Affiliate Disclosure
             </button>
