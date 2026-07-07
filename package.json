@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@react-oauth/google": "^0.12.2",
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",

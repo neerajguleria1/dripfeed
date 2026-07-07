@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../components/common/Logo';
+import GoogleAuthButton from '../components/common/GoogleAuthButton';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -70,6 +71,14 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-neutral-200" />
+          <span className="text-[12px] text-neutral-400">OR</span>
+          <div className="flex-1 h-px bg-neutral-200" />
+        </div>
+
+        <GoogleAuthButton onError={setError} />
 
         <p className="text-center text-sm text-neutral-500 mt-5">
           Don't have an account?{' '}

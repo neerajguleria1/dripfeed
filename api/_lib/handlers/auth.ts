@@ -14,11 +14,11 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 async function google(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { token } = req.body || {};
-  if (!token) return res.status(400).json({ error: 'Google token required' });
+  const { idToken } = req.body || {};
+  if (!idToken) return res.status(400).json({ error: 'Google token required' });
 
   try {
-    const ticket = await client.verifyIdToken({ idToken: token, audience: process.env.GOOGLE_CLIENT_ID });
+    const ticket = await client.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
     const { sub: googleId, email, name } = ticket.getPayload()!;
 
     await connectDB();
