@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, Link2, BarChart3, ShoppingBag, TrendingUp, ArrowRight, Zap } from 'lucide-react';
+import { Search, BarChart3, ShoppingBag, TrendingUp, ArrowRight, Zap } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import { SearchBar } from '../components/search/SearchBar';
 import SiteNav from '../components/SiteNav';
-import api from '../services/api';
 import type { ProductData, DealData } from '../types/product';
 import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
 
@@ -61,7 +60,6 @@ export default function HomePage() {
   const [deals, setDeals] = useState<DealData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [urlQuery, setUrlQuery] = useState('');
   const [comparisonCount, setComparisonCount] = useState(12847);
 
   // Animated counter
@@ -72,51 +70,27 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Existing data fetching logic
+  // Use MOCK_PRODUCTS directly for deals (API generates fake repeated titles)
   useEffect(() => {
     setLoading(true);
-    api
-      .post('/search/product', { query: 'trending fashion' })
-      .then((r) => {
-        const fetched: ProductData[] = (r.data.products || []).slice(0, 12);
-        setProducts(fetched.length > 0 ? fetched : MOCK_PRODUCTS);
-
-        const source = fetched.length > 0 ? fetched : MOCK_PRODUCTS;
-        const withDiscount = source
-          .map((p) => ({
-            ...p,
-            discount:
-              p.discount ||
-              (p.originalPrice && p.originalPrice > p.price
-                ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
-                : 0),
-          }))
-          .filter((p) => p.discount > 0)
-          .sort((a, b) => b.discount - a.discount)
-          .slice(0, 6);
-        setDeals(withDiscount as DealData[]);
-      })
-      .catch(() => {
-        setProducts(MOCK_PRODUCTS);
-        const mockDeals = MOCK_PRODUCTS
-          .filter((p) => (p.discount ?? 0) > 0)
-          .sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0))
-          .slice(0, 6);
-        setDeals(mockDeals as DealData[]);
-      })
-      .finally(() => setLoading(false));
+    setProducts(MOCK_PRODUCTS);
+    const mockDeals = MOCK_PRODUCTS
+      .filter((p) => (p.discount ?? 0) > 0)
+      .sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0))
+      .slice(0, 6);
+    setDeals(mockDeals as DealData[]);
+    setLoading(false);
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = searchQuery.trim();
-    if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
-  };
-
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = urlQuery.trim();
-    if (trimmed) navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
+    if (!trimmed) return;
+    if (trimmed.startsWith('http')) {
+      navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
+    } else {
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    }
   };
 
   return (
@@ -148,60 +122,48 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-            className="text-[14px] sm:text-[16px] text-[#E5E7EB] mb-8 sm:mb-10 max-w-xl mx-auto leading-relaxed"
+            className="text-[15px] sm:text-[17px] text-[#E5E7EB] mb-8 sm:mb-10 max-w-md mx-auto leading-relaxed"
           >
-            Compare prices across Myntra, Ajio, Amazon, Flipkart & more — in one search
+            Compare prices across 7+ platforms instantly
           </motion.p>
 
-          {/* Two inputs */}
+          {/* Single smart search input */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-            className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto"
+            className="max-w-xl mx-auto"
           >
-            {/* Search Input */}
-            <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+            <form onSubmit={handleSearchSubmit} className="relative">
               <div className="flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl h-[52px] px-4 focus-within:border-[#C9A96E] focus-within:ring-2 focus-within:ring-[#C9A96E]/20 transition-all">
                 <Search className="w-5 h-5 text-[#E5E7EB] shrink-0" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search any product..."
-                  aria-label="Search products"
-                  className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400 text-[14px] sm:text-[15px] ml-3 min-h-[44px]"
-                />
-              </div>
-            </form>
-
-            {/* URL Input */}
-            <form onSubmit={handleUrlSubmit} className="flex-1 relative">
-              <div className="flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl h-[52px] px-4 focus-within:border-[#C9A96E] focus-within:ring-2 focus-within:ring-[#C9A96E]/20 transition-all">
-                <Link2 className="w-5 h-5 text-[#E5E7EB] shrink-0" />
-                <input
-                  type="text"
-                  value={urlQuery}
-                  onChange={(e) => setUrlQuery(e.target.value)}
-                  placeholder="Or paste a product URL to compare..."
-                  aria-label="Paste product URL"
+                  placeholder="Search 'kurta set' or paste a Myntra/Amazon URL..."
+                  aria-label="Search products or paste URL"
                   className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400 text-[14px] sm:text-[15px] ml-3 min-h-[44px]"
                 />
               </div>
             </form>
           </motion.div>
 
-          {/* Platform logos strip */}
+          {/* Platform clickable buttons */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="mt-8 flex items-center justify-center gap-4 sm:gap-6 flex-wrap"
+            className="mt-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap"
           >
             {PLATFORMS.map((name) => (
-              <span key={name} className="text-[11px] sm:text-[12px] text-gray-500 font-medium tracking-wide uppercase">
+              <button
+                key={name}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(name + ' fashion')}`)}
+                className="bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[11px] text-white/70 hover:bg-white/20 hover:text-white cursor-pointer transition-colors"
+              >
                 {name}
-              </span>
+              </button>
             ))}
           </motion.div>
 
@@ -236,7 +198,7 @@ export default function HomePage() {
               { step: 2, icon: BarChart3, title: 'Compare Prices Instantly', desc: 'See prices across 7+ platforms side by side in seconds.' },
               { step: 3, icon: ShoppingBag, title: 'Buy at the Lowest Price', desc: 'Click through to the cheapest store and save real money.' },
             ].map(({ step, icon: Icon, title, desc }) => (
-              <motion.div key={step} variants={fadeUp} className="text-center">
+              <motion.div key={step} variants={fadeUp} className="bg-white rounded-2xl p-6 sm:p-8 border border-neutral-100 text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#C9A96E]/10 text-[#C9A96E] text-[14px] font-bold mb-4">
                   {step}
                 </div>
@@ -309,7 +271,7 @@ export default function HomePage() {
                       loading="lazy"
                     />
                     {deal.discount > 0 && (
-                      <span className="absolute top-2 left-2 bg-[#22C55E] text-white text-[11px] font-bold px-2 py-0.5 rounded-md">
+                      <span className="absolute top-3 left-3 bg-[#22C55E] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
                         -{deal.discount}%
                       </span>
                     )}

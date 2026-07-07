@@ -150,7 +150,7 @@ export default function SiteNav() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={`flex items-center gap-1.5 rounded-full bg-[#C9A96E] text-white font-medium transition-all min-h-[44px] ${
+                className={`flex items-center gap-1.5 rounded-full bg-white/15 text-white border border-white/30 font-medium transition-all min-h-[44px] ${
                   scrolled ? 'px-3 py-1.5 text-xs' : 'px-3 sm:px-4 py-2 text-sm'
                 }`}
               >
