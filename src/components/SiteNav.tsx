@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, User, Heart, LogOut, ChevronDown } from 'lucide-react';
+import { Search, User, Heart, LogOut, ChevronDown, Trash2 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -16,6 +17,7 @@ export default function SiteNav() {
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -70,6 +72,18 @@ export default function SiteNav() {
     logout();
     setDropdownOpen(false);
     navigate('/');
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await api.delete('/auth/delete-account');
+      logout();
+      setDropdownOpen(false);
+      setConfirmDelete(false);
+      navigate('/');
+    } catch {
+      alert('Failed to delete account. Please try again.');
+    }
   };
 
   return (
@@ -186,7 +200,7 @@ export default function SiteNav() {
                     </Link>
                   </div>
 
-                  {/* Logout */}
+                  {/* Logout & Delete */}
                   <div className="border-t border-neutral-100 py-1.5">
                     <button
                       onClick={handleLogout}
@@ -195,6 +209,33 @@ export default function SiteNav() {
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </button>
+                    {!confirmDelete ? (
+                      <button
+                        onClick={() => setConfirmDelete(true)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Account
+                      </button>
+                    ) : (
+                      <div className="px-4 py-2.5">
+                        <p className="text-[12px] text-red-600 mb-2">This will permanently delete your account, wishlists, and collections. This cannot be undone.</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleDeleteAccount}
+                            className="px-3 py-1.5 bg-red-600 text-white text-[12px] font-medium rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Yes, Delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(false)}
+                            className="px-3 py-1.5 border border-neutral-200 text-neutral-600 text-[12px] font-medium rounded-lg hover:bg-neutral-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

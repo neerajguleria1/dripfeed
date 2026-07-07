@@ -7,6 +7,7 @@ import ScrollToTop from './components/ScrollToTop';
 import PersistentBg from './components/PersistentBg';
 import AppHeader from './components/AppHeader';
 import BottomNav from './components/layout/BottomNav';
+import { CookieConsent } from './components/common/CookieConsent';
 
 // Marketing pages (existing)
 import HomePage from './pages/HomePage';
@@ -86,6 +87,7 @@ function App() {
 
         <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />
       </Routes>
+      <CookieConsent />
       <BottomNav />
       </ToastProvider>
       </PreferencesProvider>

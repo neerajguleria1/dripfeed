@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import { connectDB } from '../db.js';
 import { User } from '../models/User.js';
+import { UserPreferences } from '../models/UserPreferences.js';
+import { WishlistItem } from '../models/WishlistItem.js';
+import Collection from '../models/Collection.js';
 import { signToken, signRefreshToken, verifyToken, getUserFromRequest } from '../auth.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -115,6 +118,31 @@ async function register(req: VercelRequest, res: VercelResponse) {
   res.status(201).json({ accessToken, refreshToken, user: { id: user._id, email: user.email, name: user.name, role: user.role } });
 }
 
+async function deleteAccount(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
+
+  const payload = getUserFromRequest(req);
+  if (!payload) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    await connectDB();
+    const userId = payload.userId;
+
+    // Delete all user data in parallel
+    await Promise.all([
+      User.findByIdAndDelete(userId),
+      UserPreferences.deleteMany({ userId }),
+      WishlistItem.deleteMany({ userId }),
+      Collection.deleteMany({ userId }),
+    ]);
+
+    res.json({ success: true, message: 'Account deleted' });
+  } catch (e: any) {
+    console.error('Delete account error:', e);
+    res.status(500).json({ error: 'Failed to delete account', message: e.message || 'Internal error' });
+  }
+}
+
 export async function handleAuth(req: VercelRequest, res: VercelResponse, subpath: string) {
   switch (subpath) {
     case 'google': return google(req, res);
@@ -122,6 +150,7 @@ export async function handleAuth(req: VercelRequest, res: VercelResponse, subpat
     case 'me': return me(req, res);
     case 'refresh': return refresh(req, res);
     case 'register': return register(req, res);
+    case 'delete-account': return deleteAccount(req, res);
     default: return res.status(404).json({ error: 'Not found' });
   }
 }
