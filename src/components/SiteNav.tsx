@@ -90,25 +90,23 @@ export default function SiteNav() {
   return (
     <nav
       ref={navRef}
-      className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 pt-3 sm:pt-4"
+      className={`fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 transition-all duration-300 ease-out ${
+        scrolled ? 'py-2.5 bg-[#0F0F1A]/95 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.25)]' : 'pt-3 sm:pt-4'
+      }`}
     >
       <div className="flex items-center justify-between max-w-7xl mx-auto gap-3">
         {/* Logo — light variant for dark hero backgrounds */}
         <Logo variant="light" size="md" />
 
         {/* Center nav links - hidden on mobile, no bubble, direct on dark bg */}
-        <div
-          className={`hidden md:flex items-center transition-all duration-300 ease-out ${
-            scrolled ? 'gap-1' : 'gap-1'
-          }`}
-        >
+        <div className="hidden md:flex items-center gap-1">
           {navItems.map((item) => (
             <button
               key={item.label}
               onClick={() => handleNav(item)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full font-medium transition-all duration-200 ease-out no-underline cursor-pointer ${
+              className={`whitespace-nowrap px-4 py-2 rounded-full font-semibold transition-all duration-200 ease-out no-underline cursor-pointer ${
                 scrolled ? 'text-xs' : 'text-sm'
-              } text-white/90 hover:text-white hover:bg-white/10`}
+              } text-white hover:text-[#C9A96E] hover:bg-white/10`}
             >
               {item.label}
             </button>
@@ -117,26 +115,28 @@ export default function SiteNav() {
 
         {/* Right side: Search + Auth */}
         <div className="flex items-center gap-2">
-          {/* Search bar - desktop */}
-          <form onSubmit={handleSearch} className="relative hidden sm:block">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
-              className={`pl-8 pr-3 rounded-full border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/50 focus:border-[#C9A96E] placeholder:text-white/50 transition-all ${
-                scrolled ? 'py-1.5 text-xs w-36' : 'py-2 text-sm w-44'
-              }`}
-            />
-          </form>
+          {/* Search bar - desktop. Hidden until scrolled past the hero, which already has its own primary search field. */}
+          {scrolled && (
+            <form onSubmit={handleSearch} className="relative hidden sm:block">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="pl-8 pr-3 rounded-full border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/50 focus:border-[#C9A96E] placeholder:text-white/50 transition-all py-1.5 text-xs w-36"
+              />
+            </form>
+          )}
 
-          {/* Mobile search icon */}
-          <button
-            onClick={() => navigate('/search')}
-            className="sm:hidden p-2 rounded-full bg-white/10 border border-white/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
-          >
-            <Search className="w-4 h-4 text-white" />
-          </button>
+          {/* Mobile search icon - same rule, hidden until scrolled */}
+          {scrolled && (
+            <button
+              onClick={() => navigate('/search')}
+              className="sm:hidden p-2 rounded-full bg-white/10 border border-white/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <Search className="w-4 h-4 text-white" />
+            </button>
+          )}
 
           {/* Auth section */}
           {user ? (
