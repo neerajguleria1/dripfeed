@@ -48,9 +48,8 @@ export default function AppHeader() {
             </>
           ) : (
             <>
-              <Link to="/login" className="text-sm text-[#051F45]/70 hover:text-[#051F45]">Login</Link>
-              <Link to="/register" className="bg-[#051F45] text-white text-sm px-4 py-2 rounded-full hover:bg-[#051F45]/90 transition-colors">
-                Sign Up
+              <Link to="/login" className="bg-[#051F45] text-white text-sm px-4 py-2 rounded-full hover:bg-[#051F45]/90 transition-colors">
+                Sign In
               </Link>
             </>
           )}
@@ -82,8 +81,7 @@ export default function AppHeader() {
             </div>
           ) : (
             <div className="flex gap-4 text-sm">
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="text-[#051F45]">Login</Link>
-              <Link to="/register" onClick={() => setMenuOpen(false)} className="text-[#051F45] font-semibold">Sign Up</Link>
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-[#051F45] text-white px-4 py-2 rounded-full">Sign In</Link>
             </div>
           )}
         </div>
