@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, User, Heart, LogOut, ChevronDown, Trash2 } from 'lucide-react';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Logo from './common/Logo';
@@ -42,17 +40,6 @@ export default function SiteNav() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [dropdownOpen]);
-
-  useGSAP(() => {
-    gsap.from(navRef.current, {
-      filter: 'blur(10px)',
-      opacity: 0,
-      y: 20,
-      duration: 0.6,
-      ease: 'power2.out',
-      delay: 0.1,
-    });
-  }, { scope: navRef });
 
   const handleNav = (item: typeof navItems[0]) => {
     if (item.path === '/') {
