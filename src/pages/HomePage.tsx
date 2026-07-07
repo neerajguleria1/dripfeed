@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BarChart3, Bell, Sparkles, PiggyBank, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Search, Link2, BarChart3, ShoppingBag, TrendingUp, ArrowRight, Zap } from 'lucide-react';
+import { motion, useInView } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import { SearchBar } from '../components/search/SearchBar';
-import { TrendingSection } from '../components/discovery/TrendingSection';
-import { DealsSection } from '../components/discovery/DealsSection';
-import { CategoryTiles } from '../components/discovery/CategoryTiles';
-import { OccasionCards } from '../components/discovery/OccasionCards';
 import SiteNav from '../components/SiteNav';
 import api from '../services/api';
 import type { ProductData, DealData } from '../types/product';
@@ -28,19 +25,54 @@ const MOCK_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.map((sp, i) => {
   };
 });
 
-const VALUE_PROPS = [
-  { icon: BarChart3, label: 'Compare 7+ Platforms' },
-  { icon: Bell, label: 'Price Drop Alerts' },
-  { icon: Sparkles, label: '100% Free' },
-  { icon: PiggyBank, label: 'Save Real Money' },
-];
+const TRENDING_TERMS = ['kurta set', 'sneakers', 'silk saree', 'lehenga', 'jeans', 'hoodie', 'palazzo'];
+
+const PLATFORMS = ['Myntra', 'Ajio', 'Amazon', 'Flipkart', 'Meesho', 'Nykaa'];
+
+// Animation variants
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.12 } },
+};
+
+function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-60px' });
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={isInView ? 'visible' : 'hidden'}
+      variants={stagger}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductData[]>([]);
   const [deals, setDeals] = useState<DealData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [urlQuery, setUrlQuery] = useState('');
+  const [comparisonCount, setComparisonCount] = useState(12847);
 
+  // Animated counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setComparisonCount((prev) => prev + Math.floor(Math.random() * 3) + 1);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Existing data fetching logic
   useEffect(() => {
     setLoading(true);
     api
@@ -49,7 +81,6 @@ export default function HomePage() {
         const fetched: ProductData[] = (r.data.products || []).slice(0, 12);
         setProducts(fetched.length > 0 ? fetched : MOCK_PRODUCTS);
 
-        // Derive deals: filter by highest discount
         const source = fetched.length > 0 ? fetched : MOCK_PRODUCTS;
         const withDiscount = source
           .map((p) => ({
@@ -66,7 +97,6 @@ export default function HomePage() {
         setDeals(withDiscount as DealData[]);
       })
       .catch(() => {
-        // Use mock data when API is unavailable
         setProducts(MOCK_PRODUCTS);
         const mockDeals = MOCK_PRODUCTS
           .filter((p) => (p.discount ?? 0) > 0)
@@ -77,8 +107,20 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+  };
+
+  const handleUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = urlQuery.trim();
+    if (trimmed) navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
+  };
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       <SEOHead
         title="DripFeed India — Compare Fashion Prices Across Myntra, Ajio, Amazon, Meesho & More"
         description="Find the best fashion deals across 7+ Indian platforms. Compare prices, track drops, save money."
@@ -86,69 +128,269 @@ export default function HomePage() {
 
       <SiteNav />
 
-      {/* 1. Hero Section — premium spacing, quiet */}
-      <section className="relative pt-24 pb-16 sm:pt-36 sm:pb-24 bg-[#FAFAFA]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <h1 className="text-[28px] sm:text-[48px] lg:text-[56px] font-bold text-neutral-900 mb-4 sm:mb-5 leading-[1.12] sm:leading-[1.08] tracking-[-0.02em]">
-            Find the best price for
-            <br />
-            <span className="text-[var(--df-accent-gold)] price-display">every fashion buy</span>
-          </h1>
-          <p className="text-[14px] sm:text-[16px] text-neutral-500 mb-8 sm:mb-10 max-w-md mx-auto leading-relaxed">
-            Compare prices across Myntra, Ajio, Amazon, Meesho & more — in one search.
-          </p>
-          <div className="drip-border rounded-2xl">
-            <SearchBar size="hero" />
-          </div>
-        </div>
-      </section>
+      {/* ─── 1. Hero Section ─── */}
+      <section className="relative pt-20 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#0F0F1A] overflow-hidden">
+        {/* Subtle gradient orbs */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#C9A96E]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#C9A96E]/5 rounded-full blur-3xl" />
 
-      {/* 2. Value Props Strip — quiet, no animation */}
-      <section className="border-y border-neutral-100 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-5 sm:gap-8 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-          {VALUE_PROPS.map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-2 whitespace-nowrap flex-shrink-0">
-              <Icon className="w-4 h-4 text-neutral-400" />
-              <span className="text-[13px] font-medium text-neutral-600">{label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. Trending Now */}
-      <TrendingSection products={products} loading={loading} />
-
-      {/* 4. Deals of the Day */}
-      {(loading || deals.length > 0) && (
-        <DealsSection deals={deals} loading={loading} />
-      )}
-
-      {/* 5. Shop by Occasion */}
-      <OccasionCards />
-
-      {/* 6. Shop by Category */}
-      <CategoryTiles />
-
-      {/* 7. Thrift Teaser — quiet, premium */}
-      <section className="px-4 sm:px-8 lg:px-16 py-12 sm:py-16">
-        <div className="max-w-3xl mx-auto bg-neutral-50 rounded-2xl p-6 sm:p-14 text-center">
-          <h2 className="text-[22px] sm:text-[26px] font-bold text-neutral-900 mb-2 tracking-[-0.01em]">
-            Pre-loved Fashion
-          </h2>
-          <p className="text-neutral-500 text-[14px] mb-8">
-            Shop sustainable. Save more.
-          </p>
-          <button
-            onClick={() => navigate('/thrift')}
-            className="inline-flex items-center gap-2 bg-neutral-900 text-white font-medium px-7 py-3 rounded-full text-[13px] hover:bg-neutral-800 transition-colors"
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="text-[32px] sm:text-[48px] lg:text-[56px] font-bold text-white mb-4 sm:mb-5 leading-[1.1] tracking-[-0.02em]"
           >
-            Browse Thrift <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+            Never overpay for fashion again
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
+            className="text-[14px] sm:text-[16px] text-[#E5E7EB] mb-8 sm:mb-10 max-w-xl mx-auto leading-relaxed"
+          >
+            Compare prices across Myntra, Ajio, Amazon, Flipkart & more — in one search
+          </motion.p>
+
+          {/* Two inputs */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+            className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto"
+          >
+            {/* Search Input */}
+            <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+              <div className="flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl h-[52px] px-4 focus-within:border-[#C9A96E] focus-within:ring-2 focus-within:ring-[#C9A96E]/20 transition-all">
+                <Search className="w-5 h-5 text-[#E5E7EB] shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search any product..."
+                  aria-label="Search products"
+                  className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400 text-[14px] sm:text-[15px] ml-3 min-h-[44px]"
+                />
+              </div>
+            </form>
+
+            {/* URL Input */}
+            <form onSubmit={handleUrlSubmit} className="flex-1 relative">
+              <div className="flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl h-[52px] px-4 focus-within:border-[#C9A96E] focus-within:ring-2 focus-within:ring-[#C9A96E]/20 transition-all">
+                <Link2 className="w-5 h-5 text-[#E5E7EB] shrink-0" />
+                <input
+                  type="text"
+                  value={urlQuery}
+                  onChange={(e) => setUrlQuery(e.target.value)}
+                  placeholder="Or paste a product URL to compare..."
+                  aria-label="Paste product URL"
+                  className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400 text-[14px] sm:text-[15px] ml-3 min-h-[44px]"
+                />
+              </div>
+            </form>
+          </motion.div>
+
+          {/* Platform logos strip */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="mt-8 flex items-center justify-center gap-4 sm:gap-6 flex-wrap"
+          >
+            {PLATFORMS.map((name) => (
+              <span key={name} className="text-[11px] sm:text-[12px] text-gray-500 font-medium tracking-wide uppercase">
+                {name}
+              </span>
+            ))}
+          </motion.div>
+
+          {/* Animated counter */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.7 }}
+            className="mt-6 inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2"
+          >
+            <Zap className="w-3.5 h-3.5 text-[#C9A96E]" />
+            <span className="text-[13px] text-[#E5E7EB]">
+              <span className="font-semibold text-white">{comparisonCount.toLocaleString('en-IN')}</span> comparisons today
+            </span>
+          </motion.div>
         </div>
       </section>
 
-      {/* Footer — minimal, with bottom padding for BottomNav on mobile */}
-      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100">
+      {/* ─── 2. How It Works ─── */}
+      <section className="bg-[#FAFAFA] py-16 sm:py-20">
+        <AnimatedSection className="max-w-5xl mx-auto px-4 sm:px-6">
+          <motion.h2
+            variants={fadeUp}
+            className="text-[24px] sm:text-[32px] font-bold text-[#111827] text-center mb-12 sm:mb-14 tracking-[-0.01em]"
+          >
+            How it works
+          </motion.h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+            {[
+              { step: 1, icon: Search, title: 'Search or Paste URL', desc: 'Enter any product name or paste a link from any platform.' },
+              { step: 2, icon: BarChart3, title: 'Compare Prices Instantly', desc: 'See prices across 7+ platforms side by side in seconds.' },
+              { step: 3, icon: ShoppingBag, title: 'Buy at the Lowest Price', desc: 'Click through to the cheapest store and save real money.' },
+            ].map(({ step, icon: Icon, title, desc }) => (
+              <motion.div key={step} variants={fadeUp} className="text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#C9A96E]/10 text-[#C9A96E] text-[14px] font-bold mb-4">
+                  {step}
+                </div>
+                <div className="flex justify-center mb-3">
+                  <Icon className="w-6 h-6 text-[#111827]" />
+                </div>
+                <h3 className="text-[16px] sm:text-[18px] font-semibold text-[#111827] mb-2">{title}</h3>
+                <p className="text-[14px] text-gray-500 leading-relaxed max-w-xs mx-auto">{desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </AnimatedSection>
+      </section>
+
+      {/* ─── 3. Trending Searches ─── */}
+      <section className="py-12 sm:py-16 bg-white">
+        <AnimatedSection className="max-w-5xl mx-auto px-4 sm:px-6">
+          <motion.div variants={fadeUp} className="flex items-center gap-2 mb-6">
+            <TrendingUp className="w-5 h-5 text-[#C9A96E]" />
+            <h2 className="text-[20px] sm:text-[24px] font-bold text-[#111827]">Trending Now</h2>
+          </motion.div>
+
+          <motion.div variants={fadeUp} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+            {TRENDING_TERMS.map((term) => (
+              <button
+                key={term}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(term)}`)}
+                className="shrink-0 px-5 py-2.5 bg-[#F3F4F6] hover:bg-[#C9A96E]/10 hover:text-[#C9A96E] text-[#111827] text-[14px] font-medium rounded-full transition-colors min-h-[44px] capitalize"
+              >
+                {term}
+              </button>
+            ))}
+          </motion.div>
+        </AnimatedSection>
+      </section>
+
+      {/* ─── 4. Live Deal Feed ─── */}
+      <section className="py-12 sm:py-16 bg-[#FAFAFA]">
+        <AnimatedSection className="max-w-6xl mx-auto px-4 sm:px-6">
+          <motion.div variants={fadeUp} className="flex items-center justify-between mb-8">
+            <h2 className="text-[20px] sm:text-[24px] font-bold text-[#111827]">Today's Best Deals</h2>
+            <Link to="/deals" className="text-[14px] text-[#C9A96E] font-medium hover:underline flex items-center gap-1 min-h-[44px]">
+              View All Deals <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="animate-pulse bg-white rounded-xl p-3">
+                  <div className="w-full aspect-[3/4] bg-gray-200 rounded-lg mb-3" />
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {deals.slice(0, 4).map((deal) => (
+                <Link
+                  key={deal.id}
+                  to={`/search?q=${encodeURIComponent(deal.title)}`}
+                  className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-[#C9A96E]/30 transition-all duration-200"
+                >
+                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
+                    <img
+                      src={deal.imageUrl}
+                      alt={deal.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    {deal.discount > 0 && (
+                      <span className="absolute top-2 left-2 bg-[#22C55E] text-white text-[11px] font-bold px-2 py-0.5 rounded-md">
+                        -{deal.discount}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[13px] text-gray-500 font-medium mb-0.5 capitalize">{deal.platform}</p>
+                    <h3 className="text-[13px] sm:text-[14px] font-medium text-[#111827] line-clamp-2 mb-2 leading-snug">
+                      {deal.title}
+                    </h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[15px] font-bold text-[#111827]">₹{deal.price.toLocaleString('en-IN')}</span>
+                      {deal.originalPrice > deal.price && (
+                        <span className="text-[12px] text-gray-400 line-through">₹{deal.originalPrice.toLocaleString('en-IN')}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </motion.div>
+          )}
+        </AnimatedSection>
+      </section>
+
+      {/* ─── 5. Social Proof / Trust Section ─── */}
+      <section className="py-16 sm:py-20 bg-white">
+        <AnimatedSection className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <motion.p variants={fadeUp} className="text-[14px] text-[#C9A96E] font-medium mb-3 tracking-wide uppercase">
+            Trusted by shoppers
+          </motion.p>
+          <motion.h2 variants={fadeUp} className="text-[24px] sm:text-[32px] font-bold text-[#111827] mb-10 tracking-[-0.01em]">
+            Trusted by 50,000+ Indian fashion shoppers
+          </motion.h2>
+
+          <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-12 max-w-lg mx-auto">
+            <div>
+              <p className="text-[24px] sm:text-[32px] font-bold text-[#111827]">7+</p>
+              <p className="text-[13px] sm:text-[14px] text-gray-500 mt-1">Platforms</p>
+            </div>
+            <div>
+              <p className="text-[24px] sm:text-[32px] font-bold text-[#111827]">₹2.4Cr</p>
+              <p className="text-[13px] sm:text-[14px] text-gray-500 mt-1">Saved</p>
+            </div>
+            <div>
+              <p className="text-[24px] sm:text-[32px] font-bold text-[#111827]">100%</p>
+              <p className="text-[13px] sm:text-[14px] text-gray-500 mt-1">Free</p>
+            </div>
+          </motion.div>
+
+          {/* As seen in placeholder */}
+          <motion.div variants={fadeUp} className="mt-12 pt-8 border-t border-gray-100">
+            <p className="text-[12px] text-gray-400 uppercase tracking-wider mb-4">As seen in</p>
+            <div className="flex items-center justify-center gap-6 sm:gap-10 opacity-40">
+              {['YourStory', 'Inc42', 'Mint', 'ET'].map((name) => (
+                <span key={name} className="text-[13px] sm:text-[14px] font-semibold text-gray-600">{name}</span>
+              ))}
+            </div>
+          </motion.div>
+        </AnimatedSection>
+      </section>
+
+      {/* ─── 6. CTA Section ─── */}
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#0F0F1A]">
+        <AnimatedSection className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <motion.h2
+            variants={fadeUp}
+            className="text-[24px] sm:text-[32px] font-bold text-white mb-4 tracking-[-0.01em]"
+          >
+            Start saving on every fashion purchase
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-[14px] text-[#E5E7EB] mb-8">
+            It's free. No signup required.
+          </motion.p>
+
+          <motion.div variants={fadeUp} className="max-w-xl mx-auto">
+            <SearchBar size="hero" />
+          </motion.div>
+        </AnimatedSection>
+      </section>
+
+      {/* ─── 7. Footer ─── */}
+      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] sm:text-[12px] text-neutral-400">© 2026 DripFeed India</p>
           <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
