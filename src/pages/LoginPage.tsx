@@ -25,13 +25,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="bg-white/55 backdrop-blur-sm rounded-[2rem] border border-[#051F45]/10 shadow-lg p-8 w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#0F0F1A]">
+      <div className="bg-white rounded-2xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.25)] p-8 w-full max-w-sm border border-neutral-100">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-[#051F45]" style={{ fontFamily: 'Instrument Serif, serif' }}>
-            Drip<span style={{ color: '#F2C4CD' }}>Feed</span>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Instrument Serif, serif' }}>
+            <span className="text-[#0F0F1A]">Drip</span><span className="text-[#C9A96E]">Feed</span>
           </h1>
-          <p className="text-[#051F45]/60 text-sm mt-1">Sign in to your account</p>
+          <p className="text-neutral-500 text-sm mt-1">Sign in to your account</p>
         </div>
 
         {error && (
@@ -40,39 +40,39 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-[#051F45] mb-1">Email</label>
+            <label className="block text-sm font-medium text-[#0F0F1A] mb-1">Email</label>
             <input
               type="email"
               required
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full border border-[#051F45]/15 rounded-xl px-3 py-2.5 text-sm bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#051F45]/20"
+              className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:border-[#C9A96E] transition-all min-h-[44px]"
               placeholder="you@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#051F45] mb-1">Password</label>
+            <label className="block text-sm font-medium text-[#0F0F1A] mb-1">Password</label>
             <input
               type="password"
               required
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              className="w-full border border-[#051F45]/15 rounded-xl px-3 py-2.5 text-sm bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#051F45]/20"
+              className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-sm bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:border-[#C9A96E] transition-all min-h-[44px]"
               placeholder="••••••••"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="bg-[#051F45] text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-[#051F45]/90 disabled:opacity-60 transition-colors"
+            className="bg-[#C9A96E] text-white py-3 rounded-xl font-semibold text-sm hover:bg-[#B8964F] disabled:opacity-60 transition-colors min-h-[44px]"
           >
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-[#051F45]/60 mt-4">
+        <p className="text-center text-sm text-neutral-500 mt-5">
           Don't have an account?{' '}
-          <Link to="/register" className="text-[#051F45] font-semibold hover:underline">Sign up</Link>
+          <Link to="/register" className="text-[#C9A96E] font-semibold hover:underline">Create one</Link>
         </p>
       </div>
     </div>
