@@ -17,8 +17,8 @@ export default function AppHeader() {
   return (
     <header className="sticky top-0 z-40 liquid-glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
-        <Link to="/" className="flex-shrink-0 font-bold text-xl text-[#051F45] tracking-tight" style={{ fontFamily: 'Instrument Serif, serif' }}>
-          Drip<span style={{ color: '#F2C4CD' }}>Feed</span>
+        <Link to="/" className="flex-shrink-0 font-bold text-xl tracking-tight whitespace-nowrap overflow-hidden" style={{ fontFamily: 'Instrument Serif, serif' }}>
+          <span className="text-[#051F45]">Drip</span><span style={{ color: '#F2C4CD' }}>Feed</span>
         </Link>
 
         <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden sm:flex">
