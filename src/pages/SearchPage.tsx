@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, ArrowRight, TrendingUp } from 'lucide-react';
+import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
@@ -50,6 +50,17 @@ const SORT_OPTIONS: { value: FilterState['sort']; label: string }[] = [
   { value: 'newest', label: 'Newest First' },
   { value: 'platform', label: 'By Platform' },
 ];
+
+// Platform color mapping
+const PLATFORM_COLORS: Record<string, string> = {
+  myntra: '#ff3f6c',
+  ajio: '#000000',
+  amazon: '#ff9900',
+  flipkart: '#2874f0',
+  meesho: '#570741',
+  nykaa: '#fc2779',
+  tatacliq: '#6c3d9e',
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -105,10 +116,98 @@ const TRENDING_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.slice(0, 9).map((sp, 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Featured Product Card (lede — larger, no shadow, separated by whitespace)
+// Featured Product Card — Premium gold-accented lede card
 // ─────────────────────────────────────────────────────────────────────────────
 
 function FeaturedCard({ product }: { product: ProductData }) {
+  const savings = product.originalPrice && product.originalPrice > product.price
+    ? product.originalPrice - product.price
+    : 0;
+
+  return (
+    <motion.a
+      href={product.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+      className="group col-span-full flex flex-col md:flex-row gap-5 md:gap-8
+        bg-white rounded-2xl border border-neutral-100 overflow-hidden
+        hover:border-[#C9A96E]/30 hover:shadow-[0_8px_32px_-8px_rgba(201,169,110,0.12)]
+        transition-all duration-300 mb-8 md:mb-12 relative"
+    >
+      {/* Best Match badge */}
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5
+        bg-[#C9A96E] text-white text-[11px] font-semibold uppercase tracking-[0.06em]
+        px-3 py-1.5 rounded-full shadow-sm">
+        <Sparkles className="w-3 h-3" />
+        Best Match
+      </div>
+
+      {/* Image */}
+      <div className="w-full md:w-[320px] lg:w-[360px] flex-shrink-0 overflow-hidden bg-neutral-50">
+        <img
+          src={product.imageUrl}
+          alt={product.title}
+          className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          loading="eager"
+        />
+      </div>
+
+      {/* Details */}
+      <div className="flex flex-col justify-center p-5 md:p-8 md:py-10">
+        {/* Platform badge */}
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase()] || '#6b7280' }}
+          />
+          <span className="text-[12px] text-neutral-500 font-medium capitalize">
+            {product.platform}
+          </span>
+        </div>
+
+        <span className="text-[12px] uppercase tracking-[0.08em] text-neutral-400 font-medium">
+          {product.brand}
+        </span>
+        <h2 className="text-[20px] md:text-[26px] font-bold text-[#0F0F1A] leading-snug mt-2 mb-3 tracking-[-0.01em]">
+          {product.title}
+        </h2>
+
+        <div className="w-10 h-px bg-[#C9A96E]/40 my-3" />
+
+        <div className="flex items-baseline gap-3 mt-2">
+          <span className="text-[20px] md:text-[24px] font-bold text-[#0F0F1A] font-serif tabular-nums">
+            {formatPrice(product.price)}
+          </span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className="text-[14px] text-neutral-400 line-through tabular-nums">
+              {formatPrice(product.originalPrice)}
+            </span>
+          )}
+        </div>
+
+        {savings > 0 && (
+          <span className="inline-flex items-center gap-1 mt-3 text-[12px] font-semibold
+            text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full w-fit">
+            Save {formatPrice(savings)}
+          </span>
+        )}
+      </div>
+    </motion.a>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Standard Result Card — White card with subtle border, premium styling
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ResultCard({ product, index }: { product: ProductData; index: number }) {
+  const savings = product.originalPrice && product.originalPrice > product.price
+    ? product.originalPrice - product.price
+    : 0;
+
   return (
     <motion.a
       href={product.url}
@@ -116,130 +215,94 @@ function FeaturedCard({ product }: { product: ProductData }) {
       rel="noopener noreferrer"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="group col-span-full lg:col-span-2 flex flex-col sm:flex-row gap-5 sm:gap-8 pb-8 sm:pb-12 mb-8 sm:mb-12 border-b border-neutral-100"
+      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
+      className="group flex flex-col bg-white rounded-2xl overflow-hidden
+        border border-neutral-100 hover:border-[#C9A96E]/30
+        hover:shadow-[0_4px_20px_-4px_rgba(201,169,110,0.1)]
+        transition-all duration-300 min-h-[44px]"
     >
-      {/* Image — full width on mobile, fixed on larger */}
-      <div className="w-full sm:w-[320px] flex-shrink-0 overflow-hidden rounded-xl bg-neutral-50">
-        <img
-          src={product.imageUrl}
-          alt={product.title}
-          className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-          loading="eager"
-        />
-      </div>
-
-      {/* Details */}
-      <div className="flex flex-col justify-center py-2">
-        <span className="text-[13px] sm:text-[11px] uppercase tracking-[0.08em] text-neutral-500 font-medium">
-          {product.brand}
-        </span>
-        <h2 className="text-[18px] sm:text-[24px] font-medium text-neutral-900 leading-snug mt-2 mb-1 tracking-[-0.01em]">
-          {product.title}
-        </h2>
-        {/* Hand-crafted thin rule */}
-        <div className="w-12 h-px bg-neutral-200 my-3 sm:my-4" />
-        <div className="flex items-baseline gap-3">
-          <span className="text-[16px] sm:text-[18px] font-semibold text-neutral-900 tabular-nums">
-            {formatPrice(product.price)}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[13px] sm:text-[14px] text-neutral-400 line-through tabular-nums">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
-          {product.discount && product.discount > 0 && (
-            <span className="text-[13px] font-medium text-emerald-600">
-              {product.discount}% off
-            </span>
-          )}
-        </div>
-        <span className="text-[13px] sm:text-[12px] text-neutral-400 mt-3 capitalize">
-          via {product.platform}
-        </span>
-      </div>
-    </motion.a>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Standard Result Card (shadow, restrained type)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ResultCard({ product, index }: { product: ProductData; index: number }) {
-  return (
-    <motion.a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
-      className="group flex flex-col bg-white rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(0,0,0,0.06)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_16px_32px_-8px_rgba(0,0,0,0.1)] transition-shadow duration-300 min-h-[44px]"
-    >
-      <div className="overflow-hidden bg-neutral-50">
+      <div className="overflow-hidden bg-neutral-50 relative">
         <img
           src={product.imageUrl}
           alt={product.title}
           className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           loading="lazy"
         />
+        {/* Savings badge */}
+        {savings > 0 && (
+          <span className="absolute top-3 right-3 text-[11px] font-semibold
+            text-emerald-700 bg-emerald-50 border border-emerald-100
+            px-2.5 py-1 rounded-full">
+            Save {formatPrice(savings)}
+          </span>
+        )}
       </div>
-      <div className="p-3 sm:p-4 flex flex-col flex-1">
-        <span className="text-[13px] sm:text-[11px] uppercase tracking-[0.08em] text-neutral-500 font-medium">
+      <div className="p-4 flex flex-col flex-1">
+        {/* Platform dot + name */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase()] || '#6b7280' }}
+          />
+          <span className="text-[11px] text-neutral-400 font-medium capitalize">
+            {product.platform}
+          </span>
+        </div>
+
+        <span className="text-[11px] uppercase tracking-[0.06em] text-neutral-400 font-medium">
           {product.brand}
         </span>
-        <h3 className="text-[14px] sm:text-[15px] font-medium text-neutral-900 leading-snug mt-1.5 line-clamp-2">
+        <h3 className="text-[14px] font-medium text-[#0F0F1A] leading-snug mt-1.5 line-clamp-2">
           {product.title}
         </h3>
+
         <div className="mt-auto pt-3 flex items-baseline gap-2">
-          <span className="text-[14px] sm:text-[15px] font-semibold text-neutral-900 tabular-nums">
+          <span className="text-[15px] font-bold text-[#0F0F1A] font-serif tabular-nums">
             {formatPrice(product.price)}
           </span>
           {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[13px] sm:text-[12px] text-neutral-400 line-through tabular-nums">
+            <span className="text-[12px] text-neutral-400 line-through tabular-nums">
               {formatPrice(product.originalPrice)}
             </span>
           )}
         </div>
         {product.discount && product.discount > 0 && (
-          <span className="text-[13px] sm:text-[11px] font-medium text-emerald-600 mt-1">
+          <span className="text-[11px] font-semibold text-[#C9A96E] mt-1">
             {product.discount}% off
           </span>
         )}
-        <span className="text-[13px] sm:text-[11px] text-neutral-400 mt-2 capitalize">
-          {product.platform}
-        </span>
       </div>
     </motion.a>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Skeleton Loader
+// Skeleton Loader — Premium shimmer
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ResultsSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
       {/* Featured skeleton */}
-      <div className="flex flex-col sm:flex-row gap-8 pb-12 mb-12 border-b border-neutral-100 animate-pulse">
-        <div className="w-full sm:w-[320px] flex-shrink-0 bg-neutral-100 rounded-xl aspect-[3/4]" />
-        <div className="flex flex-col justify-center gap-3 flex-1">
+      <div className="flex flex-col md:flex-row gap-8 bg-white rounded-2xl border border-neutral-100 overflow-hidden mb-8 animate-pulse">
+        <div className="w-full md:w-[320px] flex-shrink-0 bg-neutral-100 aspect-[3/4]" />
+        <div className="flex flex-col justify-center gap-3 flex-1 p-8">
           <div className="h-3 bg-neutral-100 rounded-full w-20" />
-          <div className="h-5 bg-neutral-100 rounded-full w-3/4" />
-          <div className="h-px bg-neutral-100 w-12 my-2" />
-          <div className="h-4 bg-neutral-100 rounded-full w-24" />
+          <div className="h-6 bg-neutral-100 rounded-full w-3/4" />
+          <div className="h-px bg-[#C9A96E]/20 w-10 my-2" />
+          <div className="h-5 bg-neutral-100 rounded-full w-28" />
         </div>
       </div>
       {/* Grid skeleton */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-neutral-100 rounded-xl aspect-[3/4] mb-4" />
-            <div className="h-2.5 bg-neutral-100 rounded-full w-16 mb-2" />
-            <div className="h-3 bg-neutral-100 rounded-full w-3/4 mb-2" />
-            <div className="h-3 bg-neutral-100 rounded-full w-1/3" />
+          <div key={i} className="animate-pulse bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+            <div className="bg-neutral-100 aspect-[3/4]" />
+            <div className="p-4 space-y-2">
+              <div className="h-2 bg-neutral-100 rounded-full w-12" />
+              <div className="h-3 bg-neutral-100 rounded-full w-3/4" />
+              <div className="h-3.5 bg-neutral-100 rounded-full w-1/3" />
+            </div>
           </div>
         ))}
       </div>
@@ -369,14 +432,15 @@ export default function SearchPage() {
       />
 
       {/* ── Hero Search ──────────────────────────────────────────────────────── */}
-      <section className="pt-6 pb-8 sm:pt-10 sm:pb-12 bg-white border-b border-neutral-100">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+      <section className="pb-8 sm:pb-10 bg-white border-b border-neutral-100">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
           {!query && (
             <motion.h1
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-              className="text-[26px] sm:text-[40px] lg:text-[48px] font-bold text-neutral-900 text-center mb-6 sm:mb-8 leading-[1.12] sm:leading-[1.08] tracking-[-0.02em]"
+              className="text-[24px] sm:text-[36px] lg:text-[40px] font-bold text-[#0F0F1A]
+                text-center mb-6 sm:mb-8 leading-[1.15] tracking-[-0.02em]"
             >
               What are you looking for?
             </motion.h1>
@@ -392,40 +456,59 @@ export default function SearchPage() {
             </motion.p>
           )}
 
-          <SearchBar size="hero" initialQuery={query} onSearch={handleSearch} />
+          {/* Search bar with gold focus ring */}
+          <div className="[&_input:focus]:ring-2 [&_input:focus]:ring-[#C9A96E]/40 [&_input:focus]:border-[#C9A96E]">
+            <SearchBar size="hero" initialQuery={query} onSearch={handleSearch} />
+          </div>
 
-          {/* Results summary */}
+          {/* Results summary with platform badges */}
           {query && !loading && products.length > 0 && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="text-[13px] text-neutral-500 text-center mt-5"
+              className="flex flex-wrap items-center justify-center gap-2 mt-5"
             >
-              {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''}{' '}
+              <span className="text-[13px] text-neutral-500">
+                {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''}
+              </span>
               {platformsSearched.length > 0 && (
-                <span className="text-neutral-400">
-                  across {platformsSearched.join(', ')}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] text-neutral-400">across</span>
+                  {platformsSearched.map((platform) => (
+                    <span
+                      key={platform}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium
+                        text-neutral-600 bg-neutral-50 border border-neutral-100
+                        px-2 py-0.5 rounded-full capitalize"
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: PLATFORM_COLORS[platform.toLowerCase()] || '#6b7280' }}
+                      />
+                      {platform}
+                    </span>
+                  ))}
+                </div>
               )}
-            </motion.p>
+            </motion.div>
           )}
         </div>
       </section>
 
       {/* ── Sticky Filter Bar ────────────────────────────────────────────────── */}
       {query && (
-        <section className="bg-white/95 backdrop-blur-sm border-b border-neutral-100 sticky top-0 z-30">
+        <section className="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-neutral-400">
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="text-[13px] sm:text-[11px] font-medium uppercase tracking-[0.08em]">
+                <span className="text-[12px] font-medium uppercase tracking-[0.06em]">
                   Filters
                 </span>
               </div>
 
-              {/* Pill-style sort */}
+              {/* Pill-style sort with gold accent */}
               <div className="relative">
                 <select
                   value={filters.sort}
@@ -435,7 +518,11 @@ export default function SearchPage() {
                       sort: e.target.value as FilterState['sort'],
                     })
                   }
-                  className="appearance-none bg-white border border-neutral-200 rounded-full px-4 py-2 sm:py-1.5 pr-8 text-[13px] sm:text-[11px] font-medium text-neutral-600 cursor-pointer hover:border-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900/5 transition-colors tracking-wide min-h-[44px] sm:min-h-0"
+                  className="appearance-none bg-white border border-neutral-200 rounded-full
+                    px-4 py-2 sm:py-1.5 pr-8 text-[13px] font-medium text-neutral-600
+                    cursor-pointer hover:border-[#C9A96E]/50
+                    focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 focus:border-[#C9A96E]
+                    transition-colors tracking-wide min-h-[44px] sm:min-h-0"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -451,8 +538,9 @@ export default function SearchPage() {
               </div>
             </div>
 
-            {/* Filter chips with clay accent on active */}
-            <div className="mt-3">
+            {/* Filter chips — horizontal scroll on mobile with gold active accent */}
+            <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide mt-3
+              [&_.active]:bg-[#C9A96E]/10 [&_.active]:border-[#C9A96E] [&_.active]:text-[#8B7340]">
               <SearchFilters
                 filters={filters}
                 onFilterChange={handleFilterChange}
@@ -464,21 +552,21 @@ export default function SearchPage() {
         </section>
       )}
 
-      {/* ── Editorial Results Grid ───────────────────────────────────────────── */}
+      {/* ── Results Grid ─────────────────────────────────────────────────────── */}
       {showResults && (
         <section className="bg-[#FAFAFA]">
-          <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
             <InfiniteScroll
               hasMore={hasMore}
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {/* Featured lede — first result, larger */}
+              {/* Featured lede — first result, premium card */}
               {featuredProduct && <FeaturedCard product={featuredProduct} />}
 
-              {/* Standard grid — single column on mobile, 2 on small, 3-4 on larger */}
+              {/* Standard grid */}
               {gridProducts.length > 0 && (
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                   {gridProducts.map((product, i) => (
                     <ResultCard key={product.id || i} product={product} index={i} />
                   ))}
@@ -499,28 +587,33 @@ export default function SearchPage() {
       {/* ── Empty State ──────────────────────────────────────────────────────── */}
       {showEmpty && (
         <section className="bg-[#FAFAFA]">
-          <div className="max-w-2xl mx-auto px-6 py-24 text-center">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <Search className="w-8 h-8 text-neutral-300 mx-auto mb-6" />
-              <h2 className="text-[24px] font-bold text-neutral-900 mb-3 tracking-[-0.01em]">
+              {/* Friendly emoji illustration */}
+              <div className="text-[48px] mb-6">🔍</div>
+
+              <h2 className="text-[22px] sm:text-[26px] font-bold text-[#0F0F1A] mb-3 tracking-[-0.01em]">
                 No results for &ldquo;{query}&rdquo;
               </h2>
-              <p className="text-[14px] text-neutral-500 mb-12 leading-relaxed max-w-sm mx-auto">
-                We couldn&apos;t find matching products. Try a broader term or browse our categories below.
+              <p className="text-[14px] text-neutral-500 mb-10 leading-relaxed max-w-sm mx-auto">
+                We couldn&apos;t find matching products. Try a broader term or explore these suggestions.
               </p>
 
-              {/* Suggestion pills */}
-              <div className="flex flex-wrap justify-center gap-2.5 mb-14">
+              {/* Suggestion pills with gold accent */}
+              <div className="flex flex-wrap justify-center gap-2.5 mb-12">
                 {TRENDING_SEARCHES.slice(0, 5).map((term) => (
                   <button
                     key={term}
                     type="button"
                     onClick={() => handleTrendingClick(term)}
-                    className="px-5 py-2.5 rounded-full text-[13px] font-medium bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-900 hover:text-neutral-900 transition-colors capitalize"
+                    className="px-5 py-2.5 rounded-full text-[13px] font-medium
+                      bg-white text-neutral-600 border border-neutral-200
+                      hover:border-[#C9A96E] hover:text-[#8B7340] hover:bg-[#C9A96E]/5
+                      transition-all duration-200 capitalize min-h-[44px]"
                   >
                     {term}
                   </button>
@@ -530,13 +623,18 @@ export default function SearchPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
                   onClick={() => navigate('/deals')}
-                  className="inline-flex items-center gap-2 bg-neutral-900 text-white font-medium px-7 py-3 rounded-full text-[13px] hover:bg-neutral-800 transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#0F0F1A] text-white
+                    font-medium px-7 py-3.5 rounded-full text-[13px]
+                    hover:bg-[#1A1A2E] transition-colors min-h-[44px]"
                 >
                   Browse Deals <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => navigate('/category/western')}
-                  className="inline-flex items-center gap-2 bg-white text-neutral-700 font-medium px-7 py-3 rounded-full text-[13px] border border-neutral-200 hover:border-neutral-300 transition-colors"
+                  className="inline-flex items-center gap-2 bg-white text-neutral-700
+                    font-medium px-7 py-3.5 rounded-full text-[13px]
+                    border border-neutral-200 hover:border-[#C9A96E]/50
+                    transition-colors min-h-[44px]"
                 >
                   Shop Categories
                 </button>
@@ -549,18 +647,18 @@ export default function SearchPage() {
       {/* ── Landing State ────────────────────────────────────────────────────── */}
       {showLanding && (
         <section className="bg-[#FAFAFA]">
-          <div className="max-w-5xl mx-auto px-6 pt-14 pb-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-20">
 
-            {/* Trending Searches */}
+            {/* Trending Searches — gold accent pills */}
             <motion.div
               variants={staggerChildren}
               initial="hidden"
               animate="visible"
-              className="mb-20"
+              className="mb-16 sm:mb-20"
             >
-              <div className="flex items-center gap-2.5 mb-6">
-                <TrendingUp className="w-4 h-4 text-neutral-400" />
-                <h2 className="text-[11px] font-medium text-neutral-400 uppercase tracking-[0.08em]">
+              <div className="flex items-center gap-2.5 mb-5">
+                <TrendingUp className="w-4 h-4 text-[#C9A96E]" />
+                <h2 className="text-[12px] font-semibold text-[#C9A96E] uppercase tracking-[0.08em]">
                   Trending now
                 </h2>
               </div>
@@ -571,7 +669,11 @@ export default function SearchPage() {
                     variants={staggerItem}
                     type="button"
                     onClick={() => handleTrendingClick(term)}
-                    className="px-5 py-2.5 rounded-full text-[13px] font-medium bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-900 hover:text-white hover:border-neutral-900 transition-all duration-200 capitalize shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+                    className="px-5 py-2.5 rounded-full text-[13px] font-medium
+                      bg-white text-neutral-600 border border-neutral-200
+                      hover:bg-[#C9A96E]/5 hover:border-[#C9A96E] hover:text-[#8B7340]
+                      transition-all duration-200 capitalize
+                      shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[44px]"
                   >
                     {term}
                   </motion.button>
@@ -579,14 +681,14 @@ export default function SearchPage() {
               </div>
             </motion.div>
 
-            {/* Category Tiles */}
+            {/* Category Tiles — hover gold border */}
             <motion.div
               variants={staggerChildren}
               initial="hidden"
               animate="visible"
-              className="mb-20"
+              className="mb-16 sm:mb-20"
             >
-              <h2 className="text-[22px] sm:text-[26px] font-bold text-neutral-900 tracking-[-0.01em] mb-8">
+              <h2 className="text-[22px] sm:text-[28px] font-bold text-[#0F0F1A] tracking-[-0.02em] mb-6 sm:mb-8">
                 Browse by Category
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -595,30 +697,34 @@ export default function SearchPage() {
                     key={cat.slug}
                     variants={staggerItem}
                     onClick={() => handleCategoryClick(cat.slug)}
-                    className="bg-white rounded-2xl p-5 sm:p-8 text-left hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_-8px_rgba(0,0,0,0.08)] transition-shadow duration-300 border border-neutral-100 group min-h-[44px]"
+                    className="bg-white rounded-2xl p-5 sm:p-7 text-left
+                      border border-neutral-100 hover:border-[#C9A96E]
+                      hover:shadow-[0_4px_16px_-4px_rgba(201,169,110,0.12)]
+                      transition-all duration-300 group min-h-[44px]"
                   >
-                    <span className="text-[14px] sm:text-[15px] font-medium text-neutral-900 group-hover:text-neutral-900 transition-colors leading-snug">
+                    <span className="text-[14px] sm:text-[15px] font-semibold text-[#0F0F1A]
+                      group-hover:text-[#8B7340] transition-colors leading-snug">
                       {cat.name}
                     </span>
-                    <span className="block text-[13px] sm:text-[11px] text-neutral-400 mt-1.5 tracking-wide">
-                      {cat.count} products across 7+ platforms
+                    <span className="block text-[12px] text-neutral-400 mt-1.5 tracking-wide">
+                      {cat.count} products
                     </span>
                   </motion.button>
                 ))}
               </div>
             </motion.div>
 
-            {/* Popular Products — editorial grid with featured lede */}
+            {/* Popular Products — editorial grid */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-[22px] sm:text-[26px] font-bold text-neutral-900 tracking-[-0.01em]">
+                <h2 className="text-[22px] sm:text-[28px] font-bold text-[#0F0F1A] tracking-[-0.02em]">
                   Popular right now
                 </h2>
-                <span className="text-[11px] text-neutral-400 font-medium tracking-wide">
+                <span className="text-[11px] text-[#C9A96E] font-semibold tracking-wide uppercase">
                   Updated hourly
                 </span>
               </div>
@@ -628,8 +734,8 @@ export default function SearchPage() {
                 <FeaturedCard product={TRENDING_PRODUCTS[0]} />
               )}
 
-              {/* Remaining in asymmetric grid */}
-              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
+              {/* Remaining products grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {TRENDING_PRODUCTS.slice(1).map((product, i) => (
                   <ResultCard key={product.id} product={product} index={i} />
                 ))}
@@ -643,30 +749,30 @@ export default function SearchPage() {
       {/* ── Affiliate Disclosure Footer ──────────────────────────────────────── */}
       <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[13px] sm:text-[12px] text-neutral-400">
+          <p className="text-[13px] text-neutral-400">
             &copy; 2026 DripFeed India
           </p>
-          <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
+          <div className="flex gap-5 text-[13px] text-neutral-400">
             <button
               onClick={() => navigate('/privacy')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Privacy
             </button>
             <button
               onClick={() => navigate('/terms')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Terms
             </button>
             <button
               onClick={() => navigate('/affiliate-disclosure')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Affiliate Disclosure
             </button>
           </div>
-          <p className="text-[13px] sm:text-[10px] text-neutral-300">
+          <p className="text-[11px] text-neutral-300">
             #Ad: DripFeed earns commission on purchases through our links.
           </p>
         </div>
