@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/common/Logo';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -28,9 +29,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#0F0F1A]">
       <div className="bg-white rounded-2xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.25)] p-8 w-full max-w-sm border border-neutral-100">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Instrument Serif, serif' }}>
-            <span className="text-[#0F0F1A]">Drip</span><span className="text-[#C9A96E]">Feed</span>
-          </h1>
+          <div className="flex justify-center mb-2">
+            <Logo variant="dark" size="lg" asLink={false} />
+          </div>
           <p className="text-neutral-500 text-sm mt-1">Sign in to your account</p>
         </div>
 

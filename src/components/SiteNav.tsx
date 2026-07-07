@@ -5,6 +5,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import Logo from './common/Logo';
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -92,15 +93,8 @@ export default function SiteNav() {
       className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 pt-3 sm:pt-4"
     >
       <div className="flex items-center justify-between max-w-7xl mx-auto gap-3">
-        {/* Logo — white for dark hero backgrounds */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex-shrink-0 font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden"
-          style={{ fontFamily: 'Instrument Serif, serif' }}
-        >
-          <span className="text-white">Drip</span>
-          <span className="text-[#C9A96E]">Feed</span>
-        </button>
+        {/* Logo — light variant for dark hero backgrounds */}
+        <Logo variant="light" size="md" />
 
         {/* Center nav links - hidden on mobile, no bubble, direct on dark bg */}
         <div

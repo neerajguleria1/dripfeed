@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Heart, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import Logo from './common/Logo';
 
 export default function AppHeader() {
   const { user, logout } = useAuth();
@@ -17,9 +18,7 @@ export default function AppHeader() {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-neutral-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
-        <Link to="/" className="flex-shrink-0 font-bold text-xl tracking-tight whitespace-nowrap overflow-hidden" style={{ fontFamily: 'Instrument Serif, serif' }}>
-          <span className="text-[#0F0F1A]">Drip</span><span className="text-[#C9A96E]">Feed</span>
-        </Link>
+        <Logo variant="dark" size="md" />
 
         <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden sm:flex">
           <div className="relative w-full">
