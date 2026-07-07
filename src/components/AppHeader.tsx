@@ -15,20 +15,20 @@ export default function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 liquid-glass">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-neutral-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
         <Link to="/" className="flex-shrink-0 font-bold text-xl tracking-tight whitespace-nowrap overflow-hidden" style={{ fontFamily: 'Instrument Serif, serif' }}>
-          <span className="text-[#051F45]">Drip</span><span style={{ color: '#F2C4CD' }}>Feed</span>
+          <span className="text-[#0F0F1A]">Drip</span><span className="text-[#C9A96E]">Feed</span>
         </Link>
 
         <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden sm:flex">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#051F45]/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search kurtas, sneakers, sarees…"
-              className="w-full pl-9 pr-4 py-2 rounded-full border border-[#051F45]/15 bg-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#051F45]/20 placeholder:text-[#051F45]/40"
+              className="w-full pl-9 pr-4 py-2 rounded-full border border-neutral-200 bg-neutral-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 focus:border-[#C9A96E] placeholder:text-neutral-400 transition-all"
             />
           </div>
         </form>
@@ -36,52 +36,52 @@ export default function AppHeader() {
         <nav className="hidden sm:flex items-center gap-3 ml-auto">
           {user ? (
             <>
-              <Link to="/wishlist" className="flex items-center gap-1 text-sm text-[#051F45]/70 hover:text-[#051F45]">
+              <Link to="/wishlist" className="flex items-center gap-1 text-sm text-neutral-600 hover:text-[#C9A96E] transition-colors">
                 <Heart className="w-4 h-4" /> Saved
               </Link>
               {user.role === 'admin' && (
-                <Link to="/admin" className="text-sm text-[#051F45]/70 hover:text-[#051F45]">Admin</Link>
+                <Link to="/admin" className="text-sm text-neutral-600 hover:text-[#C9A96E] transition-colors">Admin</Link>
               )}
-              <button onClick={logout} className="flex items-center gap-1 text-sm text-[#051F45]/70 hover:text-[#051F45]">
+              <button onClick={logout} className="flex items-center gap-1 text-sm text-neutral-600 hover:text-red-500 transition-colors">
                 <LogOut className="w-4 h-4" /> Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="bg-[#051F45] text-white text-sm px-4 py-2 rounded-full hover:bg-[#051F45]/90 transition-colors">
+              <Link to="/login" className="bg-[#C9A96E] text-white text-sm px-5 py-2.5 rounded-full hover:bg-[#B8964F] transition-colors font-medium min-h-[44px] flex items-center">
                 Sign In
               </Link>
             </>
           )}
         </nav>
 
-        <button className="sm:hidden ml-auto text-[#051F45]" onClick={() => setMenuOpen(!menuOpen)}>
+        <button className="sm:hidden ml-auto text-[#0F0F1A] min-h-[44px] min-w-[44px] flex items-center justify-center" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
       {menuOpen && (
-        <div className="sm:hidden border-t border-[#051F45]/10 px-4 py-3 flex flex-col gap-3 bg-white/80 backdrop-blur-sm">
+        <div className="sm:hidden border-t border-neutral-100 px-4 py-3 flex flex-col gap-3 bg-white/95 backdrop-blur-sm">
           <form onSubmit={handleSearch}>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#051F45]/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
               <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search products…"
-                className="w-full pl-9 pr-4 py-2 rounded-full border border-[#051F45]/15 bg-white/60 text-sm focus:outline-none"
+                className="w-full pl-9 pr-4 py-2.5 rounded-full border border-neutral-200 bg-neutral-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 min-h-[44px]"
               />
             </div>
           </form>
           {user ? (
-            <div className="flex gap-4 text-sm text-[#051F45]">
-              <Link to="/wishlist" onClick={() => setMenuOpen(false)}>Saved</Link>
-              {user.role === 'admin' && <Link to="/admin" onClick={() => setMenuOpen(false)}>Admin</Link>}
-              <button onClick={() => { logout(); setMenuOpen(false); }}>Logout</button>
+            <div className="flex gap-4 text-sm text-[#0F0F1A]">
+              <Link to="/wishlist" onClick={() => setMenuOpen(false)} className="min-h-[44px] flex items-center">Saved</Link>
+              {user.role === 'admin' && <Link to="/admin" onClick={() => setMenuOpen(false)} className="min-h-[44px] flex items-center">Admin</Link>}
+              <button onClick={() => { logout(); setMenuOpen(false); }} className="min-h-[44px] flex items-center text-red-500">Logout</button>
             </div>
           ) : (
             <div className="flex gap-4 text-sm">
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-[#051F45] text-white px-4 py-2 rounded-full">Sign In</Link>
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-[#C9A96E] text-white px-5 py-2.5 rounded-full font-medium min-h-[44px] flex items-center">Sign In</Link>
             </div>
           )}
         </div>
