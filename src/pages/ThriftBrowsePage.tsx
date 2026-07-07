@@ -108,7 +108,7 @@ export default function ThriftBrowsePage() {
       {/* ─── Header ─────────────────────────────────── */}
       <section className="pt-6 pb-10 sm:pt-10 sm:pb-16 px-4 sm:px-10 lg:px-20">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-neutral-900 tracking-[-0.02em]">
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-[#0F0F1A] tracking-[-0.02em]">
             Pre-loved Fashion
           </h1>
           <p className="text-[14px] text-neutral-500 mt-2 max-w-sm leading-relaxed">
@@ -123,7 +123,7 @@ export default function ThriftBrowsePage() {
           {/* Action Row */}
           <div className="flex items-center gap-3">
             <Link to="/thrift/list">
-              <button className="inline-flex items-center gap-2 bg-neutral-900 text-white font-medium px-5 sm:px-6 py-2.5 rounded-full text-[13px] hover:bg-neutral-800 transition-colors min-h-[44px]">
+              <button className="inline-flex items-center gap-2 bg-[#C9A96E] text-white font-medium px-5 sm:px-6 py-2.5 rounded-full text-[13px] hover:bg-[#B8964F] transition-colors min-h-[44px]">
                 <Plus className="w-3.5 h-3.5" />
                 Sell Something
               </button>
@@ -140,7 +140,7 @@ export default function ThriftBrowsePage() {
               className={[
                 'inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-[13px] font-medium border transition-colors min-h-[44px]',
                 hasActiveFilters
-                  ? 'border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800'
+                  ? 'border-[#C9A96E] bg-[#C9A96E] text-white hover:bg-[#B8964F]'
                   : 'border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300',
               ].join(' ')}
             >
@@ -161,7 +161,7 @@ export default function ThriftBrowsePage() {
                     'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0',
                     category === c
                       ? 'text-white border-neutral-900'
-                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300',
+                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/30',
                   ].join(' ')}
                   style={category === c ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
                 >
@@ -182,7 +182,7 @@ export default function ThriftBrowsePage() {
                     'px-3 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0',
                     size === s
                       ? 'text-white border-neutral-900'
-                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300',
+                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/30',
                   ].join(' ')}
                   style={size === s ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
                 >
@@ -203,7 +203,7 @@ export default function ThriftBrowsePage() {
                     'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0',
                     condition === c
                       ? 'text-white border-neutral-900'
-                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300',
+                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/30',
                   ].join(' ')}
                   style={condition === c ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
                 >
@@ -270,7 +270,7 @@ export default function ThriftBrowsePage() {
                 <div className="text-center mt-16">
                   <button
                     onClick={loadMore}
-                    className="px-8 py-2.5 rounded-full text-[13px] font-medium border border-neutral-200 text-neutral-500 bg-white hover:border-neutral-300 transition-colors"
+                    className="px-8 py-2.5 rounded-full text-[13px] font-medium border border-neutral-200 text-neutral-500 bg-white hover:border-[#C9A96E]/30 transition-colors"
                   >
                     View more pieces
                   </button>
@@ -297,9 +297,9 @@ export default function ThriftBrowsePage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] sm:text-[12px] text-neutral-400">&copy; 2026 DripFeed India</p>
           <div className="flex gap-5 sm:gap-6 text-[13px] sm:text-[12px] text-neutral-400">
-            <button onClick={() => navigate('/privacy')} className="hover:text-neutral-600 transition-colors min-h-[44px] flex items-center">Privacy</button>
-            <button onClick={() => navigate('/terms')} className="hover:text-neutral-600 transition-colors min-h-[44px] flex items-center">Terms</button>
-            <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-neutral-600 transition-colors min-h-[44px] flex items-center">Affiliate Disclosure</button>
+            <button onClick={() => navigate('/privacy')} className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center">Privacy</button>
+            <button onClick={() => navigate('/terms')} className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center">Terms</button>
+            <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center">Affiliate Disclosure</button>
           </div>
           <p className="text-[13px] sm:text-[10px] text-neutral-300">
             #Ad: DripFeed earns commission on purchases through our links.
@@ -322,7 +322,7 @@ function ArchiveCard({ listing }: { listing: ThriftListing }) {
     >
       {/* Image */}
       <div
-        className="relative aspect-[4/5] rounded-xl overflow-hidden bg-neutral-100"
+        className="relative aspect-[4/5] rounded-xl overflow-hidden bg-neutral-100 border border-neutral-100 hover:border-[#C9A96E]/30 transition-colors"
         style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
       >
         {listing.images.length > 0 ? (
@@ -364,7 +364,7 @@ function ArchiveCard({ listing }: { listing: ThriftListing }) {
         </p>
 
         {/* Price */}
-        <p className="text-[15px] font-normal text-neutral-900 tabular-nums pt-0.5">
+        <p className="text-[15px] font-serif font-bold text-neutral-900 tabular-nums pt-0.5">
           ₹{listing.price.toLocaleString('en-IN')}
         </p>
 
