@@ -32,7 +32,7 @@ const PLATFORMS = ['Myntra', 'Ajio', 'Amazon', 'Flipkart', 'Meesho', 'Nykaa'];
 // Animation variants
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const } },
 };
 
 const stagger = {
@@ -57,7 +57,7 @@ function AnimatedSection({ children, className = '' }: { children: React.ReactNo
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<ProductData[]>([]);
+  const [_products, setProducts] = useState<ProductData[]>([]);
   const [deals, setDeals] = useState<DealData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -321,7 +321,7 @@ export default function HomePage() {
                     </h3>
                     <div className="flex items-baseline gap-2">
                       <span className="text-[15px] font-bold text-[#111827]">₹{deal.price.toLocaleString('en-IN')}</span>
-                      {deal.originalPrice > deal.price && (
+                      {deal.originalPrice && deal.originalPrice > deal.price && (
                         <span className="text-[12px] text-gray-400 line-through">₹{deal.originalPrice.toLocaleString('en-IN')}</span>
                       )}
                     </div>
