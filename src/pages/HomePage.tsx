@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Search, BarChart3, ShoppingBag, TrendingUp, ArrowRight, Zap } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
-import { SearchBar } from '../components/search/SearchBar';
 import SiteNav from '../components/SiteNav';
 import type { ProductData, DealData } from '../types/product';
 import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
@@ -345,8 +344,14 @@ export default function HomePage() {
             It's free. No signup required.
           </motion.p>
 
-          <motion.div variants={fadeUp} className="max-w-xl mx-auto">
-            <SearchBar size="hero" />
+          <motion.div variants={fadeUp}>
+            <button
+              onClick={() => navigate('/search')}
+              className="inline-flex items-center gap-2 bg-[#C9A96E] text-white font-semibold px-8 py-3.5 rounded-full text-[14px] hover:bg-[#B8964F] transition-colors min-h-[44px]"
+            >
+              Start Comparing
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </motion.div>
         </AnimatedSection>
       </section>
