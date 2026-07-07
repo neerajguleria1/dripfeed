@@ -102,19 +102,19 @@ export default function SiteNav() {
           <span className="text-[#C9A96E]">Feed</span>
         </button>
 
-        {/* Center nav links - hidden on mobile */}
+        {/* Center nav links - hidden on mobile, no bubble, direct on dark bg */}
         <div
-          className={`hidden md:flex items-center bg-white/90 backdrop-blur-md border-b border-neutral-100 rounded-full transition-all duration-300 ease-out ${
-            scrolled ? 'gap-1 px-1.5 py-1' : 'gap-1.5 px-1.5 py-1.5'
+          className={`hidden md:flex items-center transition-all duration-300 ease-out ${
+            scrolled ? 'gap-1' : 'gap-1'
           }`}
         >
           {navItems.map((item) => (
             <button
               key={item.label}
               onClick={() => handleNav(item)}
-              className={`whitespace-nowrap px-3 py-2 font-medium transition-all duration-300 ease-out no-underline cursor-pointer ${
+              className={`whitespace-nowrap px-4 py-2 rounded-full font-medium transition-all duration-200 ease-out no-underline cursor-pointer ${
                 scrolled ? 'text-xs' : 'text-sm'
-              } text-white hover:text-white/80`}
+              } text-white/90 hover:text-white hover:bg-white/10`}
             >
               {item.label}
             </button>
@@ -125,12 +125,12 @@ export default function SiteNav() {
         <div className="flex items-center gap-2">
           {/* Search bar - desktop */}
           <form onSubmit={handleSearch} className="relative hidden sm:block">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" />
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className={`pl-8 pr-3 rounded-full border border-neutral-200 bg-white/55 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 placeholder:text-neutral-400 transition-all ${
+              className={`pl-8 pr-3 rounded-full border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/50 focus:border-[#C9A96E] placeholder:text-white/50 transition-all ${
                 scrolled ? 'py-1.5 text-xs w-36' : 'py-2 text-sm w-44'
               }`}
             />
@@ -139,7 +139,7 @@ export default function SiteNav() {
           {/* Mobile search icon */}
           <button
             onClick={() => navigate('/search')}
-            className="sm:hidden p-2 rounded-full bg-white/55 backdrop-blur-sm border border-neutral-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="sm:hidden p-2 rounded-full bg-white/10 border border-white/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <Search className="w-4 h-4 text-white" />
           </button>
