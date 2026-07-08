@@ -60,6 +60,9 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
       className={[
         'group bg-white rounded-2xl overflow-hidden cursor-pointer flex flex-col',
         'shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_-8px_rgba(0,0,0,0.08)]',

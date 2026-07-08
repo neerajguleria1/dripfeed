@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -22,6 +22,7 @@ const CATEGORY_META: Record<string, { emoji: string; description: string; subCat
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -122,7 +123,7 @@ export default function CategoryPage() {
                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                   {trendingProducts.map((product, idx) => (
                     <div key={idx} className="flex-shrink-0 w-44">
-                      <Card variant="outlined" padding="none" hover className="overflow-hidden">
+                      <Card variant="outlined" padding="none" hover className="overflow-hidden" onClick={() => navigate(`/compare?q=${encodeURIComponent(product.title)}`)}>
                         {product.imageUrl ? (
                           <img src={product.imageUrl} alt={product.title} className="w-full h-36 object-cover" loading="lazy" />
                         ) : (
@@ -148,7 +149,7 @@ export default function CategoryPage() {
                     const pct = discountPercent(product.originalPrice || product.price, product.price);
                     return (
                       <motion.div key={idx} variants={staggerItem}>
-                        <Card variant="outlined" padding="none" hover className="overflow-hidden">
+                        <Card variant="outlined" padding="none" hover className="overflow-hidden" onClick={() => navigate(`/compare?q=${encodeURIComponent(product.title)}`)}>
                           {product.imageUrl ? (
                             <img src={product.imageUrl} alt={product.title} className="w-full h-36 object-cover" loading="lazy" />
                           ) : (
@@ -176,7 +177,7 @@ export default function CategoryPage() {
               <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={staggerChildren} initial="hidden" animate="visible">
                 {products.map((product, idx) => (
                   <motion.div key={idx} variants={staggerItem}>
-                    <Card variant="outlined" padding="none" hover className="overflow-hidden">
+                    <Card variant="outlined" padding="none" hover className="overflow-hidden" onClick={() => navigate(`/compare?q=${encodeURIComponent(product.title)}`)}>
                       {product.imageUrl ? (
                         <img src={product.imageUrl} alt={product.title} className="w-full h-36 object-cover" loading="lazy" />
                       ) : (

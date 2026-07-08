@@ -43,8 +43,13 @@ export default function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col">
-      <div className="relative aspect-square bg-[#F8F5F2] overflow-hidden">
+    <div
+      onClick={() => navigate(`/compare?q=${encodeURIComponent(product.title)}`)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/compare?q=${encodeURIComponent(product.title)}`); } }}
+      className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer"
+    >      <div className="relative aspect-square bg-[#F8F5F2] overflow-hidden">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
