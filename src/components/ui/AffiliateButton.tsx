@@ -23,6 +23,38 @@ const PLATFORM_COLORS: Record<string, string> = {
   shein: '#000000',
 };
 
+/** Centralized platform search URLs — single source of truth */
+const PLATFORM_SEARCH_URLS: Record<string, (q: string) => string> = {
+  amazon: (q) => `https://www.amazon.in/s?k=${encodeURIComponent(q)}`,
+  flipkart: (q) => `https://www.flipkart.com/search?q=${encodeURIComponent(q)}`,
+  myntra: (q) => `https://www.myntra.com/${encodeURIComponent(q.replace(/\s+/g, '-'))}`,
+  ajio: (q) => `https://www.ajio.com/search/?text=${encodeURIComponent(q)}`,
+  meesho: (q) => `https://www.meesho.com/search?q=${encodeURIComponent(q)}`,
+  nykaa: (q) => `https://www.nykaafashion.com/search/result/?q=${encodeURIComponent(q)}`,
+  tatacliq: (q) => `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(q)}`,
+};
+
+/**
+ * If the URL is just a bare domain (no product path), build a proper search URL.
+ * This fixes the bug where seed data only has "https://www.amazon.in" — user would
+ * land on the homepage with nothing relevant.
+ */
+function resolveProductUrl(platform: string, url: string, productTitle: string): string {
+  try {
+    const parsed = new URL(url);
+    // If the path is empty or just "/" — it's a bare domain, build a search URL instead
+    if (parsed.pathname === '/' || parsed.pathname === '') {
+      const key = platform.toLowerCase().replace(/\s+/g, '');
+      for (const [name, builder] of Object.entries(PLATFORM_SEARCH_URLS)) {
+        if (key.includes(name)) return builder(productTitle);
+      }
+    }
+  } catch {
+    // Invalid URL — fall through
+  }
+  return url;
+}
+
 function getPlatformColor(platform: string): string {
   const key = platform.toLowerCase();
   for (const [name, color] of Object.entries(PLATFORM_COLORS)) {
@@ -54,18 +86,19 @@ export function AffiliateButton({
   const handleClick = useCallback(async () => {
     if (state !== 'default') return;
 
+    const resolvedUrl = resolveProductUrl(platform, url, productTitle);
     setState('loading');
 
     try {
       const { data } = await api.post('/affiliate/redirect', {
         platform,
-        productUrl: url,
+        productUrl: resolvedUrl,
         productName: productTitle,
         device: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'web',
         sessionId: sessionStorage.getItem('sessionId') || undefined,
       });
 
-      const affiliateUrl = data?.affiliateUrl || url;
+      const affiliateUrl = data?.affiliateUrl || resolvedUrl;
 
       setState('redirecting');
       setTimeout(() => {
@@ -73,10 +106,10 @@ export function AffiliateButton({
         setState('default');
       }, 500);
     } catch {
-      // Never fail — open original URL directly
+      // Never fail — open resolved URL directly
       setState('redirecting');
       setTimeout(() => {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
         setState('default');
       }, 500);
     }
