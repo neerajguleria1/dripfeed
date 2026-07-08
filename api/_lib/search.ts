@@ -93,7 +93,7 @@ async function searchGoogleShopping(query: string): Promise<SearchProduct[]> {
     if (results.length < 4) {
       const titles = [...html.matchAll(/<(?:h3|span)[^>]*class="[^"]*(?:tAxDx|BNeawe)[^"]*"[^>]*>([^<]+)/gi)].map(x => cleanText(x[1]));
       const prices = [...html.matchAll(/₹\s*(\d{1,3}(?:,\d{3})*)/gi)].map(x => parsePrice(x[1])).filter(p => p > 50 && p < 500000);
-      const imgs = [...html.matchAll(/src="(https?:\/\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)].map(x => x[1]).filter(u => !u.includes('google') && !u.includes('gstatic'));
+      const imgs = [...html.matchAll(/src="(https?:\/\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)].map(x => x[1]).filter(u => !u.includes('google.com/images') && !u.includes('gstatic.com/images'));
       const links = [...html.matchAll(/href="((?:https?:\/\/)(?:[^"]*(?:amazon|myntra|flipkart|ajio|meesho)[^"]*))/gi)].map(x => x[1]);
 
       for (let i = 0; i < Math.min(titles.length, 20); i++) {

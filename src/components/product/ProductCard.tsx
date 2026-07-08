@@ -74,13 +74,23 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
       {/* Image — consistent 3:4 aspect, unified bg treatment */}
       <div className="relative aspect-[3/4] bg-neutral-50 overflow-hidden">
         {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.title}
-            className="w-full h-full object-cover saturate-[0.95] brightness-[1.01]"
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <>
+            <img
+              src={product.imageUrl}
+              alt={product.title}
+              className="w-full h-full object-cover saturate-[0.95] brightness-[1.01]"
+              loading="lazy"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.style.display = 'none';
+                const fallback = img.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="w-full h-full items-center justify-center text-neutral-300 text-5xl absolute inset-0 bg-neutral-50" style={{ display: 'none' }}>
+              🛍️
+            </div>
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-neutral-300 text-5xl">
             🛍️

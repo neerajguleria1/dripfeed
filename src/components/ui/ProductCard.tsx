@@ -51,13 +51,23 @@ export default function ProductCard({ product }: { product: Product }) {
       className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer"
     >      <div className="relative aspect-square bg-[#F8F5F2] overflow-hidden">
         {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <>
+            <img
+              src={product.imageUrl}
+              alt={product.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.style.display = 'none';
+                const fallback = img.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="w-full h-full items-center justify-center text-gray-300 text-4xl absolute inset-0 bg-[#F8F5F2]" style={{ display: 'none' }}>
+              🛍️
+            </div>
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">🛍️</div>
         )}
