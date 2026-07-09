@@ -281,9 +281,9 @@ export default function HomePage() {
                       {deal.title}
                     </h3>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[15px] font-bold text-[#111827]">₹{deal.price.toLocaleString('en-IN')}</span>
+                      <span className="text-[15px] font-bold text-[#111827] tabular-nums">₹{deal.price.toLocaleString('en-IN')}</span>
                       {deal.originalPrice && deal.originalPrice > deal.price && (
-                        <span className="text-[12px] text-gray-400 line-through">₹{deal.originalPrice.toLocaleString('en-IN')}</span>
+                        <span className="text-[12px] text-gray-400 line-through tabular-nums">₹{deal.originalPrice.toLocaleString('en-IN')}</span>
                       )}
                     </div>
                   </div>

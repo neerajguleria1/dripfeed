@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PlatformBadge from '../ui/PlatformBadge';
 import DiscountBadge from '../ui/DiscountBadge';
+import PriceDisplay from '../ui/PriceDisplay';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import type { ProductData } from '../../types/product';
@@ -133,24 +134,18 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
           {product.title}
         </p>
 
-        {/* Price as the hero element */}
-        <div className="mt-auto pt-3 flex items-baseline gap-2">
-          <span className="text-[20px] font-bold tracking-[-0.02em] text-neutral-900 font-mono">
-            ₹{product.price.toLocaleString('en-IN')}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[12px] text-neutral-400 line-through">
-              ₹{product.originalPrice.toLocaleString('en-IN')}
-            </span>
-          )}
+        {/* Price — unified component */}
+        <div className="mt-auto pt-3">
+          <PriceDisplay
+            price={product.price}
+            originalPrice={product.originalPrice}
+            size="lg"
+            showDiscount={discount >= 20}
+            showSavings={priceDelta > 0}
+            platform={product.platform}
+            layout="stacked"
+          />
         </div>
-
-        {/* Specific micro-copy — delta, not generic "X% off" */}
-        {priceDelta > 0 && (
-          <p className="text-[11px] text-emerald-600 font-medium">
-            ₹{priceDelta.toLocaleString('en-IN')} cheaper on {product.platform}
-          </p>
-        )}
       </div>
     </motion.div>
   );
