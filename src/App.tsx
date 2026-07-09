@@ -66,9 +66,9 @@ function App() {
         <Route path="/register" element={<AuthLayout><RegisterPage /></AuthLayout>} />
 
         {/* Marketing — no app header (uses SiteNav inside) */}
-        <Route path="/" element={<><PersistentBg /><div className="relative z-10"><HomePage /></div></>} />
-        <Route path="/how-it-works" element={<><PersistentBg /><div className="relative z-10"><HowItWorksPage /></div></>} />
-        <Route path="/brands" element={<><PersistentBg /><div className="relative z-10"><BrandsPage /></div></>} />
+        <Route path="/" element={<div className="relative"><HomePage /></div>} />
+        <Route path="/how-it-works" element={<div className="relative"><HowItWorksPage /></div>} />
+        <Route path="/brands" element={<div className="relative"><BrandsPage /></div>} />
 
         {/* Functional — with AppHeader */}
         <Route path="/search" element={<AppLayout><SearchPage /></AppLayout>} />
