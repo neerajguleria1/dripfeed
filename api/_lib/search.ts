@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { buildAffiliateUrl } from './affiliate.js';
+import { ALL_SEED_PRODUCTS, type SeedProduct } from './seed-data.js';
 
 export interface SearchProduct {
   id: string;
@@ -212,6 +213,46 @@ function mergeResults(arrays: SearchProduct[][]): SearchProduct[] {
   return merged.sort((a, b) => a.price - b.price);
 }
 
+/**
+ * Fallback search through local seed data when scrapers fail.
+ * Matches query words against product title, brand, and category.
+ */
+function searchSeedData(query: string): SearchProduct[] {
+  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  if (terms.length === 0) return [];
+
+  const matches: SearchProduct[] = [];
+
+  for (const sp of ALL_SEED_PRODUCTS) {
+    const searchable = `${sp.title} ${sp.brand} ${sp.category}`.toLowerCase();
+    const score = terms.filter(t => searchable.includes(t)).length;
+
+    if (score > 0) {
+      // Expand each platform entry into a separate SearchProduct
+      for (const plat of sp.platforms) {
+        const discount = plat.originalPrice > plat.price
+          ? Math.round(((plat.originalPrice - plat.price) / plat.originalPrice) * 100)
+          : 0;
+
+        matches.push({
+          id: `seed_${sp.title.slice(0, 10)}_${plat.platform}_${matches.length}`,
+          title: sp.title,
+          brand: sp.brand,
+          price: plat.price,
+          originalPrice: plat.originalPrice > plat.price ? plat.originalPrice : undefined,
+          discount: discount > 0 ? discount : undefined,
+          imageUrl: sp.imageUrl,
+          platform: plat.platform.charAt(0).toUpperCase() + plat.platform.slice(1),
+          url: plat.url,
+        });
+      }
+    }
+  }
+
+  // Sort by relevance (score) would require tracking, so just sort by price
+  return matches.sort((a, b) => a.price - b.price).slice(0, 30);
+}
+
 export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const key = `search:${query.toLowerCase().trim()}`;
   const cached = getCached(key);
@@ -223,11 +264,17 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     searchMyntra(query),
   ]);
 
-  const results = mergeResults([
+  let results = mergeResults([
     gs.status === 'fulfilled' ? gs.value : [],
     fk.status === 'fulfilled' ? fk.value : [],
     mn.status === 'fulfilled' ? mn.value : [],
   ]);
+
+  // Fallback to seed data if all scrapers returned empty
+  // (common on Vercel serverless — cloud IPs get blocked by retailers)
+  if (results.length === 0) {
+    results = searchSeedData(query);
+  }
 
   const withAffiliate = results.map(p => ({
     ...p,
