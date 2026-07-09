@@ -32,7 +32,7 @@
   "rewrites": [
     { "source": "/api/cron/:path*", "destination": "/api/cron/:path*" },
     { "source": "/api/:path*", "destination": "/api/[[...route]]" },
-    { "source": "/((?!api/|sw\\.js|manifest\\.webmanifest|favicon\\.svg|offline\\.html|sitemap\\.xml|robots\\.txt|assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|sw\\.js|manifest\\.webmanifest|favicon\\.svg|offline\\.html|sitemap\\.xml|robots\\.txt|google[a-z0-9]+\\.html|assets/).*)", "destination": "/index.html" }
   ],
   "crons": [
     { "path": "/api/cron/price-check", "schedule": "0 6 * * *" },
