@@ -130,7 +130,7 @@ export default function ComparePage() {
 
     try {
       const { data } = await api.post('/search/product', { query: searchQ });
-      const results: ProductData[] = data?.results || data?.platforms || [];
+      const results: ProductData[] = data?.products || data?.results || data?.platforms || [];
 
       results.sort((a, b) => a.price - b.price);
       setPlatforms(results);

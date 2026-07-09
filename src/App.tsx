@@ -8,6 +8,7 @@ import PersistentBg from './components/PersistentBg';
 import AppHeader from './components/AppHeader';
 import BottomNav from './components/layout/BottomNav';
 import { CookieConsent } from './components/common/CookieConsent';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Marketing pages (existing)
 import HomePage from './pages/HomePage';
@@ -58,6 +59,7 @@ function App() {
       <PreferencesProvider>
       <ToastProvider>
       <ScrollToTop />
+      <ErrorBoundary>
       <Routes>
         {/* Auth — no header */}
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
@@ -87,6 +89,7 @@ function App() {
 
         <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />
       </Routes>
+      </ErrorBoundary>
       <CookieConsent />
       <BottomNav />
       </ToastProvider>

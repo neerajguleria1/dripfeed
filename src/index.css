@@ -85,6 +85,25 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+html {
+  background-color: var(--df-bg-warm);
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* ── Noise Textures ─────────────────────────────────── */
