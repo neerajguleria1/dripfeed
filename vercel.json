@@ -20,7 +20,7 @@
   "rewrites": [
     { "source": "/api/cron/:path*", "destination": "/api/cron/:path*" },
     { "source": "/api/:path*", "destination": "/api/[[...route]]" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|sw\\.js|manifest\\.webmanifest|favicon\\.svg|offline\\.html|assets/).*)", "destination": "/index.html" }
   ],
   "crons": [
     { "path": "/api/cron/price-check", "schedule": "0 6 * * *" },
