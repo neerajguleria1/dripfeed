@@ -149,79 +149,98 @@ export default function ThriftBrowsePage() {
             </button>
           </div>
 
-          {/* Filter Chips — horizontally scrollable on mobile */}
-          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0" style={{ scrollbarWidth: 'none' }}>
-            {/* Category */}
-            <div className="flex gap-2 flex-shrink-0">
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCategory(c)}
+          {/* Filter Chips — horizontally scrollable on mobile with fade edge */}
+          <div className="relative">
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0" style={{ scrollbarWidth: 'none' }}>
+              {/* Category */}
+              <div className="flex gap-2 flex-shrink-0">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={[
+                      'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 cursor-pointer',
+                      'focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:ring-offset-1',
+                      'active:scale-[0.97]',
+                      category === c
+                        ? 'text-white border-neutral-900'
+                        : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/50 hover:text-neutral-700',
+                    ].join(' ')}
+                    style={category === c ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
+                  >
+                    {c === 'All' ? 'All Categories' : c}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-5 bg-neutral-200 flex-shrink-0" />
+
+              {/* Size */}
+              <div className="flex gap-2 flex-shrink-0">
+                {SIZES.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSize(s)}
+                    className={[
+                      'px-3.5 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 cursor-pointer',
+                      'focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:ring-offset-1',
+                      'active:scale-[0.97]',
+                      size === s
+                        ? 'text-white border-neutral-900'
+                        : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/50 hover:text-neutral-700',
+                    ].join(' ')}
+                    style={size === s ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
+                  >
+                    {s === 'All' ? 'All Sizes' : s}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-5 bg-neutral-200 flex-shrink-0" />
+
+              {/* Condition */}
+              <div className="flex gap-2 flex-shrink-0">
+                {CONDITIONS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCondition(c)}
+                    className={[
+                      'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 cursor-pointer',
+                      'focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:ring-offset-1',
+                      'active:scale-[0.97]',
+                      condition === c
+                        ? 'text-white border-neutral-900'
+                        : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/50 hover:text-neutral-700',
+                    ].join(' ')}
+                    style={condition === c ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
+                  >
+                    {conditionChipLabel(c)}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-5 bg-neutral-200 flex-shrink-0" />
+
+              {/* City — pill-style input matching other filters */}
+              <div className="flex-shrink-0">
+                <input
+                  type="text"
+                  placeholder="📍 City"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
                   className={[
-                    'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0',
-                    category === c
-                      ? 'text-white border-neutral-900'
-                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/30',
+                    'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 w-28 sm:w-32',
+                    'focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:border-[#C9A96E]',
+                    'placeholder:text-neutral-400 cursor-text',
+                    city.trim()
+                      ? 'bg-[#C9A96E]/10 border-[#C9A96E]/50 text-neutral-800'
+                      : 'bg-white border-neutral-200 text-neutral-700 hover:border-[#C9A96E]/50',
                   ].join(' ')}
-                  style={category === c ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
-                >
-                  {c === 'All' ? 'All Categories' : c}
-                </button>
-              ))}
+                />
+              </div>
             </div>
-
-            <div className="w-px h-5 bg-neutral-200 flex-shrink-0" />
-
-            {/* Size */}
-            <div className="flex gap-2 flex-shrink-0">
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSize(s)}
-                  className={[
-                    'px-3 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0',
-                    size === s
-                      ? 'text-white border-neutral-900'
-                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/30',
-                  ].join(' ')}
-                  style={size === s ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
-                >
-                  {s === 'All' ? 'All Sizes' : s}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-5 bg-neutral-200 flex-shrink-0" />
-
-            {/* Condition */}
-            <div className="flex gap-2 flex-shrink-0">
-              {CONDITIONS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCondition(c)}
-                  className={[
-                    'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium border whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0',
-                    condition === c
-                      ? 'text-white border-neutral-900'
-                      : 'bg-white text-neutral-500 border-neutral-200 hover:border-[#C9A96E]/30',
-                  ].join(' ')}
-                  style={condition === c ? { backgroundColor: TAUPE, borderColor: TAUPE } : undefined}
-                >
-                  {conditionChipLabel(c)}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-5 bg-neutral-200 flex-shrink-0" />
-
-            {/* City */}
-            <input
-              type="text"
-              placeholder="City"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="px-4 py-2.5 sm:py-2 rounded-full text-[13px] border border-neutral-200 bg-white text-neutral-700 placeholder:text-neutral-400 w-28 sm:w-32 flex-shrink-0 focus:outline-none focus:border-[#A9967F] transition-colors min-h-[44px] sm:min-h-0"
-            />
+            {/* Right fade gradient indicating more content to scroll */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#FAF9F7] to-transparent sm:hidden" />
           </div>
         </div>
       </section>

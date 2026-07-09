@@ -305,26 +305,31 @@ export default function DealsPage() {
       <section className="bg-white/95 backdrop-blur-sm border-b border-neutral-100 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           {/* Platform pills — horizontally scrollable on mobile */}
-          <div className="flex gap-2 overflow-x-auto pb-2.5 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-            {PLATFORM_FILTERS.map((platform) => (
-              <button
-                key={platform}
-                onClick={() => setPlatformFilter(platform)}
-                className={[
-                  'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 flex-shrink-0',
-                  platformFilter === platform
-                    ? 'bg-[#C9A96E] text-white shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
-                    : 'bg-white text-neutral-600 border border-neutral-200 hover:border-[#C9A96E]/30 hover:text-[#0F0F1A]',
-                ].join(' ')}
-              >
-                {platform}
-                {platform !== 'All' && platformCounts[platform] ? (
-                  <span className="ml-1.5 text-[13px] sm:text-[11px] opacity-60">
-                    {platformCounts[platform]}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+          <div className="relative">
+            <div className="flex gap-2 overflow-x-auto pb-2.5 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+              {PLATFORM_FILTERS.map((platform) => (
+                <button
+                  key={platform}
+                  onClick={() => setPlatformFilter(platform)}
+                  className={[
+                    'px-4 py-2.5 sm:py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200 min-h-[44px] sm:min-h-0 flex-shrink-0 cursor-pointer',
+                    'focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:ring-offset-1',
+                    'active:scale-[0.97]',
+                    platformFilter === platform
+                      ? 'bg-[#C9A96E] text-white shadow-[0_1px_3px_rgba(0,0,0,0.1)]'
+                      : 'bg-white text-neutral-600 border border-neutral-200 hover:border-[#C9A96E]/50 hover:text-[#0F0F1A]',
+                  ].join(' ')}
+                >
+                  {platform}
+                  {platform !== 'All' && platformCounts[platform] ? (
+                    <span className="ml-1.5 text-[13px] sm:text-[11px] opacity-60">
+                      {platformCounts[platform]}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent sm:hidden" />
           </div>
 
           {/* Discount percentage pills */}
@@ -334,10 +339,12 @@ export default function DealsPage() {
                 key={disc}
                 onClick={() => setMinDiscount(disc)}
                 className={[
-                  'px-3.5 py-2 sm:py-1.5 rounded-full text-[13px] sm:text-[12px] font-medium transition-all duration-200 min-h-[44px] sm:min-h-0 flex-shrink-0',
+                  'px-3.5 py-2.5 sm:py-2 rounded-full text-[13px] sm:text-[12px] font-medium transition-all duration-200 min-h-[44px] sm:min-h-0 flex-shrink-0 cursor-pointer',
+                  'focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/40 focus:ring-offset-1',
+                  'active:scale-[0.97]',
                   minDiscount === disc
                     ? 'bg-[#C9A96E] text-white'
-                    : 'bg-white text-neutral-500 border border-neutral-200 hover:border-[#C9A96E]/30 hover:text-neutral-700',
+                    : 'bg-white text-neutral-500 border border-neutral-200 hover:border-[#C9A96E]/50 hover:text-neutral-700',
                 ].join(' ')}
               >
                 {disc === 0 ? 'Any discount' : `${disc}%+ off`}
