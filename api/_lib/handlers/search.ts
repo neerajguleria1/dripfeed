@@ -2,6 +2,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectDB } from '../db.js';
 import Product from '../models/Product.js';
+import { searchProducts } from '../search.js';
 
 const TRENDING_SEARCHES = [
   'kurta',
@@ -14,44 +15,18 @@ const TRENDING_SEARCHES = [
   'palazzo',
 ];
 
-// --- Product Search ---
-
-function generateSearchResults(query: string) {
-  const platforms = [
-    { name: 'Amazon India', color: '#FF9900' },
-    { name: 'Flipkart', color: '#2874F0' },
-    { name: 'Myntra', color: '#FF3F6C' },
-    { name: 'Ajio', color: '#000000' },
-    { name: 'Meesho', color: '#570A57' },
-    { name: 'Nykaa Fashion', color: '#FC2779' },
-    { name: 'Tata CLiQ', color: '#4A148C' },
-  ];
-
-  const basePrice = 1000 + Math.floor(Math.random() * 4000);
-  const results: any[] = [];
-
-  for (const platform of platforms) {
-    const variation = 0.7 + Math.random() * 0.6;
-    const price = Math.round(basePrice * variation);
-    const originalPrice = Math.round(price * (1.2 + Math.random() * 0.5));
-    const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
-
-    results.push({
-      title: `${query} - ${platform.name} Edition`,
-      brand: query.split(' ')[0],
-      platform: platform.name,
-      price,
-      originalPrice,
-      discount,
-      url: `https://www.${platform.name.toLowerCase().replace(/\s+/g, '')}.com/search?q=${encodeURIComponent(query)}`,
-      imageUrl: `https://placehold.co/300x400/f8f5f2/051F45?text=${encodeURIComponent(query.slice(0, 10))}`,
-      rating: (3.5 + Math.random() * 1.5).toFixed(1),
-      inStock: Math.random() > 0.1,
-    });
-  }
-
-  return results.sort((a, b) => a.price - b.price);
+/**
+ * Strip platform/category suffixes from titles.
+ * Removes patterns like "- Myntra Edition", "- Ajio Collection", "- Flipkart Picks"
+ */
+function cleanProductTitle(title: string): string {
+  return title
+    .replace(/\s*[-–—]\s*(myntra|ajio|amazon|flipkart|meesho|nykaa|tata\s*cliq|bewakoof)\s*(edition|collection|picks|exclusive)s?\s*$/i, '')
+    .replace(/\s*[-–—]\s*(india\s*)?(edition|collection|picks)s?\s*$/i, '')
+    .trim();
 }
+
+// --- Product Search ---
 
 async function productSearch(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -60,8 +35,16 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
   if (!query || !query.trim()) return res.status(400).json({ error: 'Query is required' });
 
   try {
-    const products = generateSearchResults(query.trim());
-    res.json({ products, query: query.trim() });
+    // Use real scraper first
+    const results = await searchProducts(query.trim());
+
+    // Clean titles
+    const cleaned = results.map((p) => ({
+      ...p,
+      title: cleanProductTitle(p.title),
+    }));
+
+    res.json({ products: cleaned, query: query.trim() });
   } catch (e: any) {
     res.status(500).json({ error: 'Search failed', message: e.message });
   }

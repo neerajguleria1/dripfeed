@@ -88,7 +88,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=533&fit=crop',
   },
   {
-    title: 'Bewakoof Oversized Graphic Tee - Anime Edition',
+    title: 'Bewakoof Oversized Graphic Tee - Anime',
     brand: 'Bewakoof',
     category: 'western',
     platforms: [
@@ -524,7 +524,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
     imageUrl: 'https://images.unsplash.com/photo-1490427712608-588e68359dbd?w=400&h=533&fit=crop',
   },
   {
-    title: 'Bewakoof Crop Top - Tie Dye Collection',
+    title: 'Bewakoof Crop Top - Tie Dye',
     brand: 'Bewakoof',
     category: 'western',
     platforms: [
