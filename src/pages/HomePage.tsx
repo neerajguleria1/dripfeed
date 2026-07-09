@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, BarChart3, ShoppingBag, TrendingUp, ArrowRight, Zap } from 'lucide-react';
-import { motion, useInView } from 'framer-motion';
+import { Search, ArrowRight, Zap, ChevronRight } from 'lucide-react';
+import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import SiteNav from '../components/SiteNav';
 import type { ProductData, DealData } from '../types/product';
 import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
 
-// Convert seed data to ProductData format (pick lowest price platform)
+// ─── Data ────────────────────────────────────────────────────────────────────
+
 const MOCK_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.map((sp, i) => {
   const cheapest = sp.platforms.reduce((a, b) => (a.price < b.price ? a : b));
   return {
@@ -23,62 +24,64 @@ const MOCK_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.map((sp, i) => {
   };
 });
 
-const TRENDING_TERMS = ['kurta set', 'sneakers', 'silk saree', 'lehenga', 'jeans', 'hoodie', 'palazzo'];
+const PLATFORMS = [
+  { name: 'Myntra', color: '#FF3F6C' },
+  { name: 'Ajio', color: '#000000' },
+  { name: 'Amazon', color: '#FF9900' },
+  { name: 'Flipkart', color: '#2874F0' },
+  { name: 'Meesho', color: '#570741' },
+  { name: 'Nykaa', color: '#FC2779' },
+  { name: 'Tata CLiQ', color: '#6C3D9E' },
+];
 
-const PLATFORMS = ['Myntra', 'Ajio', 'Amazon', 'Flipkart', 'Meesho', 'Nykaa'];
+const TRENDING_TERMS = ['kurta set', 'sneakers', 'silk saree', 'lehenga', 'jeans', 'hoodie', 'palazzo', 'crop top'];
 
-// Animation variants
+// ─── Animation ───────────────────────────────────────────────────────────────
+
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const } },
+  hidden: { opacity: 0, y: 32 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 };
 
 const stagger = {
-  visible: { transition: { staggerChildren: 0.12 } },
+  visible: { transition: { staggerChildren: 0.08 } },
 };
 
-function AnimatedSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Reveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-60px' });
+  const inView = useInView(ref, { once: true, margin: '-80px' });
   return (
-    <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
-      variants={stagger}
-      className={className}
-    >
+    <motion.div ref={ref} initial="hidden" animate={inView ? 'visible' : 'hidden'} variants={stagger} className={className}>
       {children}
     </motion.div>
   );
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function HomePage() {
   const navigate = useNavigate();
-  const [_products, setProducts] = useState<ProductData[]>([]);
   const [deals, setDeals] = useState<DealData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [comparisonCount, setComparisonCount] = useState(12847);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.95]);
 
-  // Animated counter
   useEffect(() => {
     const interval = setInterval(() => {
-      setComparisonCount((prev) => prev + Math.floor(Math.random() * 3) + 1);
-    }, 3000);
+      setComparisonCount((p) => p + Math.floor(Math.random() * 3) + 1);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
-  // Use MOCK_PRODUCTS directly for deals (API generates fake repeated titles)
   useEffect(() => {
-    setLoading(true);
-    setProducts(MOCK_PRODUCTS);
     const mockDeals = MOCK_PRODUCTS
       .filter((p) => (p.discount ?? 0) > 0)
       .sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0))
-      .slice(0, 6);
+      .slice(0, 8);
     setDeals(mockDeals as DealData[]);
-    setLoading(false);
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -95,279 +98,303 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <SEOHead
-        title="DripFeed India — Compare Fashion Prices Across Myntra, Ajio, Amazon, Meesho & More"
-        description="Find the best fashion deals across 7+ Indian platforms. Compare prices, track drops, save money."
+        title="DripFeed — Compare Fashion Prices Across 7+ Indian Platforms"
+        description="Never overpay for fashion. Compare prices across Myntra, Ajio, Amazon, Flipkart, Meesho & more in one click."
       />
 
       <SiteNav />
 
-      {/* ─── 1. Hero Section ─── */}
-      <section className="relative pt-20 pb-16 sm:pt-32 sm:pb-24 bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#0F0F1A] overflow-hidden">
-        {/* Subtle gradient orbs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#C9A96E]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#C9A96E]/5 rounded-full blur-3xl" />
+      {/* ═══════════════════════════════════════════════════════════════════════
+          HERO — Full-bleed dark, cinematic, single focus: the search bar
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <motion.section
+        ref={heroRef}
+        style={{ opacity: heroOpacity, scale: heroScale }}
+        className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center bg-[#0A0A14] overflow-hidden"
+      >
+        {/* Radial gradient glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(201,169,110,0.12),transparent)]" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/5 to-transparent" />
 
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="text-[32px] sm:text-[48px] lg:text-[56px] font-bold text-white mb-4 sm:mb-5 leading-[1.1] tracking-[-0.02em]"
+        <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
+          {/* Live badge */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/10 rounded-full px-4 py-2 mb-8"
           >
-            Never overpay for fashion again
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <span className="text-[13px] text-white/70 font-medium">
+              <span className="text-white font-semibold">{comparisonCount.toLocaleString('en-IN')}</span> comparisons today
+            </span>
+          </motion.div>
+
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[36px] sm:text-[52px] lg:text-[64px] font-extrabold text-white leading-[1.05] tracking-[-0.03em] mb-5"
+          >
+            Never overpay for
+            <br />
+            <span className="bg-gradient-to-r from-[#C9A96E] via-[#E8D5A8] to-[#C9A96E] bg-clip-text text-transparent">
+              fashion
+            </span>{' '}
+            again
           </motion.h1>
 
+          {/* Sub */}
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-            className="text-[15px] sm:text-[17px] text-[#E5E7EB] mb-8 sm:mb-10 max-w-md mx-auto leading-relaxed"
+            transition={{ delay: 0.15, duration: 0.7 }}
+            className="text-[16px] sm:text-[18px] text-white/60 mb-10 max-w-md mx-auto leading-relaxed font-light"
           >
-            Compare prices across 7+ platforms instantly
+            One search. Seven platforms. The lowest price — instantly.
           </motion.p>
 
-          {/* Single smart search input */}
+          {/* Search */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-            className="max-w-xl mx-auto"
+            transition={{ delay: 0.3, duration: 0.7 }}
           >
-            <form onSubmit={handleSearchSubmit} className="relative">
-              <div className="flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl h-[52px] px-4 focus-within:border-[#C9A96E] focus-within:ring-2 focus-within:ring-[#C9A96E]/20 transition-all">
-                <Search className="w-5 h-5 text-[#E5E7EB] shrink-0" />
+            <form onSubmit={handleSearchSubmit} className="relative max-w-xl mx-auto group">
+              <div className="flex items-center bg-white/[0.08] backdrop-blur-md border border-white/[0.15] rounded-2xl h-[56px] sm:h-[60px] px-5 transition-all duration-300 group-focus-within:border-[#C9A96E]/50 group-focus-within:bg-white/[0.12] group-focus-within:shadow-[0_0_40px_rgba(201,169,110,0.1)]">
+                <Search className="w-5 h-5 text-white/40 shrink-0" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search 'kurta set' or paste a Myntra/Amazon URL..."
+                  placeholder="Search 'kurta set' or paste any product URL..."
                   aria-label="Search products or paste URL"
-                  className="flex-1 bg-transparent outline-none text-white placeholder:text-gray-400 text-[14px] sm:text-[15px] ml-3 min-h-[44px]"
+                  className="flex-1 bg-transparent outline-none text-white placeholder:text-white/35 text-[15px] ml-3 min-h-[44px]"
                 />
+                <button
+                  type="submit"
+                  className="hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#0A0A14] font-semibold px-5 py-2.5 rounded-xl text-[13px] hover:bg-[#E8D5A8] transition-colors"
+                >
+                  Compare <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </form>
           </motion.div>
 
-          {/* Platform clickable buttons */}
+          {/* Platform pills */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="mt-8 flex items-center justify-center gap-2 sm:gap-3 flex-wrap"
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="mt-8 flex items-center justify-center gap-2 flex-wrap"
           >
-            {PLATFORMS.map((name) => (
-              <button
+            <span className="text-[12px] text-white/30 mr-1">Comparing:</span>
+            {PLATFORMS.map(({ name, color }) => (
+              <span
                 key={name}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(name + ' fashion')}`)}
-                className="bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[11px] text-white/70 hover:bg-white/20 hover:text-white cursor-pointer transition-colors"
+                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-full text-[11px] text-white/60 font-medium"
               >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
                 {name}
-              </button>
+              </span>
             ))}
           </motion.div>
-
-          {/* Animated counter */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-            className="mt-6 inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2"
-          >
-            <Zap className="w-3.5 h-3.5 text-[#C9A96E]" />
-            <span className="text-[13px] text-[#E5E7EB]">
-              <span className="font-semibold text-white">{comparisonCount.toLocaleString('en-IN')}</span> comparisons today
-            </span>
-          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* ─── 2. How It Works ─── */}
-      <section className="bg-[#FAFAFA] py-16 sm:py-20">
-        <AnimatedSection className="max-w-5xl mx-auto px-4 sm:px-6">
-          <motion.h2
-            variants={fadeUp}
-            className="text-[24px] sm:text-[32px] font-bold text-[#111827] text-center mb-12 sm:mb-14 tracking-[-0.01em]"
-          >
+      {/* ═══════════════════════════════════════════════════════════════════════
+          HOW IT WORKS — 3 steps, minimal, confident
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 sm:py-28 bg-white">
+        <Reveal className="max-w-5xl mx-auto px-5 sm:px-8">
+          <motion.p variants={fadeUp} className="text-[12px] text-[#C9A96E] font-semibold uppercase tracking-[0.15em] text-center mb-3">
             How it works
+          </motion.p>
+          <motion.h2 variants={fadeUp} className="text-[28px] sm:text-[40px] font-bold text-[#0F0F1A] text-center mb-16 sm:mb-20 tracking-[-0.02em] leading-tight">
+            Three steps to the best deal
           </motion.h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10">
             {[
-              { step: 1, icon: Search, title: 'Search or Paste URL', desc: 'Enter any product name or paste a link from any platform.' },
-              { step: 2, icon: BarChart3, title: 'Compare Prices Instantly', desc: 'See prices across 7+ platforms side by side in seconds.' },
-              { step: 3, icon: ShoppingBag, title: 'Buy at the Lowest Price', desc: 'Click through to the cheapest store and save real money.' },
-            ].map(({ step, icon: Icon, title, desc }) => (
-              <motion.div key={step} variants={fadeUp} className="bg-white rounded-2xl p-6 sm:p-8 border border-neutral-100 text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#C9A96E]/10 text-[#C9A96E] text-[14px] font-bold mb-4">
-                  {step}
-                </div>
-                <div className="flex justify-center mb-3">
-                  <Icon className="w-6 h-6 text-[#111827]" />
-                </div>
-                <h3 className="text-[16px] sm:text-[18px] font-semibold text-[#111827] mb-2">{title}</h3>
-                <p className="text-[14px] text-gray-500 leading-relaxed max-w-xs mx-auto">{desc}</p>
+              { num: '01', title: 'Search or paste', desc: 'Type a product name or paste any URL from Myntra, Flipkart, Amazon, or more.' },
+              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 7+ platforms ranked by value. No signup needed.' },
+              { num: '03', title: 'Save money', desc: 'Click through to the cheapest platform and buy. We handle the rest.' },
+            ].map(({ num, title, desc }) => (
+              <motion.div key={num} variants={fadeUp} className="relative">
+                <span className="text-[48px] sm:text-[56px] font-black text-[#F3F4F6] leading-none select-none">{num}</span>
+                <h3 className="text-[18px] sm:text-[20px] font-bold text-[#0F0F1A] mt-2 mb-2 tracking-[-0.01em]">{title}</h3>
+                <p className="text-[14px] text-[#6B7280] leading-relaxed">{desc}</p>
               </motion.div>
             ))}
           </div>
-        </AnimatedSection>
+        </Reveal>
       </section>
 
-      {/* ─── 3. Trending Searches ─── */}
-      <section className="py-12 sm:py-16 bg-white">
-        <AnimatedSection className="max-w-5xl mx-auto px-4 sm:px-6">
-          <motion.div variants={fadeUp} className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-5 h-5 text-[#C9A96E]" />
-            <h2 className="text-[20px] sm:text-[24px] font-bold text-[#111827]">Trending Now</h2>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TRENDING — Horizontal pills
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-14 sm:py-16 bg-[#FAFAFA] border-y border-neutral-100">
+        <Reveal className="max-w-6xl mx-auto px-5 sm:px-8">
+          <motion.div variants={fadeUp} className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2.5">
+              <Zap className="w-4 h-4 text-[#C9A96E]" />
+              <h2 className="text-[16px] sm:text-[18px] font-bold text-[#0F0F1A]">Trending searches</h2>
+            </div>
+            <Link to="/search" className="text-[13px] text-[#C9A96E] font-medium flex items-center gap-1 hover:gap-2 transition-all min-h-[44px]">
+              View all <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+          <motion.div variants={fadeUp} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {TRENDING_TERMS.map((term) => (
               <button
                 key={term}
                 onClick={() => navigate(`/search?q=${encodeURIComponent(term)}`)}
-                className="shrink-0 px-5 py-2.5 bg-[#F3F4F6] hover:bg-[#C9A96E]/10 hover:text-[#C9A96E] text-[#111827] text-[14px] font-medium rounded-full transition-colors min-h-[44px] capitalize"
+                className="shrink-0 px-5 py-2.5 bg-white hover:bg-[#0F0F1A] hover:text-white text-[#0F0F1A] text-[14px] font-medium rounded-full border border-neutral-200 hover:border-[#0F0F1A] transition-all duration-200 min-h-[44px] capitalize"
               >
                 {term}
               </button>
             ))}
           </motion.div>
-        </AnimatedSection>
+        </Reveal>
       </section>
 
-      {/* ─── 4. Live Deal Feed ─── */}
-      <section className="py-12 sm:py-16 bg-[#FAFAFA]">
-        <AnimatedSection className="max-w-6xl mx-auto px-4 sm:px-6">
-          <motion.div variants={fadeUp} className="flex items-center justify-between mb-8">
-            <h2 className="text-[20px] sm:text-[24px] font-bold text-[#111827]">Today's Best Deals</h2>
-            <Link to="/deals" className="text-[14px] text-[#C9A96E] font-medium hover:underline flex items-center gap-1 min-h-[44px]">
-              View All Deals <ArrowRight className="w-4 h-4" />
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DEALS — Editorial grid, hover lift, savings emphasis
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 sm:py-28 bg-white">
+        <Reveal className="max-w-6xl mx-auto px-5 sm:px-8">
+          <motion.div variants={fadeUp} className="flex items-end justify-between mb-10 sm:mb-12">
+            <div>
+              <p className="text-[12px] text-[#C9A96E] font-semibold uppercase tracking-[0.15em] mb-2">Live deals</p>
+              <h2 className="text-[24px] sm:text-[32px] font-bold text-[#0F0F1A] tracking-[-0.02em]">Today's biggest drops</h2>
+            </div>
+            <Link to="/deals" className="hidden sm:flex items-center gap-1.5 text-[14px] text-[#0F0F1A] font-medium hover:text-[#C9A96E] transition-colors min-h-[44px]">
+              All deals <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
 
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="animate-pulse bg-white rounded-xl p-3">
-                  <div className="w-full aspect-[3/4] bg-gray-200 rounded-lg mb-3" />
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {deals.slice(0, 4).map((deal) => (
+          <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            {deals.slice(0, 8).map((deal, i) => (
+              <motion.div
+                key={deal.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.5 }}
+              >
                 <Link
-                  key={deal.id}
-                  to={`/search?q=${encodeURIComponent(deal.title)}`}
-                  className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-[#C9A96E]/30 transition-all duration-200"
+                  to={`/compare?q=${encodeURIComponent(deal.title)}`}
+                  className="group block bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-[0_8px_30px_-8px_rgba(0,0,0,0.12)] hover:border-neutral-200 transition-all duration-300"
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50">
                     <img
                       src={deal.imageUrl}
                       alt={deal.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                       loading="lazy"
                     />
                     {deal.discount > 0 && (
-                      <span className="absolute top-3 left-3 bg-[#22C55E] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                        -{deal.discount}%
+                      <span className="absolute top-3 left-3 bg-[#0F0F1A] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                        −{deal.discount}%
                       </span>
                     )}
                   </div>
-                  <div className="p-3">
-                    <p className="text-[13px] text-gray-500 font-medium mb-0.5 capitalize">{deal.platform}</p>
-                    <h3 className="text-[13px] sm:text-[14px] font-medium text-[#111827] line-clamp-2 mb-2 leading-snug">
+                  <div className="p-3.5 sm:p-4">
+                    <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wide mb-1">{deal.platform}</p>
+                    <h3 className="text-[13px] sm:text-[14px] font-medium text-[#0F0F1A] line-clamp-2 leading-snug mb-2.5">
                       {deal.title}
                     </h3>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[15px] font-bold text-[#111827] tabular-nums">₹{deal.price.toLocaleString('en-IN')}</span>
+                      <span className="text-[16px] font-bold text-[#0F0F1A] tabular-nums">
+                        ₹{deal.price.toLocaleString('en-IN')}
+                      </span>
                       {deal.originalPrice && deal.originalPrice > deal.price && (
-                        <span className="text-[12px] text-gray-400 line-through tabular-nums">₹{deal.originalPrice.toLocaleString('en-IN')}</span>
+                        <span className="text-[12px] text-neutral-400 line-through tabular-nums">
+                          ₹{deal.originalPrice.toLocaleString('en-IN')}
+                        </span>
                       )}
                     </div>
                   </div>
                 </Link>
-              ))}
-            </motion.div>
-          )}
-        </AnimatedSection>
-      </section>
-
-      {/* ─── 5. Social Proof / Trust Section ─── */}
-      <section className="py-16 sm:py-20 bg-white">
-        <AnimatedSection className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <motion.p variants={fadeUp} className="text-[14px] text-[#C9A96E] font-medium mb-3 tracking-wide uppercase">
-            Trusted by shoppers
-          </motion.p>
-          <motion.h2 variants={fadeUp} className="text-[24px] sm:text-[32px] font-bold text-[#111827] mb-10 tracking-[-0.01em]">
-            Trusted by 50,000+ Indian fashion shoppers
-          </motion.h2>
-
-          <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-12 max-w-lg mx-auto">
-            <div>
-              <p className="text-[24px] sm:text-[32px] font-bold text-[#111827]">7+</p>
-              <p className="text-[13px] sm:text-[14px] text-gray-500 mt-1">Platforms</p>
-            </div>
-            <div>
-              <p className="text-[24px] sm:text-[32px] font-bold text-[#111827]">₹2.4Cr</p>
-              <p className="text-[13px] sm:text-[14px] text-gray-500 mt-1">Saved</p>
-            </div>
-            <div>
-              <p className="text-[24px] sm:text-[32px] font-bold text-[#111827]">100%</p>
-              <p className="text-[13px] sm:text-[14px] text-gray-500 mt-1">Free</p>
-            </div>
+              </motion.div>
+            ))}
           </motion.div>
 
-          {/* As seen in placeholder */}
-          <motion.div variants={fadeUp} className="mt-12 pt-8 border-t border-gray-100">
-            <p className="text-[12px] text-gray-400 uppercase tracking-wider mb-4">As seen in</p>
-            <div className="flex items-center justify-center gap-6 sm:gap-10 opacity-40">
-              {['YourStory', 'Inc42', 'Mint', 'ET'].map((name) => (
-                <span key={name} className="text-[13px] sm:text-[14px] font-semibold text-gray-600">{name}</span>
-              ))}
-            </div>
-          </motion.div>
-        </AnimatedSection>
+          {/* Mobile CTA */}
+          <div className="mt-8 text-center sm:hidden">
+            <Link to="/deals" className="inline-flex items-center gap-2 text-[14px] font-medium text-[#C9A96E] min-h-[44px]">
+              See all deals <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </Reveal>
       </section>
 
-      {/* ─── 6. CTA Section ─── */}
-      <section className="py-16 sm:py-20 bg-gradient-to-br from-[#0F0F1A] via-[#1A1A2E] to-[#0F0F1A]">
-        <AnimatedSection className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <motion.h2
-            variants={fadeUp}
-            className="text-[24px] sm:text-[32px] font-bold text-white mb-4 tracking-[-0.01em]"
-          >
-            Start saving on every fashion purchase
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SOCIAL PROOF — Clean, confident numbers
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 sm:py-24 bg-[#FAFAFA] border-t border-neutral-100">
+        <Reveal className="max-w-4xl mx-auto px-5 sm:px-8 text-center">
+          <motion.h2 variants={fadeUp} className="text-[24px] sm:text-[36px] font-bold text-[#0F0F1A] mb-14 tracking-[-0.02em]">
+            Built for India's smartest shoppers
           </motion.h2>
-          <motion.p variants={fadeUp} className="text-[14px] text-[#E5E7EB] mb-8">
-            It's free. No signup required.
-          </motion.p>
 
+          <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-16">
+            {[
+              { value: '7+', label: 'Platforms compared' },
+              { value: '₹2.4Cr', label: 'Saved by users' },
+              { value: '50K+', label: 'Monthly users' },
+            ].map(({ value, label }) => (
+              <div key={label}>
+                <p className="text-[28px] sm:text-[44px] font-extrabold text-[#0F0F1A] tracking-tight">{value}</p>
+                <p className="text-[12px] sm:text-[14px] text-neutral-500 mt-1 font-medium">{label}</p>
+              </div>
+            ))}
+          </motion.div>
+        </Reveal>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          CTA — Dark, minimal, single action
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="py-24 sm:py-32 bg-[#0A0A14] relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_100%,rgba(201,169,110,0.08),transparent)]" />
+
+        <Reveal className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
+          <motion.h2 variants={fadeUp} className="text-[28px] sm:text-[40px] font-bold text-white mb-4 tracking-[-0.02em] leading-tight">
+            Stop scrolling between apps.
+            <br />
+            <span className="text-white/50">Start saving.</span>
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-[15px] text-white/40 mb-10">
+            Free forever. No signup. No ads.
+          </motion.p>
           <motion.div variants={fadeUp}>
             <button
               onClick={() => navigate('/search')}
-              className="inline-flex items-center gap-2 bg-[#C9A96E] text-white font-semibold px-8 py-3.5 rounded-full text-[14px] hover:bg-[#B8964F] transition-colors min-h-[44px]"
+              className="inline-flex items-center gap-2.5 bg-white text-[#0A0A14] font-bold px-8 py-4 rounded-full text-[15px] hover:bg-[#C9A96E] hover:text-white transition-all duration-300 min-h-[44px] shadow-[0_0_40px_rgba(255,255,255,0.1)]"
             >
               Start Comparing
               <ArrowRight className="w-4 h-4" />
             </button>
           </motion.div>
-        </AnimatedSection>
+        </Reveal>
       </section>
 
-      {/* ─── 7. Footer ─── */}
-      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
+      {/* ═══════════════════════════════════════════════════════════════════════
+          FOOTER — Minimal, clean
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <footer className="px-5 sm:px-8 py-10 pb-24 sm:pb-10 bg-white border-t border-neutral-100">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[13px] sm:text-[12px] text-neutral-400">© 2026 DripFeed India</p>
-          <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
-            <button onClick={() => navigate('/privacy')} className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center">Privacy</button>
-            <button onClick={() => navigate('/terms')} className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center">Terms</button>
-            <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center">Affiliate Disclosure</button>
+          <p className="text-[13px] text-neutral-400">© 2026 DripFeed India</p>
+          <div className="flex gap-6 text-[13px] text-neutral-400">
+            <button onClick={() => navigate('/privacy')} className="hover:text-[#0F0F1A] transition-colors min-h-[44px] flex items-center">Privacy</button>
+            <button onClick={() => navigate('/terms')} className="hover:text-[#0F0F1A] transition-colors min-h-[44px] flex items-center">Terms</button>
+            <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-[#0F0F1A] transition-colors min-h-[44px] flex items-center">Disclosure</button>
           </div>
-          <p className="text-[13px] sm:text-[10px] text-neutral-300">
-            #Ad: DripFeed earns commission on purchases through our links.
-          </p>
         </div>
       </footer>
     </div>
