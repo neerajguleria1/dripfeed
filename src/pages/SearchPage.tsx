@@ -356,7 +356,11 @@ export default function SearchPage() {
 
   function handleSearch(newQuery: string) {
     const trimmed = newQuery.trim();
-    if (trimmed) {
+    if (!trimmed) return;
+    // If it's a URL, route to compare page instead
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
+    } else {
       setSearchParams({ q: trimmed });
     }
   }

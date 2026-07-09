@@ -26,6 +26,63 @@ function cleanProductTitle(title: string): string {
     .trim();
 }
 
+/**
+ * Extract a meaningful product name from a URL.
+ * Handles Flipkart, Myntra, Amazon, Ajio URL patterns.
+ */
+function extractProductNameFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname;
+
+    // Flipkart: /product-name/p/itm123 or /product-name/pid
+    if (host.includes('flipkart')) {
+      const slug = path.split('/').filter(Boolean)[0] || '';
+      return slug.replace(/[-_]/g, ' ').replace(/\b(p|pid|itm\w+)\b/gi, '').trim();
+    }
+
+    // Myntra: /12345678 (just ID) or /brand-product-name/12345678/buy
+    if (host.includes('myntra')) {
+      const parts = path.split('/').filter(Boolean);
+      // Find the slug part (non-numeric)
+      const slug = parts.find(p => p.length > 3 && !/^\d+$/.test(p));
+      if (slug) return slug.replace(/[-_]/g, ' ').trim();
+      // If all numeric, can't extract name
+      return null;
+    }
+
+    // Amazon: /dp/ASIN or /product-name/dp/ASIN
+    if (host.includes('amazon')) {
+      const parts = path.split('/').filter(Boolean);
+      const dpIndex = parts.indexOf('dp');
+      if (dpIndex > 0) {
+        return parts[dpIndex - 1].replace(/[-_]/g, ' ').trim();
+      }
+      // /s?k=query
+      const kParam = parsed.searchParams.get('k');
+      if (kParam) return kParam;
+      return parts[0]?.replace(/[-_]/g, ' ').trim() || null;
+    }
+
+    // Ajio: /p/product-slug
+    if (host.includes('ajio')) {
+      const parts = path.split('/').filter(Boolean);
+      const slug = parts[parts.length - 1] || '';
+      return slug.replace(/[-_]/g, ' ').replace(/\d{8,}/g, '').trim() || null;
+    }
+
+    // Generic: use last meaningful path segment
+    const parts = path.split('/').filter(Boolean);
+    const slug = parts.find(p => p.length > 3 && !/^\d+$/.test(p) && !['p', 'dp', 'buy', 'itm'].includes(p));
+    if (slug) return slug.replace(/[-_]/g, ' ').trim();
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // --- Product Search ---
 
 async function productSearch(req: VercelRequest, res: VercelResponse) {
@@ -34,17 +91,27 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
   const { query } = req.body || {};
   if (!query || !query.trim()) return res.status(400).json({ error: 'Query is required' });
 
-  try {
-    // Use real scraper first
-    const results = await searchProducts(query.trim());
+  let searchTerm = query.trim();
 
-    // Clean titles
+  // If the query looks like a URL, extract the product name from it
+  if (searchTerm.startsWith('http://') || searchTerm.startsWith('https://')) {
+    const extracted = extractProductNameFromUrl(searchTerm);
+    if (extracted && extracted.length >= 3) {
+      searchTerm = extracted;
+    } else {
+      return res.status(400).json({ error: 'Could not extract product name from this URL. Try searching by product name instead.', products: [] });
+    }
+  }
+
+  try {
+    const results = await searchProducts(searchTerm);
+
     const cleaned = results.map((p) => ({
       ...p,
       title: cleanProductTitle(p.title),
     }));
 
-    res.json({ products: cleaned, query: query.trim() });
+    res.json({ products: cleaned, query: searchTerm });
   } catch (e: any) {
     res.status(500).json({ error: 'Search failed', message: e.message });
   }
