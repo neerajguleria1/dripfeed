@@ -244,12 +244,38 @@ export default function ThriftBrowsePage() {
             </div>
           ) : listings.length === 0 ? (
             <div className="text-center py-28">
-              <p className="text-[15px] font-normal text-neutral-600 mb-2">
-                No pieces match your selection.
-              </p>
-              <p className="text-[13px] text-neutral-400">
-                Try broadening your filters or revisit tomorrow.
-              </p>
+              {hasActiveFilters ? (
+                <>
+                  <p className="text-[15px] font-normal text-neutral-600 mb-2">
+                    No pieces match your selection.
+                  </p>
+                  <p className="text-[13px] text-neutral-400 mb-6">
+                    Try broadening your filters or revisit tomorrow.
+                  </p>
+                  <button
+                    onClick={() => { setCategory('All'); setSize('All'); setCondition('All'); setCity(''); }}
+                    className="px-6 py-2.5 rounded-full text-[13px] font-medium bg-[#C9A96E] text-white hover:bg-[#B8964F] transition-colors min-h-[44px]"
+                  >
+                    Clear all filters
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-4xl mb-4">👗</p>
+                  <p className="text-[18px] font-medium text-neutral-700 mb-2">
+                    The archive is getting curated
+                  </p>
+                  <p className="text-[14px] text-neutral-500 max-w-sm mx-auto mb-6">
+                    Be the first to list your pre-loved fashion. Sustainable style starts here.
+                  </p>
+                  <button
+                    onClick={() => navigate('/thrift/list')}
+                    className="px-6 py-2.5 rounded-full text-[13px] font-medium bg-[#C9A96E] text-white hover:bg-[#B8964F] transition-colors min-h-[44px]"
+                  >
+                    List your first piece
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <>
