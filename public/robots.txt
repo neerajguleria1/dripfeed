@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /wishlist
+Disallow: /collections
+Disallow: /thrift/list
+
+Sitemap: https://dripfeed-v21.vercel.app/sitemap.xml

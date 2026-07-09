@@ -185,6 +185,26 @@ export default function ComparePage() {
       <SEOHead
         title={`Compare ${productTitle} Prices — DripFeed India`}
         description={`Compare ${productTitle} prices across ${platforms.length} platforms. Find the best deal on DripFeed India.`}
+        image={productImage}
+        jsonLd={
+          lowest
+            ? {
+                '@context': 'https://schema.org',
+                '@type': 'Product',
+                name: productTitle,
+                image: productImage,
+                brand: productBrand ? { '@type': 'Brand', name: productBrand } : undefined,
+                offers: platforms.map((p) => ({
+                  '@type': 'Offer',
+                  price: p.price,
+                  priceCurrency: 'INR',
+                  url: p.url,
+                  seller: { '@type': 'Organization', name: p.platform },
+                  availability: 'https://schema.org/InStock',
+                })),
+              }
+            : undefined
+        }
       />
 
       <div className="min-h-screen bg-[#FAFAFA]">

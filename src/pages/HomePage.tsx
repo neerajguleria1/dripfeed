@@ -97,6 +97,28 @@ export default function HomePage() {
       <SEOHead
         title="DripFeed — Compare Fashion Prices Across 7+ Indian Platforms"
         description="Never overpay for fashion. Compare prices across Myntra, Ajio, Amazon, Flipkart, Meesho & more in one click."
+        url="https://dripfeed-v21.vercel.app/"
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'DripFeed India',
+            url: 'https://dripfeed-v21.vercel.app',
+            logo: 'https://dripfeed-v21.vercel.app/logo.png',
+            description: 'AI-powered fashion price comparison platform for India, comparing prices across 7+ e-commerce platforms.',
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'DripFeed India',
+            url: 'https://dripfeed-v21.vercel.app',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://dripfeed-v21.vercel.app/search?q={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          },
+        ]}
       />
 
       <SiteNav />
