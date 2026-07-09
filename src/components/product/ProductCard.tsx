@@ -123,7 +123,7 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
       </div>
 
       {/* Content — asymmetric padding, price as hero */}
-      <div className="px-4 pt-3 pb-4 flex flex-col gap-1 flex-1">
+      <div className="px-4 pt-3 pb-4 flex flex-col gap-1 flex-1 overflow-hidden min-w-0">
         {product.brand && (
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
             {product.brand}

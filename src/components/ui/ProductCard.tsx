@@ -79,7 +79,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </button>
       </div>
 
-      <div className="p-3 flex flex-col gap-2 flex-1">
+      <div className="p-3 flex flex-col gap-2 flex-1 overflow-hidden min-w-0">
         {product.brand && <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{product.brand}</p>}
         <p className="text-sm font-semibold text-navy line-clamp-2 leading-snug">{product.title}</p>
         <PlatformBadge platform={product.platform} />
