@@ -109,7 +109,7 @@ export default function HomePage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#0A0A14] overflow-hidden"
+        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#171310] overflow-hidden"
       >
         {/* Radial gradient glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(201,169,110,0.12),transparent)]" />
@@ -176,7 +176,7 @@ export default function HomePage() {
                 />
                 <button
                   type="submit"
-                  className="hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#0A0A14] font-semibold px-5 py-2.5 rounded-xl text-[13px] hover:bg-[#E8D5A8] transition-colors"
+                  className="hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#171310] font-semibold px-5 py-2.5 rounded-xl text-[13px] hover:bg-[#E8D5A8] transition-colors"
                 >
                   Compare <ArrowRight className="w-3.5 h-3.5" />
                 </button>
@@ -213,7 +213,7 @@ export default function HomePage() {
           <motion.p variants={fadeUp} className="text-[12px] text-[#C9A96E] font-semibold uppercase tracking-[0.15em] text-center mb-3">
             How it works
           </motion.p>
-          <motion.h2 variants={fadeUp} className="text-[28px] sm:text-[40px] font-bold text-[#0F0F1A] text-center mb-16 sm:mb-20 tracking-[-0.02em] leading-tight">
+          <motion.h2 variants={fadeUp} className="text-[28px] sm:text-[40px] font-bold text-[#171310] text-center mb-16 sm:mb-20 tracking-[-0.02em] leading-tight">
             Three steps to the best deal
           </motion.h2>
 
@@ -225,7 +225,7 @@ export default function HomePage() {
             ].map(({ num, title, desc }) => (
               <motion.div key={num} variants={fadeUp} className="relative">
                 <span className="text-[48px] sm:text-[56px] font-black text-[#F3F4F6] leading-none select-none">{num}</span>
-                <h3 className="text-[18px] sm:text-[20px] font-bold text-[#0F0F1A] mt-2 mb-2 tracking-[-0.01em]">{title}</h3>
+                <h3 className="text-[18px] sm:text-[20px] font-bold text-[#171310] mt-2 mb-2 tracking-[-0.01em]">{title}</h3>
                 <p className="text-[14px] text-[#6B7280] leading-relaxed">{desc}</p>
               </motion.div>
             ))}
@@ -241,7 +241,7 @@ export default function HomePage() {
           <motion.div variants={fadeUp} className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2.5">
               <Zap className="w-4 h-4 text-[#C9A96E]" />
-              <h2 className="text-[16px] sm:text-[18px] font-bold text-[#0F0F1A]">Trending searches</h2>
+              <h2 className="text-[16px] sm:text-[18px] font-bold text-[#171310]">Trending searches</h2>
             </div>
             <Link to="/search" className="text-[13px] text-[#C9A96E] font-medium flex items-center gap-1 hover:gap-2 transition-all min-h-[44px]">
               View all <ChevronRight className="w-3.5 h-3.5" />
@@ -253,7 +253,7 @@ export default function HomePage() {
               <button
                 key={term}
                 onClick={() => navigate(`/search?q=${encodeURIComponent(term)}`)}
-                className="shrink-0 px-5 py-2.5 bg-white hover:bg-[#0F0F1A] hover:text-white text-[#0F0F1A] text-[14px] font-medium rounded-full border border-neutral-200 hover:border-[#0F0F1A] transition-all duration-200 min-h-[44px] capitalize"
+                className="shrink-0 px-5 py-2.5 bg-white hover:bg-[#171310] hover:text-white text-[#171310] text-[14px] font-medium rounded-full border border-neutral-200 hover:border-[#171310] transition-all duration-200 min-h-[44px] capitalize"
               >
                 {term}
               </button>
@@ -270,9 +270,9 @@ export default function HomePage() {
           <motion.div variants={fadeUp} className="flex items-end justify-between mb-10 sm:mb-12">
             <div>
               <p className="text-[12px] text-[#C9A96E] font-semibold uppercase tracking-[0.15em] mb-2">Live deals</p>
-              <h2 className="text-[24px] sm:text-[32px] font-bold text-[#0F0F1A] tracking-[-0.02em]">Today's biggest drops</h2>
+              <h2 className="text-[24px] sm:text-[32px] font-bold text-[#171310] tracking-[-0.02em]">Today's biggest drops</h2>
             </div>
-            <Link to="/deals" className="hidden sm:flex items-center gap-1.5 text-[14px] text-[#0F0F1A] font-medium hover:text-[#C9A96E] transition-colors min-h-[44px]">
+            <Link to="/deals" className="hidden sm:flex items-center gap-1.5 text-[14px] text-[#171310] font-medium hover:text-[#C9A96E] transition-colors min-h-[44px]">
               All deals <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
@@ -297,18 +297,18 @@ export default function HomePage() {
                       loading="lazy"
                     />
                     {deal.discount > 0 && (
-                      <span className="absolute top-3 left-3 bg-[#0F0F1A] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                      <span className="absolute top-3 left-3 bg-[#171310] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
                         −{deal.discount}%
                       </span>
                     )}
                   </div>
                   <div className="p-3.5 sm:p-4">
                     <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wide mb-1">{deal.platform}</p>
-                    <h3 className="text-[13px] sm:text-[14px] font-medium text-[#0F0F1A] line-clamp-2 leading-snug mb-2.5">
+                    <h3 className="text-[13px] sm:text-[14px] font-medium text-[#171310] line-clamp-2 leading-snug mb-2.5">
                       {deal.title}
                     </h3>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[16px] font-bold text-[#0F0F1A] tabular-nums">
+                      <span className="text-[16px] font-bold text-[#171310] tabular-nums">
                         ₹{deal.price.toLocaleString('en-IN')}
                       </span>
                       {deal.originalPrice && deal.originalPrice > deal.price && (
@@ -337,7 +337,7 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════════════════════ */}
       <section className="py-20 sm:py-24 bg-[#FAFAFA] border-t border-neutral-100">
         <Reveal className="max-w-4xl mx-auto px-5 sm:px-8 text-center">
-          <motion.h2 variants={fadeUp} className="text-[24px] sm:text-[36px] font-bold text-[#0F0F1A] mb-14 tracking-[-0.02em]">
+          <motion.h2 variants={fadeUp} className="text-[24px] sm:text-[36px] font-bold text-[#171310] mb-14 tracking-[-0.02em]">
             Built for India's smartest shoppers
           </motion.h2>
 
@@ -348,7 +348,7 @@ export default function HomePage() {
               { value: '50K+', label: 'Monthly users' },
             ].map(({ value, label }) => (
               <div key={label}>
-                <p className="text-[28px] sm:text-[44px] font-extrabold text-[#0F0F1A] tracking-tight">{value}</p>
+                <p className="text-[28px] sm:text-[44px] font-extrabold text-[#171310] tracking-tight">{value}</p>
                 <p className="text-[12px] sm:text-[14px] text-neutral-500 mt-1 font-medium">{label}</p>
               </div>
             ))}
@@ -359,7 +359,7 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════════════════
           CTA — Dark, minimal, single action
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 sm:py-32 bg-[#0A0A14] relative overflow-hidden">
+      <section className="py-24 sm:py-32 bg-[#171310] relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_100%,rgba(201,169,110,0.08),transparent)]" />
 
         <Reveal className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
@@ -374,7 +374,7 @@ export default function HomePage() {
           <motion.div variants={fadeUp}>
             <button
               onClick={() => navigate('/search')}
-              className="inline-flex items-center gap-2.5 bg-white text-[#0A0A14] font-bold px-8 py-4 rounded-full text-[15px] hover:bg-[#C9A96E] hover:text-white transition-all duration-300 min-h-[44px] shadow-[0_0_40px_rgba(255,255,255,0.1)]"
+              className="inline-flex items-center gap-2.5 bg-white text-[#171310] font-bold px-8 py-4 rounded-full text-[15px] hover:bg-[#C9A96E] hover:text-white transition-all duration-300 min-h-[44px] shadow-[0_0_40px_rgba(255,255,255,0.1)]"
             >
               Start Comparing
               <ArrowRight className="w-4 h-4" />
@@ -390,9 +390,9 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] text-neutral-400">© 2026 DripFeed India</p>
           <div className="flex gap-6 text-[13px] text-neutral-400">
-            <button onClick={() => navigate('/privacy')} className="hover:text-[#0F0F1A] transition-colors min-h-[44px] flex items-center">Privacy</button>
-            <button onClick={() => navigate('/terms')} className="hover:text-[#0F0F1A] transition-colors min-h-[44px] flex items-center">Terms</button>
-            <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-[#0F0F1A] transition-colors min-h-[44px] flex items-center">Disclosure</button>
+            <button onClick={() => navigate('/privacy')} className="hover:text-[#171310] transition-colors min-h-[44px] flex items-center">Privacy</button>
+            <button onClick={() => navigate('/terms')} className="hover:text-[#171310] transition-colors min-h-[44px] flex items-center">Terms</button>
+            <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-[#171310] transition-colors min-h-[44px] flex items-center">Disclosure</button>
           </div>
         </div>
       </footer>

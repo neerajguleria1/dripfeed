@@ -77,7 +77,7 @@ export default function SiteNav() {
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 transition-all duration-300 ease-out bg-[#0F0F1A] ${
+      className={`fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-16 transition-all duration-300 ease-out bg-[#171310] ${
         scrolled ? 'py-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.35)]' : 'py-3 sm:py-4'
       }`}
     >
