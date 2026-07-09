@@ -46,6 +46,7 @@ export default function ComparePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const q = searchParams.get('q') || '';
+  const productUrl = searchParams.get('url') || '';
 
   const [platforms, setPlatforms] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,8 +61,38 @@ export default function ComparePage() {
   useEffect(() => {
     if (q) {
       fetchComparison(q);
+    } else if (productUrl) {
+      // User pasted a product URL — extract title and compare
+      fetchFromUrl(productUrl);
     }
-  }, [q]);
+  }, [q, productUrl]);
+
+  async function fetchFromUrl(url: string) {
+    setLoading(true);
+    setError('');
+    setPlatforms([]);
+    try {
+      const { data } = await api.post('/products/compare', { url });
+      const results: ProductData[] = data?.platforms || data?.products || [];
+      results.sort((a, b) => a.price - b.price);
+      setPlatforms(results);
+      if (results.length > 0) {
+        fetchAiAdvice(results[0]?.title || 'Product', results);
+      }
+    } catch {
+      // Fallback: extract product name from URL and do a keyword search
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      const guessedName = pathParts[pathParts.length - 1]?.replace(/[-_]/g, ' ') || '';
+      if (guessedName) {
+        fetchComparison(guessedName);
+      } else {
+        setError('Could not extract product info from this URL. Try searching by name instead.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const fetchAiAdvice = useCallback(async (productTitle: string, platformData: ProductData[]) => {
     if (!productTitle || platformData.length === 0) return;

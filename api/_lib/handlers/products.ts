@@ -143,17 +143,65 @@ function generateComparison(query: string) {
 }
 
 async function compare(req: VercelRequest, res: VercelResponse) {
+  // Support both GET ?q=... and POST { url: ... }
+  if (req.method === 'POST') {
+    const { url, query: bodyQuery } = req.body || {};
+    const searchTerm = bodyQuery || '';
+
+    if (url) {
+      // URL-based comparison: extract product name from URL path, then search
+      try {
+        const parsed = new URL(url);
+        const pathParts = parsed.pathname.split('/').filter(Boolean);
+        // Try to get a meaningful product name from the URL slug
+        const slug = pathParts[pathParts.length - 1] || pathParts[0] || '';
+        const productName = slug
+          .replace(/[-_]/g, ' ')
+          .replace(/\d{5,}/g, '') // remove long numeric IDs
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (!productName || productName.length < 3) {
+          return res.status(400).json({ error: 'Could not extract product name from URL' });
+        }
+
+        // Use the real scraper to find the product across platforms
+        const { searchProducts } = await import('../search.js');
+        const results = await searchProducts(productName);
+        const sorted = results.sort((a, b) => a.price - b.price);
+
+        return res.json({
+          platforms: sorted,
+          products: sorted,
+          query: productName,
+          sourceUrl: url,
+        });
+      } catch (e: any) {
+        return res.status(400).json({ error: 'Invalid URL', message: e.message });
+      }
+    }
+
+    if (searchTerm) {
+      const { searchProducts } = await import('../search.js');
+      const results = await searchProducts(searchTerm);
+      return res.json({ platforms: results.sort((a, b) => a.price - b.price), query: searchTerm });
+    }
+
+    return res.status(400).json({ error: 'Provide url or query in request body' });
+  }
+
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const q = req.query.q as string;
   if (!q || !q.trim()) return res.status(400).json({ error: 'Query parameter q is required' });
 
   try {
-    const platforms = generateComparison(q.trim());
-    const sorted = platforms.sort((a, b) => a.price - b.price);
+    const { searchProducts } = await import('../search.js');
+    const results = await searchProducts(q.trim());
+    const sorted = results.sort((a, b) => a.price - b.price);
     const lowest = sorted[0];
     const highest = sorted[sorted.length - 1];
-    const savings = highest.price - lowest.price;
+    const savings = highest && lowest ? highest.price - lowest.price : 0;
 
     res.json({ platforms: sorted, lowest, highest, savings, query: q.trim() });
   } catch (e: any) {
