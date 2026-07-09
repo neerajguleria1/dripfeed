@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, ArrowRight, Zap, ChevronRight } from 'lucide-react';
-import { motion, useInView, useScroll, useTransform } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import SiteNav from '../components/SiteNav';
 import type { ProductData, DealData } from '../types/product';
@@ -39,12 +39,12 @@ const TRENDING_TERMS = ['kurta set', 'sneakers', 'silk saree', 'lehenga', 'jeans
 // ─── Animation ───────────────────────────────────────────────────────────────
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
 const stagger = {
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.06 } },
 };
 
 function Reveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -65,9 +65,6 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [comparisonCount, setComparisonCount] = useState(12847);
   const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.95]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -109,8 +106,10 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════════════════════ */}
       <motion.section
         ref={heroRef}
-        style={{ opacity: heroOpacity, scale: heroScale }}
-        className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center justify-center bg-[#0A0A14] overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#0A0A14] overflow-hidden"
       >
         {/* Radial gradient glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(201,169,110,0.12),transparent)]" />
@@ -135,10 +134,10 @@ export default function HomePage() {
 
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="text-[36px] sm:text-[52px] lg:text-[64px] font-extrabold text-white leading-[1.05] tracking-[-0.03em] mb-5"
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="text-[32px] sm:text-[48px] lg:text-[56px] font-bold text-white leading-[1.1] tracking-[-0.02em] mb-5"
           >
             Never overpay for
             <br />
@@ -150,19 +149,19 @@ export default function HomePage() {
 
           {/* Sub */}
           <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.7 }}
-            className="text-[16px] sm:text-[18px] text-white/60 mb-10 max-w-md mx-auto leading-relaxed font-light"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="text-[15px] sm:text-[17px] text-white/60 mb-9 max-w-md mx-auto leading-relaxed"
           >
             One search. Seven platforms. The lowest price — instantly.
           </motion.p>
 
           {/* Search */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.7 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
           >
             <form onSubmit={handleSearchSubmit} className="relative max-w-xl mx-auto group">
               <div className="flex items-center bg-white/[0.08] backdrop-blur-md border border-white/[0.15] rounded-2xl h-[56px] sm:h-[60px] px-5 transition-all duration-300 group-focus-within:border-[#C9A96E]/50 group-focus-within:bg-white/[0.12] group-focus-within:shadow-[0_0_40px_rgba(201,169,110,0.1)]">
@@ -282,9 +281,9 @@ export default function HomePage() {
             {deals.slice(0, 8).map((deal, i) => (
               <motion.div
                 key={deal.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: 0.5 }}
+                transition={{ delay: i * 0.03, duration: 0.4 }}
               >
                 <Link
                   to={`/compare?q=${encodeURIComponent(deal.title)}`}
