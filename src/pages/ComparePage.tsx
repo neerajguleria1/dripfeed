@@ -78,16 +78,33 @@ export default function ComparePage() {
       setPlatforms(results);
       if (results.length > 0) {
         fetchAiAdvice(results[0]?.title || 'Product', results);
+      } else {
+        // API succeeded but returned nothing — try keyword fallback
+        const urlObj = new URL(url);
+        const pathParts = urlObj.pathname.split('/').filter(Boolean);
+        // Find meaningful slug (not 'p', not numeric IDs)
+        const slug = pathParts.find(p => p.length > 3 && !/^\d+$/.test(p) && p !== 'p' && p !== 'dp' && p !== 'buy');
+        const guessedName = slug?.replace(/[-_]/g, ' ') || '';
+        if (guessedName) {
+          await fetchComparison(guessedName);
+        } else {
+          setError('Could not find products for this URL. Try searching by product name instead.');
+        }
       }
     } catch {
       // Fallback: extract product name from URL and do a keyword search
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(Boolean);
-      const guessedName = pathParts[pathParts.length - 1]?.replace(/[-_]/g, ' ') || '';
-      if (guessedName) {
-        fetchComparison(guessedName);
-      } else {
-        setError('Could not extract product info from this URL. Try searching by name instead.');
+      try {
+        const urlObj = new URL(url);
+        const pathParts = urlObj.pathname.split('/').filter(Boolean);
+        const slug = pathParts.find(p => p.length > 3 && !/^\d+$/.test(p) && p !== 'p' && p !== 'dp' && p !== 'buy');
+        const guessedName = slug?.replace(/[-_]/g, ' ') || '';
+        if (guessedName) {
+          await fetchComparison(guessedName);
+        } else {
+          setError('Could not extract product info from this URL. Try searching by name instead.');
+        }
+      } catch {
+        setError('Could not process this URL. Try searching by product name instead.');
       }
     } finally {
       setLoading(false);
@@ -472,7 +489,7 @@ export default function ComparePage() {
           )}
 
           {/* Empty state */}
-          {!loading && !error && platforms.length === 0 && q && (
+          {!loading && !error && platforms.length === 0 && (q || productUrl) && (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -481,10 +498,10 @@ export default function ComparePage() {
             >
               <p className="text-4xl mb-4">📊</p>
               <h2 className="text-[22px] font-semibold text-[#0F0F1A] tracking-[-0.01em] mb-2">
-                No comparison data for &ldquo;{q}&rdquo;
+                No comparison data found
               </h2>
               <p className="text-[14px] text-neutral-500 leading-relaxed max-w-sm mx-auto">
-                Try a more specific product name, or browse our deals.
+                We couldn't find pricing data for this product. Try a more specific product name, or browse our deals.
               </p>
               <button
                 onClick={() => navigate('/deals')}
