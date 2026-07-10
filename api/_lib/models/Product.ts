@@ -72,7 +72,7 @@ const productSchema = new mongoose.Schema<IProduct>(
     aiGeneratedAt: { type: Date },
     priceHistory: [priceEntrySchema],
     searchQuery: { type: String, index: true },
-    cachedAt: { type: Date, default: Date.now, index: { expires: '15m' } },
+    cachedAt: { type: Date, default: Date.now, index: { expires: '24h' } },
   },
   { timestamps: true }
 );

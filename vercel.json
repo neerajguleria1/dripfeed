@@ -36,6 +36,7 @@
   ],
   "crons": [
     { "path": "/api/cron/price-check", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/deals-refresh", "schedule": "0 18 * * *" }
+    { "path": "/api/cron/deals-refresh", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/populate-catalog", "schedule": "0 */6 * * *" }
   ]
 }
