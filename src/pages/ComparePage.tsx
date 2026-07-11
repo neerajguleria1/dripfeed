@@ -49,7 +49,7 @@ export default function ComparePage() {
   const productUrl = searchParams.get('url') || '';
 
   const [platforms, setPlatforms] = useState<ProductData[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!!(searchParams.get('q') || searchParams.get('url')));
   const [error, setError] = useState('');
 
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
@@ -483,13 +483,13 @@ export default function ComparePage() {
               )}
 
               {/* ─── 6. ASCI Disclosure — single toned-down line ─── */}
-              <p className="text-[13px] sm:text-[10px] text-neutral-300 text-center pt-4">
+              <p className="text-[13px] sm:text-[10px] text-neutral-500 text-center pt-4">
                 #Ad · Prices include affiliate links. DripFeed earns commission at no extra cost to you.
               </p>
             </div>
           )}
 
-          {/* Empty state */}
+          {/* Empty state — only show after a fetch has completed, not on initial mount */}
           {!loading && !error && platforms.length === 0 && (q || productUrl) && (
             <motion.div
               initial={{ opacity: 0, y: 16 }}

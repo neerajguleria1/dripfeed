@@ -123,18 +123,12 @@ async function compare(req: VercelRequest, res: VercelResponse) {
         const pathParts = parsed.pathname.split('/').filter(Boolean);
         // Try to get a meaningful product name from the URL slug
         const slug = pathParts[pathParts.length - 1] || pathParts[0] || '';
-        const productName = slug
-          .replace(/[-_]/g, ' ')
-          .replace(/\d{5,}/g, '') // remove long numeric IDs
-          .replace(/\s+/g, ' ')
-          .trim();
+        const { searchProducts, slugToSearchQuery } = await import('../search.js');
+        const productName = slugToSearchQuery(slug);
 
         if (!productName || productName.length < 3) {
           return res.status(400).json({ error: 'Could not extract product name from URL' });
         }
-
-        // Use the real scraper to find the product across platforms
-        const { searchProducts } = await import('../search.js');
         const results = await searchProducts(productName);
         const sorted = results.sort((a, b) => a.price - b.price);
 
