@@ -132,7 +132,20 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 1. Try MongoDB first (instant — pre-populated by cron)
+    // Always run live scrapers first — they search all 7 platforms in parallel
+    // and return the cheapest result per platform.
+    const results = await searchProducts(searchTerm);
+
+    if (results.length > 0) {
+      const cleaned = results.map((p) => ({
+        ...p,
+        title: cleanProductTitle(p.title),
+      }));
+      return res.json({ products: cleaned, query: searchTerm, source: 'live' });
+    }
+
+    // Fallback: try MongoDB cache if live scrapers returned nothing
+    // (e.g. all platforms blocked the Vercel IP and no ScraperAPI key set)
     await connectDB();
     const dbResults = await Product.find(
       { $text: { $search: searchTerm } },
@@ -142,38 +155,23 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
       .limit(30)
       .lean();
 
-    if (dbResults.length > 0) {
-      // Flatten platform listings into individual product results
-      const fromDb = dbResults.flatMap((doc: any) =>
-        (doc.platforms || []).map((plat: any, i: number) => ({
-          id: `db_${doc._id}_${i}`,
-          title: cleanProductTitle(doc.title),
-          brand: doc.brand || '',
-          price: plat.price,
-          originalPrice: plat.originalPrice,
-          discount: plat.discount,
-          imageUrl: doc.imageUrl || '',
-          platform: plat.platform,
-          url: plat.url,
-          affiliateUrl: plat.affiliateUrl,
-        }))
-      ).filter((p: any) => p.price > 0)
-        .sort((a: any, b: any) => a.price - b.price);
+    const fromDb = dbResults.flatMap((doc: any) =>
+      (doc.platforms || []).map((plat: any, i: number) => ({
+        id: `db_${doc._id}_${i}`,
+        title: cleanProductTitle(doc.title),
+        brand: doc.brand || '',
+        price: plat.price,
+        originalPrice: plat.originalPrice,
+        discount: plat.discount,
+        imageUrl: doc.imageUrl || '',
+        platform: plat.platform,
+        url: plat.url,
+        affiliateUrl: plat.affiliateUrl,
+      }))
+    ).filter((p: any) => p.price > 0)
+      .sort((a: any, b: any) => a.price - b.price);
 
-      if (fromDb.length > 0) {
-        return res.json({ products: fromDb, query: searchTerm, source: 'cache' });
-      }
-    }
-
-    // 2. Fallback: live scrape (slower but gets fresh data)
-    const results = await searchProducts(searchTerm);
-
-    const cleaned = results.map((p) => ({
-      ...p,
-      title: cleanProductTitle(p.title),
-    }));
-
-    res.json({ products: cleaned, query: searchTerm });
+    res.json({ products: fromDb, query: searchTerm, source: 'cache' });
   } catch (e: any) {
     res.status(500).json({ error: 'Search failed', message: e.message });
   }
