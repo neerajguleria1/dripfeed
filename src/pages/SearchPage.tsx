@@ -334,17 +334,14 @@ export default function SearchPage() {
       return;
     }
     setLoading(true);
+    setProducts([]); // clear previous results immediately
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
       const fetched: ProductData[] = data.products || [];
-      if (fetched.length > 0) {
-        setProducts(fetched);
-      } else {
-        setProducts(searchSeedProducts(searchQuery));
-      }
+      setProducts(fetched); // show whatever comes back, even if empty
       setHasMore(false);
     } catch {
-      setProducts(searchSeedProducts(searchQuery));
+      setProducts([]); // on error show empty, not wrong seed data
     } finally {
       setLoading(false);
     }

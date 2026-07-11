@@ -18,7 +18,7 @@ export interface SearchProduct {
 // ─── Cache (15 min TTL) ───────────────────────────────────────────────────────
 
 const cache = new Map<string, { data: SearchProduct[]; ts: number }>();
-const CACHE_TTL = 15 * 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 function getCached(key: string): SearchProduct[] | null {
   const entry = cache.get(key);
