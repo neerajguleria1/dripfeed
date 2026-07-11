@@ -439,8 +439,6 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   return withAffiliate;
 }
 
-export { slugToSearchQuery };
-
 const TRENDING_QUERIES = ['kurta sets women', 'sneakers men india', 'sarees silk', 'watches men under 5000'];
 
 export async function getTrending(): Promise<SearchProduct[]> {
