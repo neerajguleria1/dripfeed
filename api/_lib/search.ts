@@ -53,6 +53,13 @@ function platformFrom(url: string): string {
   return 'Online';
 }
 
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY || '';
+
+function scraperUrl(targetUrl: string): string {
+  if (!SCRAPER_API_KEY) return targetUrl;
+  return `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(targetUrl)}`;
+}
+
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
   'Accept': 'text/html',
@@ -62,8 +69,8 @@ const HEADERS = {
 async function searchGoogleShopping(query: string): Promise<SearchProduct[]> {
   try {
     const { data: html } = await axios.get(
-      `https://www.google.com/search?q=${encodeURIComponent(query + ' buy online India')}&tbm=shop&num=20&hl=en&gl=in`,
-      { headers: HEADERS, timeout: 8000 }
+      scraperUrl(`https://www.google.com/search?q=${encodeURIComponent(query + ' buy online India')}&tbm=shop&num=20&hl=en&gl=in`),
+      { headers: HEADERS, timeout: 15000 }
     );
 
     const results: SearchProduct[] = [];
@@ -104,8 +111,8 @@ async function searchGoogleShopping(query: string): Promise<SearchProduct[]> {
 async function searchFlipkart(query: string): Promise<SearchProduct[]> {
   try {
     const { data: html } = await axios.get(
-      `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
-      { headers: HEADERS, timeout: 8000 }
+      scraperUrl(`https://www.flipkart.com/search?q=${encodeURIComponent(query)}`),
+      { headers: HEADERS, timeout: 15000 }
     );
 
     const titles = [...html.matchAll(/class="_4rR01T"[^>]*>([^<]+)/gi)].map(x => cleanText(x[1]));
@@ -178,8 +185,8 @@ async function searchMeesho(query: string): Promise<SearchProduct[]> {
 async function searchAmazon(query: string): Promise<SearchProduct[]> {
   try {
     const { data: html } = await axios.get(
-      `https://www.amazon.in/s?k=${encodeURIComponent(query)}&i=fashion`,
-      { headers: { ...HEADERS, 'Accept': 'text/html,application/xhtml+xml' }, timeout: 8000 }
+      scraperUrl(`https://www.amazon.in/s?k=${encodeURIComponent(query)}&i=fashion`),
+      { headers: { ...HEADERS, 'Accept': 'text/html,application/xhtml+xml' }, timeout: 15000 }
     );
     const results: SearchProduct[] = [];
     // Amazon embeds product data in __NEXT_DATA__ or data-asin blocks
@@ -246,9 +253,9 @@ async function searchAjio(query: string): Promise<SearchProduct[]> {
 async function searchMyntra(query: string): Promise<SearchProduct[]> {
   try {
     const slug = query.toLowerCase().replace(/\s+/g, '-');
-    const { data: html } = await axios.get(`https://www.myntra.com/${slug}`, {
+    const { data: html } = await axios.get(scraperUrl(`https://www.myntra.com/${slug}`), {
       headers: HEADERS,
-      timeout: 8000,
+      timeout: 15000,
     });
 
     const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
