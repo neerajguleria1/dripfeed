@@ -29,7 +29,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       { platform: 'ajio', price: 1449, originalPrice: 2999, url: 'https://www.ajio.com' },
       { platform: 'flipkart', price: 1399, originalPrice: 2999, url: 'https://www.flipkart.com' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=533&fit=crop',
   },
   {
     title: 'Biba Printed Straight Kurta with Palazzo',
@@ -322,7 +322,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'ajio', price: 1349, originalPrice: 2299, url: 'https://www.ajio.com' },
       { platform: 'flipkart', price: 1249, originalPrice: 2299, url: 'https://www.flipkart.com' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1508427953056-b00b8d78ebf5?w=400&h=533&fit=crop',
   },
   {
     title: 'Kalki Georgette Lehenga Choli Set',
@@ -464,7 +464,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'myntra', price: 1299, originalPrice: 2499, url: 'https://www.myntra.com' },
       { platform: 'ajio', price: 1399, originalPrice: 2499, url: 'https://www.ajio.com' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1544957992-20514f595d6f?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=533&fit=crop',
   },
 
   // ─── Western Wear (12 products) ───
@@ -912,7 +912,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'ajio', price: 1499, originalPrice: 2599, url: 'https://www.ajio.com' },
       { platform: 'meesho', price: 1249, originalPrice: 2599, url: 'https://www.meesho.com' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1617019114583-affb34d1b3cd?w=400&h=533&fit=crop',
   },
 
   // ─── Activewear (8 products) ───

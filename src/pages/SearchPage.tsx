@@ -170,7 +170,7 @@ function FeaturedCard({ product }: { product: ProductData }) {
           </span>
         </div>
 
-        <span className="text-[12px] uppercase tracking-[0.08em] text-neutral-400 font-medium">
+        <span className="text-[12px] tracking-[0.04em] text-neutral-400 font-medium">
           {product.brand}
         </span>
         <h2 className="text-[20px] md:text-[26px] font-bold text-[#0F0F1A] leading-snug mt-2 mb-3 tracking-[-0.01em]">
@@ -250,10 +250,10 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
           </span>
         </div>
 
-        <span className="text-[11px] uppercase tracking-[0.06em] text-neutral-400 font-medium">
+        <span className="text-[11px] tracking-[0.04em] text-neutral-400 font-medium">
           {product.brand}
         </span>
-        <h3 className="text-[14px] font-medium text-[#0F0F1A] leading-snug mt-1.5 line-clamp-2">
+        <h3 className="text-[14px] font-medium text-[#0F0F1A] leading-snug mt-1.5 line-clamp-2 min-h-[40px]">
           {product.title}
         </h3>
 
