@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "tsx api/server.ts",
+    "dev:all": "npm run dev:api & npm run dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -17,6 +19,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
+    "express": "^4.22.2",
     "framer-motion": "^12.40.0",
     "google-auth-library": "^10.9.0",
     "groq-sdk": "^1.3.0",

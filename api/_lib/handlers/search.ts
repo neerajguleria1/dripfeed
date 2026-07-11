@@ -1,7 +1,5 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectDB } from '../db.js';
-import Product from '../models/Product.js';
 import { searchProducts } from '../search.js';
 
 const TRENDING_SEARCHES = [
@@ -136,42 +134,12 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
     // and return the cheapest result per platform.
     const results = await searchProducts(searchTerm);
 
-    if (results.length > 0) {
-      const cleaned = results.map((p) => ({
-        ...p,
-        title: cleanProductTitle(p.title),
-      }));
-      return res.json({ products: cleaned, query: searchTerm, source: 'live' });
-    }
+    const cleaned = results.map((p) => ({
+      ...p,
+      title: cleanProductTitle(p.title),
+    }));
+    return res.json({ products: cleaned, query: searchTerm, source: 'live' });
 
-    // Fallback: try MongoDB cache if live scrapers returned nothing
-    // (e.g. all platforms blocked the Vercel IP and no ScraperAPI key set)
-    await connectDB();
-    const dbResults = await Product.find(
-      { $text: { $search: searchTerm } },
-      { score: { $meta: 'textScore' } }
-    )
-      .sort({ score: { $meta: 'textScore' } })
-      .limit(30)
-      .lean();
-
-    const fromDb = dbResults.flatMap((doc: any) =>
-      (doc.platforms || []).map((plat: any, i: number) => ({
-        id: `db_${doc._id}_${i}`,
-        title: cleanProductTitle(doc.title),
-        brand: doc.brand || '',
-        price: plat.price,
-        originalPrice: plat.originalPrice,
-        discount: plat.discount,
-        imageUrl: doc.imageUrl || '',
-        platform: plat.platform,
-        url: plat.url,
-        affiliateUrl: plat.affiliateUrl,
-      }))
-    ).filter((p: any) => p.price > 0)
-      .sort((a: any, b: any) => a.price - b.price);
-
-    res.json({ products: fromDb, query: searchTerm, source: 'cache' });
   } catch (e: any) {
     res.status(500).json({ error: 'Search failed', message: e.message });
   }

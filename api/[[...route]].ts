@@ -9,6 +9,7 @@ import { handleThrift } from './_lib/handlers/thrift.js';
 import { handleFeed } from './_lib/handlers/feed.js';
 import { handlePreferences } from './_lib/handlers/preferences.js';
 import { handleAffiliate } from './_lib/handlers/affiliate.js';
+import { handleDebug } from './_lib/handlers/debug.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { url } = req;
@@ -24,7 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path.startsWith('feed/')) return handleFeed(req, res, path.replace('feed/', ''));
   if (path.startsWith('preferences')) return handlePreferences(req, res, path.replace('preferences', ''));
   if (path.startsWith('affiliate/')) return handleAffiliate(req, res, path.replace('affiliate/', ''));
-  if (path.startsWith('analytics/')) return res.status(200).json({ ok: true }); // fire-and-forget
+  if (path.startsWith('analytics/')) return res.status(200).json({ ok: true });
+  if (path.startsWith('debug/')) return handleDebug(req, res, path.replace('debug/', ''));
 
   return res.status(404).json({ error: 'Not found' });
 }

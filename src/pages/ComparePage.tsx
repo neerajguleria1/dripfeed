@@ -15,6 +15,7 @@ import AffiliateButton from '../components/ui/AffiliateButton';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import { formatPrice } from '../utils/formatPrice';
 import api from '../services/api';
+import { searchSeedProducts } from '../utils/seedSearch';
 import type { ProductData } from '../types/product';
 import type { AIAdvice } from '../components/product/AIAdviceCard';
 import type { PriceHistoryPoint } from '../components/product/PriceHistory';
@@ -149,22 +150,22 @@ export default function ComparePage() {
     try {
       const { data } = await api.post('/search/product', { query: searchQ });
       const results: ProductData[] = data?.products || data?.results || data?.platforms || [];
-
-      results.sort((a, b) => a.price - b.price);
-      setPlatforms(results);
-
-      if (results.length > 0) {
-        fetchAiAdvice(results[0]?.title || searchQ, results);
+      const final = results.length > 0 ? results : searchSeedProducts(searchQ);
+      final.sort((a, b) => a.price - b.price);
+      setPlatforms(final);
+      if (final.length > 0) {
+        fetchAiAdvice(final[0]?.title || searchQ, final);
       }
-
-      // Fire-and-forget analytics
       api.post('/analytics/track', {
         event: 'compare_view',
         productTitle: searchQ,
-        platformCount: results.length,
+        platformCount: final.length,
       }).catch(() => {});
     } catch {
-      setError('Could not fetch comparison. Please try again.');
+      const fallback = searchSeedProducts(searchQ);
+      fallback.sort((a, b) => a.price - b.price);
+      setPlatforms(fallback);
+      if (fallback.length === 0) setError('Could not fetch comparison. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ import { SEOHead } from '../components/common/SEOHead';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
+import { searchSeedProducts } from '../utils/seedSearch';
 import type { ProductData } from '../types/product';
 import type { FilterState } from '../components/search/SearchFilters';
 
@@ -336,10 +337,14 @@ export default function SearchPage() {
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
       const fetched: ProductData[] = data.products || [];
-      setProducts(fetched);
+      if (fetched.length > 0) {
+        setProducts(fetched);
+      } else {
+        setProducts(searchSeedProducts(searchQuery));
+      }
       setHasMore(false);
     } catch {
-      setProducts([]);
+      setProducts(searchSeedProducts(searchQuery));
     } finally {
       setLoading(false);
     }

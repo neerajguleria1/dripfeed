@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card';
 import { formatINR, discountPercent } from '../utils/format';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import api from '../services/api';
+import { getSeedByCategory } from '../utils/seedSearch';
 import type { ProductData } from '../types/product';
 
 const CATEGORY_META: Record<string, {
@@ -114,12 +115,16 @@ export default function CategoryPage() {
       const query = subFilter ? `${categoryName} ${subFilter}` : categoryName;
       const { data } = await api.post('/search/product', { query });
       const fetched: ProductData[] = data.products || [];
-      if (reset) setProducts(fetched);
-      else setProducts((prev) => [...prev, ...fetched]);
-      setHasMore(false); // Backend doesn't paginate yet
-    } catch { /* empty */ }
-    finally { setLoading(false); }
-  }, [categoryName, subFilter]);
+      const result = fetched.length > 0 ? fetched : getSeedByCategory(slug || '');
+      if (reset) setProducts(result);
+      else setProducts((prev) => [...prev, ...result]);
+      setHasMore(false);
+    } catch {
+      const fallback = getSeedByCategory(slug || '');
+      if (reset) setProducts(fallback);
+      else setProducts((prev) => [...prev, ...fallback]);
+    } finally { setLoading(false); }
+  }, [categoryName, subFilter, slug]);
 
   useEffect(() => {
     setPage(1);
