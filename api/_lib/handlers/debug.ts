@@ -194,8 +194,20 @@ async function debugSearchOld(req: VercelRequest, res: VercelResponse) {
   return res.json({ query, timestamp: new Date().toISOString(), results });
 }
 
+async function debugLiveSearch(req: VercelRequest, res: VercelResponse) {
+  const query = (req.query.q as string) || 'kurta';
+  try {
+    const { searchProducts } = await import('../search.js');
+    const products = await searchProducts(query);
+    return res.json({ query, count: products.length, products: products.slice(0, 3) });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 500) });
+  }
+}
+
 export async function handleDebug(req: VercelRequest, res: VercelResponse, subpath: string) {
   if (subpath === 'search') return debugSearch(req, res);
   if (subpath === 'search-old') return debugSearchOld(req, res);
+  if (subpath === 'live') return debugLiveSearch(req, res);
   return res.status(404).json({ error: 'Not found' });
 }
