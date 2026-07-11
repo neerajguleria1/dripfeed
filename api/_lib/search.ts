@@ -62,13 +62,28 @@ const SCRAPER_KEYS = [
   process.env.SCRAPER_API_KEY_3,
   process.env.SCRAPER_API_KEY_4,
   process.env.SCRAPER_API_KEY_5,
+  process.env.SCRAPER_API_KEY_6,
+  process.env.SCRAPER_API_KEY_7,
+  process.env.SCRAPER_API_KEY_8,
+  process.env.SCRAPER_API_KEY_9,
+  process.env.SCRAPER_API_KEY_10,
 ].filter(Boolean) as string[];
 
-let keyIndex = 0;
-function getNextKey(): string {
-  const key = SCRAPER_KEYS[keyIndex % SCRAPER_KEYS.length];
-  keyIndex++;
-  return key;
+// Hash-based key selection — same query always uses same key
+// This means cache hits are consistent AND load spreads across keys
+function getKeyForQuery(query: string): string {
+  if (!SCRAPER_KEYS.length) return '';
+  let hash = 0;
+  for (let i = 0; i < query.length; i++) {
+    hash = (hash * 31 + query.charCodeAt(i)) & 0xffffffff;
+  }
+  return SCRAPER_KEYS[Math.abs(hash) % SCRAPER_KEYS.length];
+}
+
+// Fallback to next key if current one hits rate limit
+function getNextKey(currentKey: string): string {
+  const idx = SCRAPER_KEYS.indexOf(currentKey);
+  return SCRAPER_KEYS[(idx + 1) % SCRAPER_KEYS.length] || currentKey;
 }
 
 const SCRAPER_KEY = SCRAPER_KEYS[0] || '';
@@ -77,7 +92,7 @@ const SCRAPER_KEY = SCRAPER_KEYS[0] || '';
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
-  const key = getNextKey();
+  const key = getKeyForQuery(query);
   try {
     const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
       params: { api_key: key, query, country_code: 'in', tld: 'in', page },
@@ -104,9 +119,10 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       };
     }).filter(p => p.price > 0 && p.title.length > 0);
   } catch (e: any) {
-    // On rate limit, retry with next key
-    if (e?.response?.status === 429 && SCRAPER_KEYS.length > 1) {
-      const fallbackKey = getNextKey();
+    // On rate limit (429), retry with next key automatically
+    if (e?.response?.status === 429) {
+      const fallbackKey = getNextKey(key);
+      if (fallbackKey === key) return []; // only one key, give up
       try {
         const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
           params: { api_key: fallbackKey, query, country_code: 'in', tld: 'in', page },
