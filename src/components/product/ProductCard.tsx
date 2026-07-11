@@ -74,7 +74,7 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
     >
       {/* Image — consistent 3:4 aspect, unified bg treatment */}
       <div className="relative aspect-[3/4] bg-neutral-50 overflow-hidden">
-        {product.imageUrl ? (
+        {product.imageUrl && !product.imageUrl.includes('placehold.co') ? (
           <>
             <img
               src={product.imageUrl}
@@ -88,13 +88,19 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
                 if (fallback) fallback.style.display = 'flex';
               }}
             />
-            <div className="w-full h-full items-center justify-center text-neutral-300 text-5xl absolute inset-0 bg-neutral-50" style={{ display: 'none' }}>
-              🛍️
+            <div className="w-full h-full items-center justify-center absolute inset-0 bg-neutral-50" style={{ display: 'none' }}>
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="text-4xl">🛍️</span>
+                <span className="text-[10px] text-neutral-400 font-medium tracking-wide">{product.brand || product.title.slice(0, 24)}</span>
+              </div>
             </div>
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-neutral-300 text-5xl">
-            🛍️
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="text-4xl">🛍️</span>
+              <span className="text-[10px] text-neutral-400 font-medium tracking-wide">{product.brand || product.title.slice(0, 24)}</span>
+            </div>
           </div>
         )}
 

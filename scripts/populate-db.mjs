@@ -72,39 +72,35 @@ async function scrapeMyntra(query) {
     const slug = query.toLowerCase().replace(/\s+/g, '-');
     const { data: html } = await axios.get(`https://www.myntra.com/${slug}`, { headers: HEADERS, timeout: 12000 });
 
-    // Try extracting __INITIAL_STATE__ JSON
-    const stateMatch = html.match(/window\.__myx\s*=\s*({[\s\S]*?});\s*<\/script>/i) || html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
+    // Extract parallel arrays of product data from the embedded JSON
+    const brands = [...html.matchAll(/"brand":"([^"]{2,40})"/g)].map(m => m[1]);
+    const productNames = [...html.matchAll(/"product":"([^"]{5,120})"/g)].map(m => m[1]);
+    const prices = [...html.matchAll(/"price":(\d{3,6})/g)].map(m => parseInt(m[1]));
+    const mrps = [...html.matchAll(/"mrp":(\d{3,6})/g)].map(m => parseInt(m[1]));
+    const images = [...html.matchAll(/"searchImage":"([^"]+)"/g)].map(m => m[1].replace(/\\u002F/g, '/'));
 
-    if (stateMatch) {
-      try {
-        const state = JSON.parse(stateMatch[1]);
-        const items = state?.searchData?.results?.products || state?.search?.results || state?.products || [];
-        return items.slice(0, 10).map((p, i) => ({
-          title: `${p.brand || ''} ${p.product || p.name || ''}`.trim(),
-          price: p.price || p.discountedPrice || 0,
-          originalPrice: p.mrp || p.strikedPrice || undefined,
-          discount: p.discount ? parseInt(p.discount) : undefined,
-          imageUrl: p.searchImage || p.image || '',
-          url: `https://www.myntra.com/${p.landingPageUrl || p.id || i}`,
-          platform: 'Myntra',
-          brand: p.brand || '',
-        })).filter(p => p.price > 0);
-      } catch { /* fall through */ }
-    }
+    const count = Math.min(brands.length, productNames.length, prices.length, images.length, 12);
+    const products = [];
 
-    // Fallback: regex price extraction
-    const prices = [...html.matchAll(/₹\s*([\d,]+)/g)].map(x => parseInt(x[1].replace(/,/g, ''), 10)).filter(p => p > 100 && p < 100000);
-    if (prices.length > 0) {
-      return prices.slice(0, 8).map((price, i) => ({
-        title: `${query} - Style ${i + 1}`,
-        price,
-        imageUrl: '',
+    for (let i = 0; i < count; i++) {
+      if (prices[i] <= 0) continue;
+      const title = productNames[i].startsWith(brands[i]) ? productNames[i] : `${brands[i]} ${productNames[i]}`;
+      const imgUrl = images[i].startsWith('http') ? images[i] : `https://assets.myntassets.com/${images[i]}`;
+      const discount = mrps[i] > prices[i] ? Math.round(((mrps[i] - prices[i]) / mrps[i]) * 100) : 0;
+
+      products.push({
+        title,
+        price: prices[i],
+        originalPrice: mrps[i] > prices[i] ? mrps[i] : undefined,
+        discount: discount > 0 ? discount : undefined,
+        imageUrl: imgUrl,
         url: `https://www.myntra.com/${slug}`,
         platform: 'Myntra',
-        brand: '',
-      }));
+        brand: brands[i],
+      });
     }
-    return [];
+
+    return products;
   } catch { return []; }
 }
 
