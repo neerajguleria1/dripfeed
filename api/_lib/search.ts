@@ -16,7 +16,7 @@ export interface SearchProduct {
 }
 
 const cache = new Map<string, { data: SearchProduct[]; ts: number }>();
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL = 30 * 60 * 1000; // 30 min — saves credits when multiple users search same term
 
 function getCached(key: string): SearchProduct[] | null {
   const entry = cache.get(key);
@@ -56,15 +56,31 @@ export function slugToSearchQuery(slug: string): string {
     .trim();
 }
 
-const SCRAPER_KEY = process.env.SCRAPER_API_KEY || '';
+const SCRAPER_KEYS = [
+  process.env.SCRAPER_API_KEY,
+  process.env.SCRAPER_API_KEY_2,
+  process.env.SCRAPER_API_KEY_3,
+  process.env.SCRAPER_API_KEY_4,
+  process.env.SCRAPER_API_KEY_5,
+].filter(Boolean) as string[];
+
+let keyIndex = 0;
+function getNextKey(): string {
+  const key = SCRAPER_KEYS[keyIndex % SCRAPER_KEYS.length];
+  keyIndex++;
+  return key;
+}
+
+const SCRAPER_KEY = SCRAPER_KEYS[0] || '';
 
 // ─── Amazon structured — fetch one page ──────────────────────────────────────
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEY) return [];
+  if (!SCRAPER_KEYS.length) return [];
+  const key = getNextKey();
   try {
     const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
-      params: { api_key: SCRAPER_KEY, query, country_code: 'in', tld: 'in', page },
+      params: { api_key: key, query, country_code: 'in', tld: 'in', page },
       timeout: 25000,
     });
 
@@ -87,7 +103,36 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
         rating: p.stars ? parseFloat(p.stars) : undefined,
       };
     }).filter(p => p.price > 0 && p.title.length > 0);
-  } catch { return []; }
+  } catch (e: any) {
+    // On rate limit, retry with next key
+    if (e?.response?.status === 429 && SCRAPER_KEYS.length > 1) {
+      const fallbackKey = getNextKey();
+      try {
+        const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
+          params: { api_key: fallbackKey, query, country_code: 'in', tld: 'in', page },
+          timeout: 25000,
+        });
+        const products: any[] = data?.results || data?.organic_results || [];
+        return products.map((p, i) => {
+          const price = typeof p.price === 'number' ? p.price : parsePrice(p.price || p.sale_price || '0');
+          const orig = typeof p.original_price === 'number' ? p.original_price : parsePrice(p.original_price || p.list_price || '0');
+          return {
+            id: `az_p${page}_${p.asin || i}`,
+            title: cleanText(p.name || p.title || ''),
+            price,
+            originalPrice: orig > price ? orig : undefined,
+            discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
+            imageUrl: p.image || p.thumbnail || '',
+            platform: 'Amazon India',
+            url: p.asin ? `https://www.amazon.in/dp/${p.asin}` : `https://www.amazon.in/s?k=${encodeURIComponent(query)}`,
+            brand: p.brand || undefined,
+            rating: p.stars ? parseFloat(p.stars) : undefined,
+          };
+        }).filter((p: any) => p.price > 0 && p.title.length > 0);
+      } catch { return []; }
+    }
+    return [];
+  }
 }
 
 // ─── Flipkart via ScraperAPI async (non-blocking, best effort) ────────────────
@@ -256,18 +301,20 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cached = getCached(key);
   if (cached) return cached;
 
-  // Fetch Amazon pages 1+2 in parallel with other platforms
-  const [az1, az2, fk, mn, aj] = await Promise.allSettled([
-    fetchAmazonPage(query, 1),
-    fetchAmazonPage(query, 2),
+  // Fetch page 1 first, only fetch page 2 if needed — saves credits
+  const az1 = await fetchAmazonPage(query, 1).catch(() => []);
+  const az2 = az1.length < 10 ? await fetchAmazonPage(query, 2).catch(() => []) : fetchAmazonPage(query, 2).catch(() => []);
+
+  const [fk, mn, aj] = await Promise.allSettled([
     fetchFlipkart(query),
     fetchMyntra(query),
     fetchAjio(query),
   ]);
 
+  const [az2result] = await Promise.allSettled([az2]);
   const amazonResults = [
-    ...(az1.status === 'fulfilled' ? az1.value : []),
-    ...(az2.status === 'fulfilled' ? az2.value : []),
+    ...az1,
+    ...(az2result.status === 'fulfilled' ? az2result.value : []),
   ];
 
   // Deduplicate Amazon by ASIN
