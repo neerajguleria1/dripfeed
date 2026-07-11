@@ -76,9 +76,9 @@ async function fetchAmazon(query: string): Promise<SearchProduct[]> {
     const products: any[] = data?.results || data?.organic_results || [];
     if (!products.length) return [];
 
-    return products.slice(0, 15).map((p, i) => {
-      const price = parsePrice(p.price || p.sale_price || '0');
-      const orig = parsePrice(p.original_price || p.list_price || '0');
+    return products.slice(0, 40).map((p, i) => {
+      const price = typeof p.price === 'number' ? p.price : parsePrice(p.price || p.sale_price || '0');
+      const orig = typeof p.original_price === 'number' ? p.original_price : parsePrice(p.original_price || p.list_price || '0');
       return {
         id: `az_${p.asin || i}`,
         title: cleanText(p.name || p.title || ''),
@@ -91,7 +91,7 @@ async function fetchAmazon(query: string): Promise<SearchProduct[]> {
         brand: p.brand || undefined,
         rating: p.stars ? parseFloat(p.stars) : undefined,
       };
-    }).filter(p => p.price > 0 && p.title);
+    }).filter(p => p.price > 0 && p.title.length > 0);
   } catch { return []; }
 }
 

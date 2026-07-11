@@ -210,7 +210,7 @@ async function debugLiveSearch(req: VercelRequest, res: VercelResponse) {
   try {
     const { searchProducts } = await import('../search.js');
     const products = await searchProducts(query);
-    return res.json({ query, count: products.length, products: products.slice(0, 3) });
+    return res.json({ query, count: products.length, products });
   } catch (e: any) {
     return res.status(500).json({ error: e.message, stack: e.stack?.slice(0, 500) });
   }
