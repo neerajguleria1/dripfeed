@@ -41,6 +41,42 @@ async function debugSearch(req: VercelRequest, res: VercelResponse) {
 
   const results = await Promise.all([
 
+    testPlatform('amazon_structured', async () => {
+      const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
+        params: { api_key: SCRAPER_KEY, query, country_code: 'in', tld: 'in' },
+        timeout: 25000,
+      });
+      const products = data?.results || data?.organic_results || [];
+      return { count: products.length, first: products[0] ? { title: products[0].name || products[0].title, price: products[0].price } : null };
+    }),
+
+    testPlatform('flipkart_structured', async () => {
+      const { data } = await axios.get('https://api.scraperapi.com/structured/flipkart/search', {
+        params: { api_key: SCRAPER_KEY, query },
+        timeout: 25000,
+      });
+      const products = data?.results || data?.organic_results || [];
+      return { count: products.length, first: products[0] ? { title: products[0].name || products[0].title, price: products[0].price } : null, raw_keys: Object.keys(data || {}) };
+    }),
+
+    testPlatform('scraper_credits', async () => {
+      const { data } = await axios.get('https://api.scraperapi.com/account', {
+        params: { api_key: SCRAPER_KEY },
+        timeout: 10000,
+      });
+      return data;
+    }),
+
+  ]);
+
+  return res.json({ query, timestamp: new Date().toISOString(), structured_test: results });
+}
+
+async function debugSearchOld(req: VercelRequest, res: VercelResponse) {
+  const query = (req.query.q as string) || 'kurta';
+
+  const results = await Promise.all([
+
     testPlatform('env_check', async () => ({
       SCRAPER_API_KEY: SCRAPER_KEY ? `set (${SCRAPER_KEY.slice(0, 6)}...)` : 'NOT SET — this is why nothing works',
       FLIPKART_ID: process.env.AFFILIATE_FLIPKART_ID ? 'set' : 'not set',
@@ -160,5 +196,6 @@ async function debugSearch(req: VercelRequest, res: VercelResponse) {
 
 export async function handleDebug(req: VercelRequest, res: VercelResponse, subpath: string) {
   if (subpath === 'search') return debugSearch(req, res);
+  if (subpath === 'search-old') return debugSearchOld(req, res);
   return res.status(404).json({ error: 'Not found' });
 }
