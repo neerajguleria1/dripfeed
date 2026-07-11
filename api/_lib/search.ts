@@ -35,8 +35,8 @@ function setCache(key: string, data: SearchProduct[]) {
 
 function parsePrice(t: string | number): number {
   if (typeof t === 'number') return Math.round(t);
-  const m = String(t).match(/(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)/);
-  return m ? parseInt(m[1].replace(/,/g, ''), 10) : 0;
+  const m = String(t).replace(/[₹,\s]/g, '').match(/(\d+(?:\.\d{1,2})?)/);
+  return m ? Math.round(parseFloat(m[1])) : 0;
 }
 
 function cleanText(t: string): string {
@@ -63,25 +63,20 @@ export function slugToSearchQuery(slug: string): string {
 
 const SCRAPER_KEY = process.env.SCRAPER_API_KEY || '';
 
-// ─── Amazon via ScraperAPI Structured Endpoint (no captcha, clean JSON) ───────
+// ─── Amazon — ScraperAPI Structured (confirmed working ✅) ────────────────────
 
 async function fetchAmazon(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEY) return [];
   try {
     const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
-      params: {
-        api_key: SCRAPER_KEY,
-        query,
-        country_code: 'in',
-        tld: 'in',
-      },
+      params: { api_key: SCRAPER_KEY, query, country_code: 'in', tld: 'in' },
       timeout: 25000,
     });
 
     const products: any[] = data?.results || data?.organic_results || [];
     if (!products.length) return [];
 
-    return products.slice(0, 10).map((p, i) => {
+    return products.slice(0, 15).map((p, i) => {
       const price = parsePrice(p.price || p.sale_price || '0');
       const orig = parsePrice(p.original_price || p.list_price || '0');
       return {
@@ -100,42 +95,148 @@ async function fetchAmazon(query: string): Promise<SearchProduct[]> {
   } catch { return []; }
 }
 
-// ─── Flipkart via ScraperAPI Structured Endpoint ──────────────────────────────
+// ─── Flipkart — ScraperAPI render:true with updated CSS selectors ─────────────
 
 async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEY) return [];
   try {
-    const { data } = await axios.get('https://api.scraperapi.com/structured/flipkart/search', {
+    const { data: html } = await axios.get('https://api.scraperapi.com/', {
       params: {
         api_key: SCRAPER_KEY,
-        query,
+        url: `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
+        render: true,
+        country_code: 'in',
+        premium: true,
+        wait_for_selector: 'div[data-id]',
       },
-      timeout: 25000,
+      timeout: 35000,
     });
 
-    const products: any[] = data?.results || data?.organic_results || [];
-    if (!products.length) return [];
+    if (typeof html !== 'string') return [];
 
-    return products.slice(0, 10).map((p, i) => {
-      const price = parsePrice(p.price || p.sale_price || '0');
-      const orig = parsePrice(p.original_price || p.mrp || '0');
-      return {
+    // Try JSON state first
+    const jsonMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
+    if (jsonMatch) {
+      try {
+        const state = JSON.parse(jsonMatch[1]);
+        const slots: any[] = Object.values(state?.pageDataV4?.page?.data || {}).flat();
+        const products: any[] = [];
+        for (const slot of slots) {
+          const p = slot?.widget?.data?.products;
+          if (Array.isArray(p)) products.push(...p);
+        }
+        if (products.length) {
+          return products.slice(0, 10).map((p, i) => {
+            const info = p.productInfo?.value || p;
+            const price = parsePrice(info.pricing?.finalPrice?.value || info.price || 0);
+            const orig = parsePrice(info.pricing?.mrp?.value || info.mrp || 0);
+            return {
+              id: `fk_${info.pid || i}`,
+              title: cleanText(info.title || ''),
+              price,
+              originalPrice: orig > price ? orig : undefined,
+              discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
+              imageUrl: info.media?.images?.[0]?.url || '',
+              platform: 'Flipkart',
+              url: info.baseUrl ? `https://www.flipkart.com${info.baseUrl}` : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
+              brand: info.brand || undefined,
+            };
+          }).filter((p: any) => p.price > 0 && p.title);
+        }
+      } catch { /* fall through */ }
+    }
+
+    // Regex fallback with updated 2025 Flipkart class names
+    const titles = [...html.matchAll(/class="[^"]*(?:KzDlHZ|s1Q9rs|IRpwTa|wjcEIp|_4rR01T|WKTcLC|col-12-12)[^"]*"[^>]*>([^<]{5,120})</gi)]
+      .map(m => cleanText(m[1])).filter(t => t.length > 5);
+    const prices = [...html.matchAll(/class="[^"]*(?:Nx9bqj|_30jeq3|_1_WHN1|hl05au|_3I9_wc)[^"]*"[^>]*>₹\s*([\d,]+)/gi)]
+      .map(m => parsePrice(m[1]));
+    const imgs = [...html.matchAll(/<img[^>]*class="[^"]*(?:DByuf4|_396cs4|_2r_T1I|q6DClP)[^"]*"[^>]*src="([^"]+)"/gi)]
+      .map(m => m[1]);
+    const links = [...html.matchAll(/href="(\/[^"]+\/p\/[^"?#]+)/gi)].map(m => m[1]);
+
+    const count = Math.min(titles.length, prices.length, 10);
+    if (count > 0) {
+      return Array.from({ length: count }, (_, i) => ({
         id: `fk_${i}`,
-        title: cleanText(p.name || p.title || ''),
-        price,
-        originalPrice: orig > price ? orig : undefined,
-        discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
-        imageUrl: p.image || p.thumbnail || '',
+        title: titles[i],
+        price: prices[i],
+        imageUrl: imgs[i] || '',
         platform: 'Flipkart',
-        url: p.url || `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
-        brand: p.brand || undefined,
-        rating: p.rating ? parseFloat(p.rating) : undefined,
-      };
-    }).filter(p => p.price > 0 && p.title);
-  } catch { return []; }
+        url: links[i] ? `https://www.flipkart.com${links[i]}` : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
+      })).filter(p => p.price > 0 && p.title);
+    }
+  } catch { /* skip */ }
+  return [];
 }
 
-// ─── Ajio via direct API (works without render) ───────────────────────────────
+// ─── Myntra — render:true with __NEXT_DATA__ extraction ──────────────────────
+
+async function fetchMyntra(query: string): Promise<SearchProduct[]> {
+  if (!SCRAPER_KEY) return [];
+  try {
+    const { data: html } = await axios.get('https://api.scraperapi.com/', {
+      params: {
+        api_key: SCRAPER_KEY,
+        url: `https://www.myntra.com/${query.toLowerCase().replace(/\s+/g, '-')}`,
+        render: true,
+        country_code: 'in',
+        premium: true,
+      },
+      timeout: 35000,
+    });
+
+    if (typeof html !== 'string') return [];
+
+    // Try window.__myx state
+    const stateMatch = html.match(/window\.__myx\s*=\s*({[\s\S]*?});\s*(?:<\/script>|window\.)/i)
+      || html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
+
+    if (stateMatch) {
+      try {
+        const state = JSON.parse(stateMatch[1]);
+        const products: any[] = state?.search?.results || state?.searchData?.results || state?.products || [];
+        if (products.length) {
+          return products.slice(0, 10).map((p, i) => {
+            const price = p.price?.selling || p.sellingPrice || p.price || 0;
+            const orig = p.price?.mrp || p.mrp || 0;
+            return {
+              id: `mn_${p.id || i}`,
+              title: `${p.brand || ''} ${p.product || p.productName || ''}`.trim(),
+              price,
+              originalPrice: orig > price ? orig : undefined,
+              discount: p.discount || undefined,
+              imageUrl: p.searchImage || p.image || '',
+              platform: 'Myntra',
+              url: p.id ? `https://www.myntra.com/${p.id}` : `https://www.myntra.com/${encodeURIComponent(query)}`,
+              brand: p.brand || undefined,
+            };
+          }).filter(p => p.price > 0 && p.title);
+        }
+      } catch { /* fall through */ }
+    }
+
+    // Regex fallback
+    const prices = [...html.matchAll(/(?:Rs\.|₹)\s*([\d,]+)/g)].map(m => parsePrice(m[1])).filter(p => p > 0);
+    const titles = [...html.matchAll(/class="[^"]*product-product[^"]*"[^>]*>([^<]{5,100})</gi)].map(m => cleanText(m[1]));
+    const imgs = [...html.matchAll(/<img[^>]*class="[^"]*search-resultCard[^"]*"[^>]*src="([^"]+)"/gi)].map(m => m[1]);
+
+    const count = Math.min(titles.length, prices.length, 8);
+    if (count > 0) {
+      return Array.from({ length: count }, (_, i) => ({
+        id: `mn_${i}`,
+        title: titles[i],
+        price: prices[i],
+        imageUrl: imgs[i] || '',
+        platform: 'Myntra',
+        url: `https://www.myntra.com/${query.toLowerCase().replace(/\s+/g, '-')}`,
+      })).filter(p => p.price > 0 && p.title);
+    }
+  } catch { /* skip */ }
+  return [];
+}
+
+// ─── Ajio — direct JSON API ───────────────────────────────────────────────────
 
 async function fetchAjio(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEY) return [];
@@ -146,10 +247,13 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
         url: `https://www.ajio.com/api/search?text=${encodeURIComponent(query)}&pageSize=20&currentPage=0&format=json&sortBy=price-asc`,
         render: false,
         country_code: 'in',
-        headers: JSON.stringify({
+        keep_headers: true,
+      },
+      headers: {
+        'x-scraperapi-headers': JSON.stringify({
           'Accept': 'application/json',
           'Referer': 'https://www.ajio.com/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }),
       },
       timeout: 20000,
@@ -177,113 +281,6 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
   } catch { return []; }
 }
 
-// ─── Meesho via ScraperAPI render:true ────────────────────────────────────────
-
-async function fetchMeesho(query: string): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEY) return [];
-  try {
-    const { data: html } = await axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: SCRAPER_KEY,
-        url: `https://www.meesho.com/search?q=${encodeURIComponent(query)}`,
-        render: true,
-        country_code: 'in',
-      },
-      timeout: 30000,
-    });
-
-    if (typeof html !== 'string') return [];
-
-    // Extract JSON from window.__NEXT_DATA__ or similar
-    const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>({[\s\S]*?})<\/script>/i);
-    if (nextDataMatch) {
-      try {
-        const nextData = JSON.parse(nextDataMatch[1]);
-        const products: any[] = nextData?.props?.pageProps?.data?.products || [];
-        if (products.length) {
-          return products.slice(0, 10).map((p, i) => {
-            const price = p.min_price || p.price || 0;
-            const orig = p.mrp || 0;
-            return {
-              id: `ms_${p.id || i}`,
-              title: p.name || '',
-              price: parsePrice(price),
-              originalPrice: orig > price ? parsePrice(orig) : undefined,
-              discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
-              imageUrl: p.images?.[0]?.url || '',
-              platform: 'Meesho',
-              url: p.id ? `https://www.meesho.com/product/${p.id}` : `https://www.meesho.com/search?q=${encodeURIComponent(query)}`,
-              brand: p.brand_name || undefined,
-            };
-          }).filter(p => p.price > 0 && p.title);
-        }
-      } catch { /* fall through */ }
-    }
-
-    // Regex fallback for price + title
-    const prices = [...html.matchAll(/₹\s*([\d,]+)/g)].map(m => parsePrice(m[1])).filter(p => p > 0);
-    if (prices.length >= 3) {
-      return prices.slice(0, 8).map((price, i) => ({
-        id: `ms_${i}`,
-        title: `Fashion Item ${i + 1}`,
-        price,
-        imageUrl: '',
-        platform: 'Meesho',
-        url: `https://www.meesho.com/search?q=${encodeURIComponent(query)}`,
-      }));
-    }
-  } catch { /* skip */ }
-  return [];
-}
-
-// ─── Myntra via ScraperAPI render:true ────────────────────────────────────────
-
-async function fetchMyntra(query: string): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEY) return [];
-  try {
-    const { data: html } = await axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: SCRAPER_KEY,
-        url: `https://www.myntra.com/${query.toLowerCase().replace(/\s+/g, '-')}`,
-        render: true,
-        country_code: 'in',
-        premium: true,
-      },
-      timeout: 30000,
-    });
-
-    if (typeof html !== 'string') return [];
-
-    const stateMatch = html.match(/window\.__myx\s*=\s*({[\s\S]*?});\s*(?:<\/script>|window\.)/i)
-      || html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
-
-    if (stateMatch) {
-      try {
-        const state = JSON.parse(stateMatch[1]);
-        const products: any[] = state?.search?.results || state?.searchData?.results || state?.products || [];
-        if (products.length) {
-          return products.slice(0, 10).map((p, i) => {
-            const price = p.price?.selling || p.sellingPrice || p.price || 0;
-            const orig = p.price?.mrp || p.mrp || 0;
-            return {
-              id: `mn_${p.id || i}`,
-              title: `${p.brand || ''} ${p.product || p.productName || ''}`.trim(),
-              price,
-              originalPrice: orig > price ? orig : undefined,
-              discount: p.discount || undefined,
-              imageUrl: p.searchImage || p.image || '',
-              platform: 'Myntra',
-              url: p.id ? `https://www.myntra.com/${p.id}` : `https://www.myntra.com/${encodeURIComponent(query)}`,
-              brand: p.brand || undefined,
-            };
-          }).filter(p => p.price > 0 && p.title);
-        }
-      } catch { /* fall through */ }
-    }
-  } catch { /* skip */ }
-  return [];
-}
-
 // ─── Build comparison ─────────────────────────────────────────────────────────
 
 function buildComparison(results: SearchProduct[][]): SearchProduct[] {
@@ -300,22 +297,19 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cached = getCached(key);
   if (cached) return cached;
 
-  // Run Amazon + Flipkart first (structured endpoints, most reliable)
-  // Ajio, Meesho, Myntra in parallel
-  const [az, fk, aj, ms, mn] = await Promise.allSettled([
+  // Amazon is confirmed working. Run all in parallel.
+  const [az, fk, mn, aj] = await Promise.allSettled([
     fetchAmazon(query),
     fetchFlipkart(query),
-    fetchAjio(query),
-    fetchMeesho(query),
     fetchMyntra(query),
+    fetchAjio(query),
   ]);
 
   const results = buildComparison([
     az.status === 'fulfilled' ? az.value : [],
     fk.status === 'fulfilled' ? fk.value : [],
-    aj.status === 'fulfilled' ? aj.value : [],
-    ms.status === 'fulfilled' ? ms.value : [],
     mn.status === 'fulfilled' ? mn.value : [],
+    aj.status === 'fulfilled' ? aj.value : [],
   ]);
 
   const withAffiliate = results.map(p => ({
