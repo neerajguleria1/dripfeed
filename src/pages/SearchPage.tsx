@@ -424,8 +424,8 @@ export default function SearchPage() {
 
   // ── Derived State ─────────────────────────────────────────────────────────
 
-  const featuredProduct = filteredProducts[0] || null;
-  const gridProducts = filteredProducts.slice(1);
+  const featuredProduct = null; // disabled — show all in grid
+  const gridProducts = filteredProducts;
   const showEmpty = !loading && query && filteredProducts.length === 0;
   const showResults = !loading && filteredProducts.length > 0;
   const showLanding = !query && !loading;
@@ -576,17 +576,12 @@ export default function SearchPage() {
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {/* Featured lede — first result, premium card */}
-              {featuredProduct && <FeaturedCard product={featuredProduct} />}
-
-              {/* Standard grid */}
-              {gridProducts.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                  {gridProducts.map((product, i) => (
-                    <ResultCard key={product.id || i} product={product} index={i} />
-                  ))}
-                </div>
-              )}
+              {/* All products grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                {gridProducts.map((product, i) => (
+                  <ResultCard key={product.id || i} product={product} index={i} />
+                ))}
+              </div>
             </InfiniteScroll>
           </div>
         </section>
