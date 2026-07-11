@@ -107,40 +107,8 @@ confidence should be a number between 0 and 1 indicating how confident you are i
 
 // --- Compare ---
 
-function generateComparison(query: string) {
-  const platforms = [
-    { name: 'Amazon India', delivery: '2-3 days', returnPolicy: '10-day return' },
-    { name: 'Flipkart', delivery: '3-5 days', returnPolicy: '10-day return' },
-    { name: 'Myntra', delivery: '4-6 days', returnPolicy: '30-day return' },
-    { name: 'Ajio', delivery: '5-7 days', returnPolicy: '15-day return' },
-    { name: 'Meesho', delivery: '5-8 days', returnPolicy: '7-day return' },
-    { name: 'Nykaa Fashion', delivery: '4-7 days', returnPolicy: '15-day return' },
-    { name: 'Tata CLiQ', delivery: '3-5 days', returnPolicy: '30-day return' },
-  ];
-
-  const basePrice = 1500 + Math.floor(Math.random() * 3500);
-
-  return platforms.map(p => {
-    const variation = 0.75 + Math.random() * 0.5;
-    const price = Math.round(basePrice * variation);
-    const originalPrice = Math.round(price * (1.15 + Math.random() * 0.4));
-    const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
-
-    return {
-      platform: p.name,
-      title: `${query}`,
-      price,
-      originalPrice,
-      discount,
-      delivery: p.delivery,
-      returnPolicy: p.returnPolicy,
-      url: `https://www.${p.name.toLowerCase().replace(/\s+/g, '')}.com/product/${encodeURIComponent(query)}`,
-      imageUrl: `https://placehold.co/300x400/f8f5f2/051F45?text=${encodeURIComponent(query.slice(0, 10))}`,
-      rating: (3.5 + Math.random() * 1.5).toFixed(1),
-      inStock: true,
-    };
-  });
-}
+// generateComparison removed — was generating fake random data with placeholder images.
+// All comparison data now comes from real scraper results via searchProducts().
 
 async function compare(req: VercelRequest, res: VercelResponse) {
   // Support both GET ?q=... and POST { url: ... }
@@ -184,7 +152,10 @@ async function compare(req: VercelRequest, res: VercelResponse) {
     if (searchTerm) {
       const { searchProducts } = await import('../search.js');
       const results = await searchProducts(searchTerm);
-      return res.json({ platforms: results.sort((a, b) => a.price - b.price), query: searchTerm });
+      if (results.length === 0) {
+        return res.json({ platforms: [], products: [], query: searchTerm, message: 'No real product data found. Try a more specific search term.' });
+      }
+      return res.json({ platforms: results.sort((a, b) => a.price - b.price), products: results.sort((a, b) => a.price - b.price), query: searchTerm });
     }
 
     return res.status(400).json({ error: 'Provide url or query in request body' });

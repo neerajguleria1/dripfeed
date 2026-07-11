@@ -187,9 +187,9 @@ async function main() {
     for (const p of allProducts) {
       try {
         await Product.findOneAndUpdate(
-          { title: p.title, 'platforms.platform': p.platform, searchQuery: query.toLowerCase() },
+          { title: p.title, searchQuery: query.toLowerCase() },
           {
-            $set: { title: p.title, brand: p.brand || '', imageUrl: p.imageUrl, searchQuery: query.toLowerCase(), cachedAt: new Date() },
+            $set: { title: p.title, brand: p.brand || '', imageUrl: p.imageUrl || '', searchQuery: query.toLowerCase(), cachedAt: new Date() },
             $addToSet: { platforms: { platform: p.platform, price: p.price, originalPrice: p.originalPrice, discount: p.discount, url: p.url } },
           },
           { upsert: true }

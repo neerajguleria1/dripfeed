@@ -91,26 +91,9 @@ async function searchGoogleShopping(query: string): Promise<SearchProduct[]> {
       } catch { /* skip */ }
     }
 
-    if (results.length < 4) {
-      const titles = [...html.matchAll(/<(?:h3|span)[^>]*class="[^"]*(?:tAxDx|BNeawe)[^"]*"[^>]*>([^<]+)/gi)].map(x => cleanText(x[1]));
-      const prices = [...html.matchAll(/₹\s*(\d{1,3}(?:,\d{3})*)/gi)].map(x => parsePrice(x[1])).filter(p => p > 50 && p < 500000);
-      const imgs = [...html.matchAll(/src="(https?:\/\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/gi)].map(x => x[1]).filter(u => !u.includes('google.com/images') && !u.includes('gstatic.com/images'));
-      const links = [...html.matchAll(/href="((?:https?:\/\/)(?:[^"]*(?:amazon|myntra|flipkart|ajio|meesho)[^"]*))/gi)].map(x => x[1]);
-
-      for (let i = 0; i < Math.min(titles.length, 20); i++) {
-        const price = prices[i] || prices[0] || 0;
-        if (price > 0 && titles[i]?.length > 5) {
-          results.push({
-            id: `gs_${results.length}`,
-            title: titles[i],
-            price,
-            imageUrl: imgs[i % Math.max(imgs.length, 1)] || '',
-            platform: platformFrom(links[i] || ''),
-            url: links[i] || `https://www.google.com/search?q=${encodeURIComponent(titles[i])}`,
-          });
-        }
-      }
-    }
+    // NOTE: Removed broken HTML fallback that misaligned images with titles.
+    // The LD+JSON path above is the only reliable source from Google Shopping.
+    // HTML scraping of Google results is fragile and produces wrong image/title pairs.
 
     return results.slice(0, 20);
   } catch {
@@ -183,16 +166,9 @@ async function searchMyntra(query: string): Promise<SearchProduct[]> {
       } catch { /* fall through */ }
     }
 
-    const imgs = [...html.matchAll(/src="(https?:\/\/assets\.myntassets\.com[^"]*)"/gi)].map(x => x[1]);
-    const prices = [...html.matchAll(/₹([\d,]+)/gi)].map(x => parsePrice(x[1])).filter(p => p > 0);
-    return imgs.slice(0, 8).map((img, i) => ({
-      id: `mn_${i}`,
-      title: query,
-      price: prices[i] || 0,
-      imageUrl: img,
-      platform: 'Myntra',
-      url: `https://www.myntra.com/${slug}`,
-    })).filter(p => p.price > 0);
+    // NOTE: Removed broken HTML fallback that misaligned images with prices.
+    // The __INITIAL_STATE__ JSON path above is the only reliable source from Myntra.
+    return [];
   } catch {
     return [];
   }
@@ -234,6 +210,8 @@ function searchSeedData(query: string): SearchProduct[] {
           ? Math.round(((plat.originalPrice - plat.price) / plat.originalPrice) * 100)
           : 0;
 
+        // Only use seed imageUrl if it's from a trusted source (unsplash is fine for seed data
+        // but we mark it so the frontend can show a "stock image" indicator)
         matches.push({
           id: `seed_${sp.title.slice(0, 10)}_${plat.platform}_${matches.length}`,
           title: sp.title,
@@ -241,7 +219,7 @@ function searchSeedData(query: string): SearchProduct[] {
           price: plat.price,
           originalPrice: plat.originalPrice > plat.price ? plat.originalPrice : undefined,
           discount: discount > 0 ? discount : undefined,
-          imageUrl: sp.imageUrl,
+          imageUrl: sp.imageUrl || '',
           platform: plat.platform.charAt(0).toUpperCase() + plat.platform.slice(1),
           url: plat.url,
         });

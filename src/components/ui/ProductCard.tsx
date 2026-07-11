@@ -50,7 +50,7 @@ export default function ProductCard({ product }: { product: Product }) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/compare?q=${encodeURIComponent(product.title)}`); } }}
       className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer"
     >      <div className="relative aspect-square bg-[#F8F5F2] overflow-hidden">
-        {product.imageUrl ? (
+        {product.imageUrl && !product.imageUrl.includes('placehold.co') ? (
           <>
             <img
               src={product.imageUrl}
@@ -64,12 +64,20 @@ export default function ProductCard({ product }: { product: Product }) {
                 if (fallback) fallback.style.display = 'flex';
               }}
             />
-            <div className="w-full h-full items-center justify-center text-gray-300 text-4xl absolute inset-0 bg-[#F8F5F2]" style={{ display: 'none' }}>
-              🛍️
+            <div className="w-full h-full items-center justify-center absolute inset-0 bg-[#F8F5F2]" style={{ display: 'none' }}>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-3xl">🛍️</span>
+                <span className="text-[10px] text-gray-400 font-medium">{product.brand || product.title.slice(0, 20)}</span>
+              </div>
             </div>
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">🛍️</div>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-3xl">🛍️</span>
+              <span className="text-[10px] text-gray-400 font-medium">{product.brand || product.title.slice(0, 20)}</span>
+            </div>
+          </div>
         )}
         <button
           onClick={handleSave}
