@@ -139,6 +139,110 @@ async function searchFlipkart(query: string): Promise<SearchProduct[]> {
   }
 }
 
+async function searchMeesho(query: string): Promise<SearchProduct[]> {
+  try {
+    const { data } = await axios.post(
+      'https://www.meesho.com/api/v1/products/search',
+      { query, page: 1, limit: 10 },
+      {
+        headers: {
+          ...HEADERS,
+          'Content-Type': 'application/json',
+          'x-meesho-client': 'meesho-web',
+        },
+        timeout: 8000,
+      }
+    );
+    const products = data?.data?.products || data?.products || [];
+    return products.slice(0, 10).map((p: any, i: number) => {
+      const price = p.min_price || p.price?.min || p.price || 0;
+      const orig = p.mrp || p.price?.max || 0;
+      return {
+        id: `ms_${p.id || i}`,
+        title: p.name || p.product_name || '',
+        price: typeof price === 'string' ? parsePrice(price) : price,
+        originalPrice: orig > price ? orig : undefined,
+        discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
+        imageUrl: p.images?.[0]?.url || p.image_url || '',
+        platform: 'Meesho',
+        url: `https://www.meesho.com/product/${p.id || ''}`,
+        brand: p.brand_name || undefined,
+        rating: p.ratings?.average || undefined,
+      };
+    }).filter((p: SearchProduct) => p.price > 0 && p.title);
+  } catch {
+    return [];
+  }
+}
+
+async function searchAmazon(query: string): Promise<SearchProduct[]> {
+  try {
+    const { data: html } = await axios.get(
+      `https://www.amazon.in/s?k=${encodeURIComponent(query)}&i=fashion`,
+      { headers: { ...HEADERS, 'Accept': 'text/html,application/xhtml+xml' }, timeout: 8000 }
+    );
+    const results: SearchProduct[] = [];
+    // Amazon embeds product data in __NEXT_DATA__ or data-asin blocks
+    const asinBlocks = [...html.matchAll(/data-asin="([A-Z0-9]{10})"[\s\S]*?data-component-type="s-search-result"/gi)];
+    const titles = [...html.matchAll(/<span[^>]*class="[^"]*a-size-medium[^"]*a-color-base[^"]*s-inline[^"]*"[^>]*>([^<]+)<\/span>/gi)].map(x => cleanText(x[1]));
+    const prices = [...html.matchAll(/<span[^>]*class="a-price-whole"[^>]*>([\d,]+)/gi)].map(x => parsePrice(x[1]));
+    const imgs = [...html.matchAll(/<img[^>]*class="s-image"[^>]*src="([^"]+)"/gi)].map(x => x[1]);
+    const asins = [...html.matchAll(/data-asin="([A-Z0-9]{10})"/gi)].map(x => x[1]).filter(Boolean);
+
+    for (let i = 0; i < Math.min(titles.length, prices.length, 10); i++) {
+      if (prices[i] > 0 && titles[i]) {
+        results.push({
+          id: `az_${i}`,
+          title: titles[i],
+          price: prices[i],
+          imageUrl: imgs[i] || '',
+          platform: 'Amazon India',
+          url: asins[i] ? `https://www.amazon.in/dp/${asins[i]}` : `https://www.amazon.in/s?k=${encodeURIComponent(query)}`,
+        });
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+async function searchAjio(query: string): Promise<SearchProduct[]> {
+  try {
+    // Ajio has a public search API used by their website
+    const { data } = await axios.get(
+      `https://www.ajio.com/api/search?text=${encodeURIComponent(query)}&pageSize=10&currentPage=0&format=json`,
+      {
+        headers: {
+          ...HEADERS,
+          'Accept': 'application/json',
+          'Referer': 'https://www.ajio.com/',
+        },
+        timeout: 8000,
+      }
+    );
+    const products = data?.searchresult?.products || data?.products || [];
+    return products.slice(0, 10).map((p: any, i: number) => {
+      const price = p.price?.value || p.wasPriceData?.value || 0;
+      const orig = p.wasPriceData?.value || p.price?.value || 0;
+      return {
+        id: `aj_${p.code || i}`,
+        title: `${p.brandname || ''} ${p.name || ''}`.trim(),
+        price,
+        originalPrice: orig > price ? orig : undefined,
+        discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
+        imageUrl: p.images?.[0]?.url ? `https://assets.ajio.com${p.images[0].url}` : '',
+        platform: 'Ajio',
+        url: p.url ? `https://www.ajio.com${p.url}` : `https://www.ajio.com/search/?text=${encodeURIComponent(query)}`,
+        brand: p.brandname || undefined,
+        rating: p.averageRating || undefined,
+      };
+    }).filter((p: SearchProduct) => p.price > 0 && p.title);
+  } catch {
+    return [];
+  }
+}
+
 async function searchMyntra(query: string): Promise<SearchProduct[]> {
   try {
     const slug = query.toLowerCase().replace(/\s+/g, '-');
@@ -236,16 +340,22 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cached = getCached(key);
   if (cached) return cached;
 
-  const [gs, fk, mn] = await Promise.allSettled([
+  const [gs, fk, mn, ms, az, aj] = await Promise.allSettled([
     searchGoogleShopping(query),
     searchFlipkart(query),
     searchMyntra(query),
+    searchMeesho(query),
+    searchAmazon(query),
+    searchAjio(query),
   ]);
 
   let results = mergeResults([
     gs.status === 'fulfilled' ? gs.value : [],
     fk.status === 'fulfilled' ? fk.value : [],
     mn.status === 'fulfilled' ? mn.value : [],
+    ms.status === 'fulfilled' ? ms.value : [],
+    az.status === 'fulfilled' ? az.value : [],
+    aj.status === 'fulfilled' ? aj.value : [],
   ]);
 
   // Fallback to seed data if all scrapers returned empty

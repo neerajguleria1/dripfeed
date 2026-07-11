@@ -75,20 +75,21 @@ export default function ComparePage() {
       const { data } = await api.post('/products/compare', { url });
       const results: ProductData[] = data?.platforms || data?.products || [];
       results.sort((a, b) => a.price - b.price);
-      setPlatforms(results);
       if (results.length > 0) {
+        setPlatforms(results);
+        setLoading(false);
         fetchAiAdvice(results[0]?.title || 'Product', results);
       } else {
         // API succeeded but returned nothing — try keyword fallback
         const urlObj = new URL(url);
         const pathParts = urlObj.pathname.split('/').filter(Boolean);
-        // Find meaningful slug (not 'p', not numeric IDs)
         const slug = pathParts.find(p => p.length > 3 && !/^\d+$/.test(p) && p !== 'p' && p !== 'dp' && p !== 'buy');
         const guessedName = slug?.replace(/[-_]/g, ' ') || '';
         if (guessedName) {
           await fetchComparison(guessedName);
         } else {
-          setError('Could not find products for this URL. Try searching by product name instead.');
+          setError("We couldn't fetch details for this link. Please try another one.");
+          setLoading(false);
         }
       }
     } catch {
@@ -101,13 +102,13 @@ export default function ComparePage() {
         if (guessedName) {
           await fetchComparison(guessedName);
         } else {
-          setError('Could not extract product info from this URL. Try searching by name instead.');
+          setError("We couldn't fetch details for this link. Please try another one.");
+          setLoading(false);
         }
       } catch {
-        setError('Could not process this URL. Try searching by product name instead.');
+        setError("We couldn't fetch details for this link. Please try another one.");
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -517,10 +518,10 @@ export default function ComparePage() {
         {/* ─── Footer — matching premium design language ─── */}
         <footer className="px-4 sm:px-8 lg:px-16 py-10 border-t border-neutral-100 bg-white">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-[13px] sm:text-[12px] text-neutral-400">
+            <p className="text-[13px] sm:text-[12px] text-neutral-600">
               &copy; 2026 DripFeed India
             </p>
-            <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
+            <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-600">
               <button
                 onClick={() => navigate('/privacy')}
                 className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
@@ -540,7 +541,7 @@ export default function ComparePage() {
                 Affiliate Disclosure
               </button>
             </div>
-            <p className="text-[13px] sm:text-[10px] text-neutral-300">
+            <p className="text-[13px] sm:text-[10px] text-neutral-500">
               #Ad: DripFeed earns commission on purchases through our links.
             </p>
           </div>
