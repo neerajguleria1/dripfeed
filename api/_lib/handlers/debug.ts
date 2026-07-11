@@ -47,7 +47,18 @@ async function debugSearch(req: VercelRequest, res: VercelResponse) {
         timeout: 25000,
       });
       const products = data?.results || data?.organic_results || [];
-      return { count: products.length, first: products[0] ? { title: products[0].name || products[0].title, price: products[0].price } : null };
+      return { 
+        count: products.length, 
+        first3: products.slice(0, 3).map((p: any) => ({ 
+          title: p.name || p.title, 
+          price: p.price,
+          price_type: typeof p.price,
+          original_price: p.original_price,
+          image: p.image ? 'yes' : 'no',
+          asin: p.asin,
+          all_keys: Object.keys(p)
+        }))
+      };
     }),
 
     testPlatform('flipkart_structured', async () => {
