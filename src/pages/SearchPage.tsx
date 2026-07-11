@@ -53,13 +53,16 @@ const SORT_OPTIONS: { value: FilterState['sort']; label: string }[] = [
 
 // Platform color mapping
 const PLATFORM_COLORS: Record<string, string> = {
-  myntra: '#ff3f6c',
-  ajio: '#000000',
-  amazon: '#ff9900',
-  flipkart: '#2874f0',
+  myntra: '#FF3F6C',
+  ajio: '#1A1A1A',
+  amazon: '#FF9900',
+  amazonia: '#FF9900',
+  flipkart: '#2874F0',
   meesho: '#570741',
-  nykaa: '#fc2779',
-  tatacliq: '#6c3d9e',
+  nykaa: '#FC2779',
+  nykaafashion: '#FC2779',
+  tata: '#6C3D9E',
+  tatacliq: '#6C3D9E',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -157,13 +160,12 @@ function FeaturedCard({ product }: { product: ProductData }) {
 
       {/* Details */}
       <div className="flex flex-col justify-center p-5 md:p-8 md:py-10">
-        {/* Platform badge */}
+        {/* Platform badge pill */}
         <div className="flex items-center gap-2 mb-3">
           <span
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase()] || '#6b7280' }}
-          />
-          <span className="text-[12px] text-neutral-500 font-medium capitalize">
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold text-white capitalize"
+            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || PLATFORM_COLORS[product.platform.toLowerCase().split(' ')[0]] || '#6b7280' }}
+          >
             {product.platform}
           </span>
         </div>
@@ -238,13 +240,12 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
         )}
       </div>
       <div className="p-4 flex flex-col flex-1">
-        {/* Platform dot + name */}
+        {/* Platform badge pill */}
         <div className="flex items-center gap-1.5 mb-2">
           <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase()] || '#6b7280' }}
-          />
-          <span className="text-[11px] text-neutral-400 font-medium capitalize">
+            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize"
+            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || PLATFORM_COLORS[product.platform.toLowerCase().split(' ')[0]] || '#6b7280' }}
+          >
             {product.platform}
           </span>
         </div>
@@ -268,7 +269,7 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
         </div>
         {product.discount && product.discount > 0 && (
           <span className="text-[11px] font-semibold text-[#C9A96E] mt-1">
-            {product.discount}% off
+            {Math.round(Number(product.discount))}% off
           </span>
         )}
       </div>
@@ -548,9 +549,8 @@ export default function SearchPage() {
               </div>
             </div>
 
-            {/* Filter chips — horizontal scroll on mobile with gold active accent */}
-            <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide mt-3
-              [&_.active]:bg-[#C9A96E]/10 [&_.active]:border-[#C9A96E] [&_.active]:text-[#8B7340]">
+            {/* Filter chips — horizontal scroll on mobile */}
+            <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide mt-3">
               <SearchFilters
                 filters={filters}
                 onFilterChange={handleFilterChange}
@@ -759,10 +759,10 @@ export default function SearchPage() {
       {/* ── Affiliate Disclosure Footer ──────────────────────────────────────── */}
       <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[13px] text-neutral-400">
+          <p className="text-[13px] text-neutral-600">
             &copy; 2026 DripFeed India
           </p>
-          <div className="flex gap-5 text-[13px] text-neutral-400">
+          <div className="flex gap-5 text-[13px] text-neutral-600">
             <button
               onClick={() => navigate('/privacy')}
               className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
@@ -782,7 +782,7 @@ export default function SearchPage() {
               Affiliate Disclosure
             </button>
           </div>
-          <p className="text-[11px] text-neutral-300">
+          <p className="text-[11px] text-neutral-500">
             #Ad: DripFeed earns commission on purchases through our links.
           </p>
         </div>

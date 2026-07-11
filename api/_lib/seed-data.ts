@@ -278,8 +278,8 @@ export const SEED_PRODUCTS_EXTENDED: SeedProduct[] = [
   { title: 'Marks & Spencer Velvet Blazer', brand: 'M&S', category: 'western', platforms: [{ platform: 'myntra', price: 4999, originalPrice: 7999, url: 'https://www.myntra.com' }, { platform: 'tatacliq', price: 5299, originalPrice: 7999, url: 'https://www.tatacliq.com' }], imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&h=533&fit=crop' },
   { title: 'Mango Pleated Midi Skirt', brand: 'Mango', category: 'western', platforms: [{ platform: 'myntra', price: 1990, originalPrice: 3490, url: 'https://www.myntra.com' }, { platform: 'ajio', price: 2190, originalPrice: 3490, url: 'https://www.ajio.com' }], imageUrl: 'https://images.unsplash.com/photo-1583496661160-fb5886a0aebd?w=400&h=533&fit=crop' },
   // Kurtas
-  { title: 'Manyavar Silk Nehru Jacket Set', brand: 'Manyavar', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 5999, originalPrice: 9999, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 6499, originalPrice: 9999, url: 'https://www.flipkart.com' }], imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=533&fit=crop' },
-  { title: 'Kishwer Merchant x Anouk Palazzo Set', brand: 'Anouk', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 1799, originalPrice: 3499, url: 'https://www.myntra.com' }, { platform: 'ajio', price: 1999, originalPrice: 3499, url: 'https://www.ajio.com' }, { platform: 'meesho', price: 1599, originalPrice: 3499, url: 'https://www.meesho.com' }], imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&h=533&fit=crop' },
+  { title: 'Manyavar Silk Nehru Jacket Set', brand: 'Manyavar', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 5999, originalPrice: 9999, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 6499, originalPrice: 9999, url: 'https://www.flipkart.com' }], imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&h=533&fit=crop' },
+  { title: 'Kishwer Merchant x Anouk Palazzo Set', brand: 'Anouk', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 1799, originalPrice: 3499, url: 'https://www.myntra.com' }, { platform: 'ajio', price: 1999, originalPrice: 3499, url: 'https://www.ajio.com' }, { platform: 'meesho', price: 1599, originalPrice: 3499, url: 'https://www.meesho.com' }], imageUrl: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=533&fit=crop' },
   // Sneakers
   { title: 'Nike Air Max 90 Essential', brand: 'Nike', category: 'footwear', platforms: [{ platform: 'myntra', price: 8995, originalPrice: 11995, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 9295, originalPrice: 11995, url: 'https://www.flipkart.com' }, { platform: 'amazon', price: 9195, originalPrice: 11995, url: 'https://www.amazon.in' }], imageUrl: 'https://images.unsplash.com/photo-1514989940723-e8e51635b782?w=400&h=533&fit=crop' },
   { title: 'Adidas Ultraboost Light Running', brand: 'Adidas', category: 'footwear', platforms: [{ platform: 'myntra', price: 12999, originalPrice: 16999, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 13499, originalPrice: 16999, url: 'https://www.flipkart.com' }, { platform: 'amazon', price: 13299, originalPrice: 16999, url: 'https://www.amazon.in' }], imageUrl: 'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=400&h=533&fit=crop' },
@@ -399,7 +399,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'flipkart', price: 549, originalPrice: 999, url: 'https://www.flipkart.com' },
       { platform: 'meesho', price: 449, originalPrice: 999, url: 'https://www.meesho.com' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=400&h=533&fit=crop',
   },
   {
     title: 'Pantaloons Festive Silk Blend Kurta Set',
@@ -433,7 +433,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'meesho', price: 699, originalPrice: 1499, url: 'https://www.meesho.com' },
       { platform: 'amazon', price: 899, originalPrice: 1499, url: 'https://www.amazon.in' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1485968579996-35ef07fbc07b?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1617019114583-affb34d1b3cd?w=400&h=533&fit=crop',
   },
   {
     title: 'Anouk Banarasi Dupatta - Gold Zari',
