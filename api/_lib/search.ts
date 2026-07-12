@@ -530,6 +530,8 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     affiliateUrl: buildAffiliateUrl(p.platform, p.url),
   }));
 
+  if (!withAffiliate.length) return withAffiliate; // don't cache empty results
+
   setMemCache(cacheKey, withAffiliate);
   setDbCache(cacheKey, withAffiliate);
 
