@@ -80,16 +80,12 @@ const CATEGORY_SLUGS = new Set([
 
 function isValidProduct(p: { title: string; price: number; imageUrl: string }): boolean {
   const t = p.title.trim();
-  // Must have a real price
   if (p.price <= 0) return false;
-  // Title must be at least 8 chars and contain a space (not a single slug word)
-  if (t.length < 8 || !t.includes(' ')) return false;
-  // Reject pure category strings
+  if (t.length < 5) return false;
   if (CATEGORY_SLUGS.has(t.toLowerCase())) return false;
-  // Reject titles that are just numbers or special chars
   if (!/[a-zA-Z]{3,}/.test(t)) return false;
-  // Image must be a valid https URL
-  if (!p.imageUrl || !p.imageUrl.startsWith('https://')) return false;
+  // Accept https:// URLs and data: base64 images (Google Shopping)
+  if (!p.imageUrl || (!p.imageUrl.startsWith('https://') && !p.imageUrl.startsWith('data:'))) return false;
   return true;
 }
 
@@ -110,7 +106,23 @@ export function slugToSearchQuery(slug: string): string {
     .trim();
 }
 
-const SCRAPER_KEYS = [
+// ─── Query normalizer ────────────────────────────────────────────────────────
+// Normalizes user queries so "trousers women" and "women trousers" hit the same
+// cache key, and common variants map to the best search term.
+function normalizeQuery(q: string): string {
+  return q
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')         // collapse whitespace
+    .replace(/s\b/g, '')          // remove trailing 's' (trousers→trouser, jeans→jean)
+    .replace(/[^a-z0-9 ]/g, '')  // strip special chars
+    .split(' ')
+    .filter(Boolean)
+    .sort()                        // canonical word order
+    .join(' ');
+}
+
+
   process.env.SCRAPER_API_KEY,
   process.env.SCRAPER_API_KEY_2,
   process.env.SCRAPER_API_KEY_3,
@@ -268,8 +280,31 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
 }
 
 // ─── Myntra via render:true ───────────────────────────────────────────────────
-// Myntra needs ~60s to render. Uses regex on the __myx state blob.
-// searchImage comes as http:// — we upgrade to https://
+// Myntra category URLs: myntra.com/jeans, myntra.com/nike-shoes etc.
+// Price/brand queries like "jeans under 500" or "levis jeans" don't work as slugs
+// — fall back to myntra.com/search?q= for those.
+
+function buildMyntraUrl(query: string): string {
+  const q = query.toLowerCase().trim();
+  // Price intent queries — use search
+  if (/under\s*\d+|below\s*\d+|\d+\s*to\s*\d+/.test(q)) {
+    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+  }
+  // Single known-bad slugs that redirect to homepage — use search
+  const BAD_SLUGS = new Set(['kurti', 'jean', 'kurtas', 'jeans under']);
+  if (BAD_SLUGS.has(q)) {
+    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+  }
+  // Brand + product queries with 2+ words where first word is a brand
+  // e.g. "levis jeans", "zara dress" — use search
+  const BRANDS = new Set(['levis', 'zara', 'h&m', 'hm', 'puma', 'adidas', 'reebok', 'gap', 'mango', 'only', 'vero', 'forever']);
+  const words = q.split(' ');
+  if (words.length >= 2 && BRANDS.has(words[0])) {
+    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+  }
+  // Default: category slug
+  return `https://www.myntra.com/${q.replace(/\s+/g, '-')}`;
+}
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
@@ -277,7 +312,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
     const { data: html } = await axios.get('https://api.scraperapi.com/', {
       params: {
         api_key: getNextRoundRobinKey(),
-        url: `https://www.myntra.com/${query.toLowerCase().replace(/\s+/g, '-')}`,
+        url: buildMyntraUrl(query),
         render: true,
         country_code: 'in',
       },
@@ -312,7 +347,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
         price,
         originalPrice: disc > 0 ? mrp : undefined,
         discount: discPct,
-        imageUrl: (images[i] || '').replace(/^http:/, 'https://'),
+        imageUrl: (images[i] || '').replace(/^http:///, 'https://'),
         platform: 'Myntra',
         url: slugs[i] ? `https://www.myntra.com${slugs[i]}` : `https://www.myntra.com/${encodeURIComponent(query)}`,
       };
@@ -337,6 +372,16 @@ function normalizePlatformName(source: string): string {
   if (s.includes('westside')) return 'Westside';
   if (s.includes('libas')) return 'Libas';
   return source;
+}
+
+// Extract real retailer URL from ScraperAPI Google Shopping proxy link
+function extractGoogleShoppingUrl(proxyLink: string): string {
+  try {
+    const u = new URL(proxyLink);
+    const target = u.searchParams.get('url');
+    if (target) return decodeURIComponent(target);
+  } catch {}
+  return proxyLink;
 }
 
 async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
@@ -370,7 +415,7 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
           price,
           imageUrl,
           platform,
-          url: r.link || '',
+          url: extractGoogleShoppingUrl(r.link || ''),
         };
       })
       .filter(p => p.price > 100 && p.title.length >= 8 && p.title.includes(' ') && p.url);
@@ -380,26 +425,25 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function searchProducts(query: string): Promise<SearchProduct[]> {
-  const cacheKey = query.toLowerCase().trim();
+  const cacheKey = normalizeQuery(query);
+  const searchTerm = query.toLowerCase().trim(); // use original for actual search
 
-  // L1 — memory
   const mem = getMemCached(cacheKey);
   if (mem) return mem;
 
-  // L2 — MongoDB (survives cold starts and deploys)
   const db = await getDbCached(cacheKey);
   if (db) { setMemCache(cacheKey, db); return db; }
 
   // All fetchers run in parallel — Google Shopping covers Ajio + others
   const [az1, fk, mn, gs] = await Promise.all([
-    fetchAmazonPage(query, 1).catch(() => []),
-    fetchFlipkart(query).catch(() => []),
-    fetchMyntra(query).catch(() => []),
-    fetchGoogleShopping(query).catch(() => []),
+    fetchAmazonPage(searchTerm, 1).catch(() => []),
+    fetchFlipkart(searchTerm).catch(() => []),
+    fetchMyntra(searchTerm).catch(() => []),
+    fetchGoogleShopping(searchTerm).catch(() => []),
   ]);
 
   const [az2result] = await Promise.allSettled([
-    az1.length < 10 ? fetchAmazonPage(query, 2) : Promise.resolve([] as SearchProduct[]),
+    az1.length < 10 ? fetchAmazonPage(searchTerm, 2) : Promise.resolve([] as SearchProduct[]),
   ]);
 
   const amazonResults = [
@@ -430,7 +474,6 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     affiliateUrl: buildAffiliateUrl(p.platform, p.url),
   }));
 
-  // Write to both cache layers — fire-and-forget for DB
   setMemCache(cacheKey, withAffiliate);
   setDbCache(cacheKey, withAffiliate);
 
