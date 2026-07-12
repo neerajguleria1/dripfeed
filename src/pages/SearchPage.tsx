@@ -319,6 +319,81 @@ export default function SearchPage() {
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
+  const fetchIndianPlatforms = useCallback(async (searchQuery: string) => {
+    const q = encodeURIComponent(searchQuery);
+    const base = '/api/proxy?url=';
+
+    const fetchers = [
+      {
+        name: 'Myntra',
+        url: `https://www.myntra.com/gateway/v2/search/${q}?p=1&rows=20&o=0&plaEnabled=false&sort=price_asc`,
+        parse: (d: any): ProductData[] => (d?.products || []).map((p: any) => ({
+          id: `mn_${p.productId}`,
+          title: `${p.brand || ''} ${p.productName || ''}`.trim(),
+          brand: p.brand,
+          price: p.price || 0,
+          originalPrice: p.mrp > p.price ? p.mrp : undefined,
+          discount: p.mrp > p.price ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : undefined,
+          imageUrl: (p.searchImage || '').replace(/^http:\/\//, 'https://'),
+          platform: 'Myntra',
+          url: p.landingPageUrl ? `https://www.myntra.com/${p.landingPageUrl}` : `https://www.myntra.com/search?q=${q}`,
+          rating: p.rating,
+        })).filter((p: ProductData) => p.price > 0 && p.title.length > 4 && (p.imageUrl || '').startsWith('https://')),
+      },
+      {
+        name: 'Ajio',
+        url: `https://www.ajio.com/api/search?text=${q}&pageSize=20&currentPage=0&format=json&sortBy=price-asc`,
+        parse: (d: any): ProductData[] => (d?.searchresult?.products || []).map((p: any) => ({
+          id: `aj_${p.code}`,
+          title: `${p.brandname || ''} ${p.name || ''}`.trim(),
+          brand: p.brandname,
+          price: p.price?.value || 0,
+          originalPrice: p.wasPriceData?.value > p.price?.value ? p.wasPriceData.value : undefined,
+          discount: p.discount ? parseInt(p.discount) : undefined,
+          imageUrl: p.images?.[0]?.url ? `https://assets.ajio.com${p.images[0].url}` : '',
+          platform: 'Ajio',
+          url: p.url ? `https://www.ajio.com${p.url}` : `https://www.ajio.com/search/?text=${q}`,
+        })).filter((p: ProductData) => p.price > 0 && p.title.length > 4 && (p.imageUrl || '').startsWith('https://')),
+      },
+      {
+        name: 'Meesho',
+        url: `https://www.meesho.com/api/v1/products/search`,
+        method: 'POST' as const,
+        body: { query: searchQuery, page: 1, limit: 20, filters: {}, sort: 'price_asc' },
+        parse: (d: any): ProductData[] => (d?.data?.products || []).map((p: any) => ({
+          id: `ms_${p.id}`,
+          title: p.name || '',
+          price: p.min_price || p.price || 0,
+          originalPrice: p.mrp > (p.min_price || p.price) ? p.mrp : undefined,
+          imageUrl: p.images?.[0]?.url || '',
+          platform: 'Meesho',
+          url: p.product_url || `https://www.meesho.com/search?q=${q}`,
+        })).filter((p: ProductData) => p.price > 0 && p.title.length > 4 && (p.imageUrl || '').startsWith('https://')),
+      },
+    ];
+
+    await Promise.allSettled(
+      fetchers.map(async (f) => {
+        try {
+          const proxyUrl = f.method === 'POST'
+            ? `${base}${encodeURIComponent(f.url)}`
+            : `${base}${encodeURIComponent(f.url)}`;
+          const resp = f.method === 'POST'
+            ? await api.post(proxyUrl.replace('/api/proxy?url=', '/api/proxy?url='), f.body, { baseURL: '' })
+            : await fetch(proxyUrl).then(r => r.json());
+          const parsed = f.parse(f.method === 'POST' ? (resp as any).data : resp);
+          if (parsed.length > 0) {
+            setProducts(prev => {
+              const existingIds = new Set(prev.map(p => p.id));
+              const newOnes = parsed.filter((p: ProductData) => !existingIds.has(p.id));
+              return [...prev, ...newOnes].sort((a, b) => a.price - b.price);
+            });
+          }
+        } catch { /* silent — platform unavailable */ }
+      })
+    );
+  }, []);
+
   const fetchResults = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) { setProducts([]); return; }
     setLoading(true);
@@ -329,7 +404,9 @@ export default function SearchPage() {
       const fetched: ProductData[] = data.products || [];
       setProducts(fetched);
       setHasMore(false);
-      // Fetch related products in background after main results load
+      // Fetch Indian platforms in background via Mumbai proxy
+      fetchIndianPlatforms(searchQuery);
+      // Fetch related products in background
       api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
         .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
         .catch(() => {});
@@ -338,7 +415,7 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchIndianPlatforms]);
 
   // Fetch real trending products for landing page
   useEffect(() => {

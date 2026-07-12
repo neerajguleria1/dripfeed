@@ -1,7 +1,7 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 60, regions: ['bom1'] }; // bom1 = Mumbai
 import { handleAuth } from './_lib/handlers/auth.js';
 import { handleProducts } from './_lib/handlers/products.js';
 import { handleSearch } from './_lib/handlers/search.js';
