@@ -8,7 +8,6 @@ import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
-import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
 import type { ProductData } from '../types/product';
 import type { FilterState } from '../components/search/SearchFilters';
 
@@ -99,24 +98,6 @@ function formatPrice(price: number): string {
     maximumFractionDigits: 0,
   }).format(price);
 }
-
-// Derive trending products from seed data for landing state
-const TRENDING_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.slice(0, 9).map((sp, i) => {
-  const cheapest = sp.platforms.reduce((a, b) => (a.price < b.price ? a : b));
-  return {
-    id: `trending-${i}`,
-    title: sp.title,
-    brand: sp.brand,
-    price: cheapest.price,
-    originalPrice: cheapest.originalPrice,
-    discount: Math.round(
-      ((cheapest.originalPrice - cheapest.price) / cheapest.originalPrice) * 100
-    ),
-    platform: cheapest.platform,
-    url: cheapest.url,
-    imageUrl: sp.imageUrl,
-  };
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Featured Product Card — Premium gold-accented lede card
@@ -333,6 +314,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [hasMore, setHasMore] = useState(false);
+  const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
@@ -351,6 +333,15 @@ export default function SearchPage() {
       setLoading(false);
     }
   }, []);
+
+  // Fetch real trending products for landing page
+  useEffect(() => {
+    if (query) return; // only on landing
+    api.get('/search/trending').then(({ data }) => {
+      const items: ProductData[] = (data.products || data || []).slice(0, 9);
+      if (items.length) setTrendingProducts(items);
+    }).catch(() => {});
+  }, [query]);
 
   useEffect(() => {
     if (query) {
@@ -742,13 +733,13 @@ export default function SearchPage() {
               </div>
 
               {/* Featured first product */}
-              {TRENDING_PRODUCTS[0] && (
-                <FeaturedCard product={TRENDING_PRODUCTS[0]} />
+              {trendingProducts[0] && (
+                <FeaturedCard product={trendingProducts[0]} />
               )}
 
               {/* Remaining products grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                {TRENDING_PRODUCTS.slice(1).map((product, i) => (
+                {trendingProducts.slice(1).map((product, i) => (
                   <ResultCard key={product.id} product={product} index={i} />
                 ))}
               </div>

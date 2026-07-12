@@ -18,14 +18,9 @@ export interface SearchProduct {
 }
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
-// L1: in-memory (instant, dies on cold start)
-// L2: MongoDB (persistent across deploys and cold starts, 6hr TTL)
-// This means the same query only hits ScraperAPI ONCE per 6 hours
-// regardless of how many Vercel instances are running.
-
 const memCache = new Map<string, { data: SearchProduct[]; ts: number }>();
-const MEM_TTL  = 2 * 60 * 60 * 1000; // 2hr in-memory
-const DB_TTL_MS = 6 * 60 * 60 * 1000; // 6hr MongoDB (matches schema expireAfterSeconds)
+const MEM_TTL   = 2 * 60 * 60 * 1000;
+const DB_TTL_MS = 6 * 60 * 60 * 1000;
 
 function getMemCached(key: string): SearchProduct[] | null {
   const entry = memCache.get(key);
@@ -33,22 +28,18 @@ function getMemCached(key: string): SearchProduct[] | null {
   if (Date.now() - entry.ts > MEM_TTL) { memCache.delete(key); return null; }
   return entry.data;
 }
-
 function setMemCache(key: string, data: SearchProduct[]) {
   memCache.set(key, { data, ts: Date.now() });
 }
-
 async function getDbCached(query: string): Promise<SearchProduct[] | null> {
   try {
     await connectDB();
     const doc = await SearchCache.findOne({ query }).lean();
     if (!doc) return null;
-    // Double-check TTL client-side (TTL index can lag by up to 60s)
     if (Date.now() - new Date(doc.cachedAt).getTime() > DB_TTL_MS) return null;
     return doc.results as SearchProduct[];
   } catch { return null; }
 }
-
 async function setDbCache(query: string, results: SearchProduct[]) {
   try {
     await connectDB();
@@ -57,12 +48,29 @@ async function setDbCache(query: string, results: SearchProduct[]) {
       { results, cachedAt: new Date() },
       { upsert: true, new: true }
     );
-  } catch { /* non-fatal — scraper result still returned */ }
+  } catch { /* non-fatal */ }
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parsePrice(t: string | number): number {
   if (typeof t === 'number') return Math.round(t);
-  const m = String(t).replace(/[₹,\s]/g, '').match(/(\d+(?:\.\d{1,2})?)/);
+  // Handle European thousands separator: "1.260 ₹" → 1260, "1,260 ₹" → 1260
+  const s = String(t).replace(/[₹\s]/g, '').trim();
+  // If dot is thousands separator (e.g. "1.260" or "12.592") — no decimal part or >2 decimal digits
+  const dotIdx = s.lastIndexOf('.');
+  const commaIdx = s.lastIndexOf(',');
+  let normalized = s;
+  if (dotIdx > 0 && commaIdx < 0) {
+    const afterDot = s.slice(dotIdx + 1);
+    // If 3 digits after dot → thousands separator, not decimal
+    if (afterDot.length === 3) normalized = s.replace(/\./g, '');
+    // If 1-2 digits after dot → decimal (e.g. "490.50")
+    else normalized = s.replace(/,/g, '');
+  } else {
+    normalized = s.replace(/,/g, ''); // remove comma thousands separators
+  }
+  const m = normalized.match(/(\d+(?:\.\d{1,2})?)/);
   return m ? Math.round(parseFloat(m[1])) : 0;
 }
 
@@ -71,8 +79,6 @@ function cleanText(t: string): string {
 }
 
 // ─── Product quality validator ────────────────────────────────────────────────
-// Rejects slugs, category strings, and anything that doesn't look like a real product name
-
 const CATEGORY_SLUGS = new Set([
   'women', 'men', 'kids', 'ethnic', 'western', 'fashion', 'clothing',
   'footwear', 'accessories', 'buy online', 'shop online', 'india',
@@ -84,7 +90,6 @@ function isValidProduct(p: { title: string; price: number; imageUrl: string }): 
   if (t.length < 5) return false;
   if (CATEGORY_SLUGS.has(t.toLowerCase())) return false;
   if (!/[a-zA-Z]{3,}/.test(t)) return false;
-  // Accept https:// URLs and data: base64 images (Google Shopping)
   if (!p.imageUrl || (!p.imageUrl.startsWith('https://') && !p.imageUrl.startsWith('data:'))) return false;
   return true;
 }
@@ -106,23 +111,22 @@ export function slugToSearchQuery(slug: string): string {
     .trim();
 }
 
-// ─── Query normalizer ────────────────────────────────────────────────────────
-// Normalizes user queries so "trousers women" and "women trousers" hit the same
-// cache key, and common variants map to the best search term.
+// ─── Query normalizer ─────────────────────────────────────────────────────────
 function normalizeQuery(q: string): string {
   return q
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ' ')         // collapse whitespace
-    .replace(/s\b/g, '')          // remove trailing 's' (trousers→trouser, jeans→jean)
-    .replace(/[^a-z0-9 ]/g, '')  // strip special chars
+    .replace(/\s+/g, ' ')
+    .replace(/s\b/g, '')
+    .replace(/[^a-z0-9 ]/g, '')
     .split(' ')
     .filter(Boolean)
-    .sort()                        // canonical word order
+    .sort()
     .join(' ');
 }
 
-
+// ─── ScraperAPI keys ──────────────────────────────────────────────────────────
+const SCRAPER_KEYS = [
   process.env.SCRAPER_API_KEY,
   process.env.SCRAPER_API_KEY_2,
   process.env.SCRAPER_API_KEY_3,
@@ -135,7 +139,6 @@ function normalizeQuery(q: string): string {
   process.env.SCRAPER_API_KEY_10,
 ].filter(Boolean) as string[];
 
-// Round-robin counter — spreads load evenly across all keys
 let rrIndex = 0;
 function getNextRoundRobinKey(): string {
   if (!SCRAPER_KEYS.length) return '';
@@ -143,84 +146,76 @@ function getNextRoundRobinKey(): string {
   rrIndex = (rrIndex + 1) % SCRAPER_KEYS.length;
   return key;
 }
-
-// On 429, skip to the next key in rotation
 function getNextKey(currentKey: string): string {
   const idx = SCRAPER_KEYS.indexOf(currentKey);
   return SCRAPER_KEYS[(idx + 1) % SCRAPER_KEYS.length] || currentKey;
 }
 
-// ─── Amazon structured — fetch one page ──────────────────────────────────────
+// ─── Amazon ───────────────────────────────────────────────────────────────────
+// Research findings:
+//   - price: number (always, no parsing needed)
+//   - original_price: { price, price_string, price_symbol } — NOT a number/string
+//   - image: https:// URL (always valid)
+//   - asin: always present
+//   - brand: sometimes missing
+
+function mapAmazonProduct(p: any, page: number, i: number, query: string): SearchProduct {
+  const price = typeof p.price === 'number' ? p.price : parsePrice(p.price || '0');
+  // original_price is an object: { price: number, price_string: "₹3,999", price_symbol: "₹" }
+  const orig = typeof p.original_price === 'object' && p.original_price !== null
+    ? (p.original_price.price || 0)
+    : typeof p.original_price === 'number'
+    ? p.original_price
+    : parsePrice(p.original_price || '0');
+  const imageUrl = (p.image || p.thumbnail || '') as string;
+  return {
+    id: `az_p${page}_${p.asin || i}`,
+    title: cleanText(p.name || p.title || ''),
+    price,
+    originalPrice: orig > price ? orig : undefined,
+    discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
+    imageUrl: imageUrl.startsWith('https://') ? imageUrl : '',
+    platform: 'Amazon India',
+    url: p.asin ? `https://www.amazon.in/dp/${p.asin}` : `https://www.amazon.in/s?k=${encodeURIComponent(query)}`,
+    brand: p.brand || undefined,
+    rating: p.stars ? parseFloat(p.stars) : undefined,
+  };
+}
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
   const key = getNextRoundRobinKey();
+  const params = { api_key: key, query, country_code: 'in', tld: 'in', page };
   try {
     const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
-      params: { api_key: key, query, country_code: 'in', tld: 'in', page },
-      timeout: 25000,
+      params, timeout: 25000,
     });
-
     const products: any[] = data?.results || data?.organic_results || [];
-    if (!products.length) return [];
-
-    function mapAmazonProduct(p: any, i: number): SearchProduct {
-    const price = typeof p.price === 'number' ? p.price : parsePrice(p.price || p.sale_price || '0');
-    const orig = typeof p.original_price === 'number' ? p.original_price : parsePrice(p.original_price || p.list_price || '0');
-    const imageUrl = (p.image || p.thumbnail || '') as string;
-    return {
-      id: `az_p${page}_${p.asin || i}`,
-      title: cleanText(p.name || p.title || ''),
-      price,
-      originalPrice: orig > price ? orig : undefined,
-      discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
-      imageUrl: imageUrl.startsWith('https://') ? imageUrl : '',
-      platform: 'Amazon India',
-      url: p.asin ? `https://www.amazon.in/dp/${p.asin}` : `https://www.amazon.in/s?k=${encodeURIComponent(query)}`,
-      brand: p.brand || undefined,
-      rating: p.stars ? parseFloat(p.stars) : undefined,
-    };
-  }
-
-    return products.map(mapAmazonProduct).filter(p => isValidProduct(p));
+    return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter(p => isValidProduct(p));
   } catch (e: any) {
     if (e?.response?.status === 429) {
       const fallbackKey = getNextKey(key);
       if (fallbackKey === key) return [];
       try {
         const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
-          params: { api_key: fallbackKey, query, country_code: 'in', tld: 'in', page },
-          timeout: 25000,
+          params: { ...params, api_key: fallbackKey }, timeout: 25000,
         });
         const products: any[] = data?.results || data?.organic_results || [];
-        function mapAmazonProduct2(p: any, i: number): SearchProduct {
-          const price = typeof p.price === 'number' ? p.price : parsePrice(p.price || p.sale_price || '0');
-          const orig = typeof p.original_price === 'number' ? p.original_price : parsePrice(p.original_price || p.list_price || '0');
-          const imageUrl = (p.image || p.thumbnail || '') as string;
-          return {
-            id: `az_p${page}_${p.asin || i}`,
-            title: cleanText(p.name || p.title || ''),
-            price,
-            originalPrice: orig > price ? orig : undefined,
-            discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
-            imageUrl: imageUrl.startsWith('https://') ? imageUrl : '',
-            platform: 'Amazon India',
-            url: p.asin ? `https://www.amazon.in/dp/${p.asin}` : `https://www.amazon.in/s?k=${encodeURIComponent(query)}`,
-            brand: p.brand || undefined,
-            rating: p.stars ? parseFloat(p.stars) : undefined,
-          };
-        }
-        return products.map(mapAmazonProduct2).filter((p: any) => isValidProduct(p));
+        return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter((p: any) => isValidProduct(p));
       } catch { return []; }
     }
     return [];
   }
 }
 
-// ─── Flipkart via render:false (1 credit) ───────────────────────────────────────────────────
-// __INITIAL_STATE__ is embedded in raw HTML — no render needed, saves credits.
-// Image URLs use {@ width}/{@height} template — replace with fixed 300x400.
-// Pricing: SPECIAL_PRICE = final price, FSP (strikeOff:true) = MRP.
+// ─── Flipkart ─────────────────────────────────────────────────────────────────
+// Research findings:
+//   - __INITIAL_STATE__ in raw HTML (render:false works, saves credits)
+//   - ALL image URLs are http:// templates: "http://rukmini1.flixcart.com/image/{@width}/{@height}/..."
+//   - Replace {@ placeholders AND http→https
+//   - pricing.prices: FSP (strikeOff:true) = MRP, SPECIAL_PRICE = final price
+//   - pricing.totalDiscount = discount % (not amount)
+//   - All 40 products have price > 0
 
 async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
@@ -257,13 +252,13 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
       const mrp   = mrpEntry?.value || 0;
       const price = spEntry?.value || mrpEntry?.value || 0;
       const disc  = info.pricing?.totalDiscount || 0;
-      // Fix template image URL — replace placeholders with real dimensions
+      // ALL Flipkart images are http:// templates — replace placeholders AND fix protocol
       const rawImg = info.media?.images?.[0]?.url || '';
       const imageUrl = rawImg
         .replace('{@width}', '300')
         .replace('{@height}', '400')
         .replace('{@quality}', '70')
-        .replace(/^http:/, 'https:');
+        .replace(/^http:\/\//, 'https://');
       return {
         id: `fk_${info.id || i}`,
         title: cleanText(info.titles?.title || info.titles?.newTitle || ''),
@@ -273,37 +268,109 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         discount: disc > 0 ? disc : undefined,
         imageUrl,
         platform: 'Flipkart',
-        url: info.baseUrl ? `https://www.flipkart.com${info.baseUrl}` : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
+        url: info.baseUrl
+          ? `https://www.flipkart.com${info.baseUrl}`
+          : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
       };
     }).filter(p => isValidProduct(p));
   } catch { return []; }
 }
 
-// ─── Myntra via render:true ───────────────────────────────────────────────────
-// Myntra category URLs: myntra.com/jeans, myntra.com/nike-shoes etc.
-// Price/brand queries like "jeans under 500" or "levis jeans" don't work as slugs
-// — fall back to myntra.com/search?q= for those.
+// ─── Myntra ───────────────────────────────────────────────────────────────────
+// Research findings:
+//   - Data is in window.__myx.searchData.results.products[]
+//   - Products are deeply nested (brace depth 4) — self-contained block regex FAILS
+//   - Must extract products array using balanced-brace parser
+//   - Product fields: productId, productName, brand, mrp, discount (AMOUNT not %), price (final price!),
+//     searchImage (http://assets.myntassets.com/...), landingPageUrl
+//   - ALL images are http:// — must convert to https://
+//   - Use p.price directly (Myntra provides final price, no need to compute mrp-discount)
+//   - 500 errors on: sarees, jeans, dresses — use search?q= for those
+
+const SLUG_MAP: Record<string, string> = {
+  saree: 'sarees', kurta: 'kurtas', jean: 'jeans', trouser: 'trousers',
+  legging: 'leggings', dress: 'dresses', skirt: 'skirts', top: 'tops',
+  shoe: 'shoes', sandal: 'sandals', sneaker: 'sneakers', boot: 'boots',
+  jacket: 'jackets', blazer: 'blazers', hoodie: 'hoodies', shirt: 'shirts',
+  pant: 'pants', short: 'shorts', suit: 'suits', coat: 'coats',
+  bag: 'bags', watch: 'watches', sari: 'sarees',
+};
+
+// Slugs that return 500 on Myntra — must use search?q= instead
+const MYNTRA_500_SLUGS = new Set([
+  'sarees', 'jeans', 'dresses', 'leggings', 'skirts', 'tops', 'shoes',
+  'sandals', 'sneakers', 'boots', 'blazers', 'hoodies', 'pants', 'shorts',
+  'suits', 'coats', 'bags', 'watches',
+]);
 
 function buildMyntraUrl(query: string): string {
   const q = query.toLowerCase().trim();
-  // Price intent queries — use search
+  // Price intent queries
   if (/under\s*\d+|below\s*\d+|\d+\s*to\s*\d+/.test(q)) {
     return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
   }
-  // Single known-bad slugs that redirect to homepage — use search
-  const BAD_SLUGS = new Set(['kurti', 'jean', 'kurtas', 'jeans under']);
+  // Known bad single-word slugs
+  const BAD_SLUGS = new Set(['kurti', 'jean', 'kurtas', 'ladies', 'gents', 'women', 'men']);
   if (BAD_SLUGS.has(q)) {
     return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
   }
-  // Brand + product queries with 2+ words where first word is a brand
-  // e.g. "levis jeans", "zara dress" — use search
+  // Brand queries
   const BRANDS = new Set(['levis', 'zara', 'h&m', 'hm', 'puma', 'adidas', 'reebok', 'gap', 'mango', 'only', 'vero', 'forever']);
   const words = q.split(' ');
   if (words.length >= 2 && BRANDS.has(words[0])) {
     return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
   }
-  // Default: category slug
-  return `https://www.myntra.com/${q.replace(/\s+/g, '-')}`;
+  // Apply singular→plural correction
+  const corrected = SLUG_MAP[q] || q.replace(/\s+/g, '-');
+  // If the corrected slug is known to 500, use search
+  if (MYNTRA_500_SLUGS.has(corrected)) {
+    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+  }
+  return `https://www.myntra.com/${corrected}`;
+}
+
+// Extract individual product objects from Myntra's deeply-nested JSON
+// using a balanced-brace parser anchored on "products":[{
+function extractMyntraProducts(html: string): any[] {
+  // Find the products array — it's inside window.__myx.searchData.results
+  const startMarker = '"products":[{';
+  const startIdx = html.indexOf(startMarker);
+  if (startIdx < 0) return [];
+
+  const arrayStart = startIdx + '"products":'.length;
+  const objects: any[] = [];
+  let i = arrayStart;
+
+  // Skip the opening [
+  while (i < html.length && html[i] !== '[') i++;
+  i++; // skip [
+
+  while (i < html.length) {
+    if (html[i] === '{') {
+      // Extract balanced object
+      let depth = 0;
+      const objStart = i;
+      while (i < html.length) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            try {
+              objects.push(JSON.parse(html.slice(objStart, i + 1)));
+            } catch { /* skip malformed */ }
+            i++;
+            break;
+          }
+        }
+        i++;
+      }
+    } else if (html[i] === ']') {
+      break; // end of products array
+    } else {
+      i++;
+    }
+  }
+  return objects;
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
@@ -320,46 +387,43 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
     });
     if (typeof html !== 'string') return [];
 
-    // Extract individual product fields via targeted regex
-    // Each product has: productId, brand, product/productName, mrp, discount (amount), searchImage, url slug
-    const ids     = [...html.matchAll(/"productId"\s*:\s*(\d+)/g)].map(m => m[1]);
-    const names   = [...html.matchAll(/"productName"\s*:\s*"([^"]+)"/g)].map(m => cleanText(m[1]));
-    const brands  = [...html.matchAll(/"brand"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-    const mrps    = [...html.matchAll(/"mrp"\s*:\s*(\d+)/g)].map(m => parseInt(m[1]));
-    const discAmt = [...html.matchAll(/"discount"\s*:\s*(\d+)/g)].map(m => parseInt(m[1]));
-    const images  = [...html.matchAll(/"searchImage"\s*:\s*"((?:http|https):[^"]+)"/g)]
-                    .map(m => m[1].replace(/\\u002F/g, '/').replace(/^http:/, 'https:'));
-    const slugs   = [...html.matchAll(/"pdpUrl"\s*:\s*"([^"]+)"/g)]
-                    .map(m => m[1].replace(/\\u002F/g, '/'));
+    const products = extractMyntraProducts(html);
+    if (!products.length) return [];
 
-    const count = Math.min(ids.length, names.length, mrps.length, images.length, 40);
-    if (count === 0) return [];
-
-    return Array.from({ length: count }, (_, i) => {
-      const mrp = mrps[i] || 0;
-      const disc = discAmt[i] || 0;
-      const price = mrp - disc;
-      const discPct = mrp > 0 && disc > 0 ? Math.round((disc / mrp) * 100) : undefined;
+    return products.slice(0, 40).map((p: any) => {
+      // p.price = final selling price (Myntra provides this directly)
+      // p.mrp = original price
+      // p.discount = discount AMOUNT (not %)
+      const price = p.price || 0;
+      const mrp = p.mrp || 0;
+      const discPct = mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : undefined;
+      // ALL Myntra images are http:// — convert to https://
+      const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://');
+      const slug = p.landingPageUrl || '';
       return {
-        id: `mn_${ids[i] || i}`,
-        title: `${brands[i] || ''} ${names[i] || ''}`.trim(),
-        brand: brands[i] || undefined,
+        id: `mn_${p.productId || Math.random()}`,
+        title: cleanText(`${p.brand || ''} ${p.productName || p.product || ''}`.trim()),
+        brand: p.brand || undefined,
         price,
-        originalPrice: disc > 0 ? mrp : undefined,
+        originalPrice: mrp > price ? mrp : undefined,
         discount: discPct,
-        imageUrl: (images[i] || '').replace(/^http:///, 'https://'),
+        imageUrl,
         platform: 'Myntra',
-        url: slugs[i] ? `https://www.myntra.com${slugs[i]}` : `https://www.myntra.com/${encodeURIComponent(query)}`,
+        url: slug ? `https://www.myntra.com/${slug}` : `https://www.myntra.com/search?q=${encodeURIComponent(query)}`,
+        rating: p.rating || undefined,
       };
     }).filter(p => isValidProduct(p));
   } catch { return []; }
 }
 
-// ─── Google Shopping — catches Ajio + any platform Google indexes ────────────
-// Costs 5 credits. Returns base64 thumbnails (not real URLs) so imageUrl is
-// set to empty and filtered by isValidProduct — we relax the image check here.
-// Links go through Google proxy — we extract the real retailer URL from the docid/link.
-// Skips Amazon/Flipkart/Myntra since we already fetch those directly.
+// ─── Google Shopping ──────────────────────────────────────────────────────────
+// Research findings:
+//   - price field uses European format: "1.260 ₹" = ₹1260, "360 ₹" = ₹360
+//   - extracted_price divides by 100 (bug in ScraperAPI): 12.6 for ₹1260
+//   - CORRECT approach: use parsePrice(r.price) with dot-as-thousands fix
+//   - link = Google catalog URL (not retailer URL) — no product_link/merchant_link field
+//   - thumbnail: mix of https:// (20) and data:base64 (20) — both valid
+//   - Sources include: Ajio, Myntra, Amazon, Libas, Soch, Westside, Manyavar, Koskii etc.
 
 const GOOGLE_SKIP_PLATFORMS = new Set(['amazon.in', 'flipkart', 'myntra']);
 
@@ -371,17 +435,13 @@ function normalizePlatformName(source: string): string {
   if (s.includes('tatacliq') || s.includes('tata cliq')) return 'TataCliq';
   if (s.includes('westside')) return 'Westside';
   if (s.includes('libas')) return 'Libas';
+  if (s.includes('manyavar')) return 'Manyavar';
+  if (s.includes('soch')) return 'Soch';
+  if (s.includes('koskii')) return 'Koskii';
+  if (s.includes('jaypore')) return 'Jaypore';
+  if (s.includes('biba')) return 'Biba';
+  if (s.includes('w for woman') || s === 'w') return 'W';
   return source;
-}
-
-// Extract real retailer URL from ScraperAPI Google Shopping proxy link
-function extractGoogleShoppingUrl(proxyLink: string): string {
-  try {
-    const u = new URL(proxyLink);
-    const target = u.searchParams.get('url');
-    if (target) return decodeURIComponent(target);
-  } catch {}
-  return proxyLink;
 }
 
 async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
@@ -402,11 +462,13 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
       })
       .slice(0, 20)
       .map((r, i): SearchProduct => {
+        // Use parsePrice on the raw price string — our fixed parsePrice handles
+        // European dot-as-thousands: "1.260 ₹" → 1260, "360 ₹" → 360
         const price = parsePrice(r.price || '0');
         const imageUrl = typeof r.thumbnail === 'string' && r.thumbnail.startsWith('https://')
           ? r.thumbnail
           : typeof r.thumbnail === 'string' && r.thumbnail.startsWith('data:')
-          ? r.thumbnail  // base64 — valid as img src
+          ? r.thumbnail
           : '';
         const platform = normalizePlatformName(r.source || '');
         return {
@@ -415,10 +477,12 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
           price,
           imageUrl,
           platform,
-          url: extractGoogleShoppingUrl(r.link || ''),
+          // link is a Google catalog URL — best we have without a second API call
+          url: r.link || '',
         };
       })
-      .filter(p => p.price > 100 && p.title.length >= 8 && p.title.includes(' ') && p.url);
+      // Filter: price must be > 100 (real fashion item), title must be descriptive
+      .filter(p => p.price > 100 && p.title.length >= 8 && p.url);
   } catch { return []; }
 }
 
@@ -426,7 +490,7 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
 
 export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cacheKey = normalizeQuery(query);
-  const searchTerm = query.toLowerCase().trim(); // use original for actual search
+  const searchTerm = query.toLowerCase().trim();
 
   const mem = getMemCached(cacheKey);
   if (mem) return mem;
@@ -434,7 +498,6 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  // All fetchers run in parallel — Google Shopping covers Ajio + others
   const [az1, fk, mn, gs] = await Promise.all([
     fetchAmazonPage(searchTerm, 1).catch(() => []),
     fetchFlipkart(searchTerm).catch(() => []),
@@ -460,12 +523,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [
-    ...dedupedAmazon,
-    ...fk,
-    ...mn,
-    ...gs,
-  ]
+  const allResults = [...dedupedAmazon, ...fk, ...mn, ...gs]
     .filter(p => isValidProduct(p))
     .sort((a, b) => a.price - b.price);
 
