@@ -297,7 +297,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
     const slugs   = [...html.matchAll(/"pdpUrl"\s*:\s*"([^"]+)"/g)]
                     .map(m => m[1].replace(/\\u002F/g, '/'));
 
-    const count = Math.min(ids.length, names.length, mrps.length, images.length, 20);
+    const count = Math.min(ids.length, names.length, mrps.length, images.length, 40);
     if (count === 0) return [];
 
     return Array.from({ length: count }, (_, i) => {
@@ -312,7 +312,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
         price,
         originalPrice: disc > 0 ? mrp : undefined,
         discount: discPct,
-        imageUrl: images[i] || '',
+        imageUrl: (images[i] || '').replace(/^http:/, 'https://'),
         platform: 'Myntra',
         url: slugs[i] ? `https://www.myntra.com${slugs[i]}` : `https://www.myntra.com/${encodeURIComponent(query)}`,
       };
