@@ -423,7 +423,6 @@ export default function SearchPage() {
 
   // ── Derived State ─────────────────────────────────────────────────────────
 
-  const featuredProduct = filteredProducts[0] || null;
   const gridProducts = filteredProducts.slice(1);
   const showEmpty = !loading && query && filteredProducts.length === 0;
   const showResults = !loading && filteredProducts.length > 0;
@@ -575,7 +574,7 @@ export default function SearchPage() {
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {featuredProduct && <FeaturedCard product={featuredProduct} />}
+              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} />}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {gridProducts.map((product, i) => (
                   <ResultCard key={product.id || i} product={product} index={i} />
