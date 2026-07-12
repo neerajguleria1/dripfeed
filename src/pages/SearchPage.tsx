@@ -156,6 +156,7 @@ function FeaturedCard({ product }: { product: ProductData }) {
           alt={product.title}
           className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           loading="eager"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
         />
       </div>
 
@@ -230,6 +231,7 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
           alt={product.title}
           className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           loading="lazy"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
         />
         {/* Savings badge */}
         {savings > 0 && (
@@ -329,19 +331,16 @@ export default function SearchPage() {
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
   const fetchResults = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      setProducts([]);
-      return;
-    }
+    if (!searchQuery.trim()) { setProducts([]); return; }
     setLoading(true);
-    setProducts([]); // clear previous results immediately
+    setProducts([]);
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
       const fetched: ProductData[] = data.products || [];
-      setProducts(fetched); // show whatever comes back, even if empty
+      setProducts(fetched.length > 0 ? fetched : searchSeedProducts(searchQuery));
       setHasMore(false);
     } catch {
-      setProducts([]); // on error show empty, not wrong seed data
+      setProducts(searchSeedProducts(searchQuery));
     } finally {
       setLoading(false);
     }
@@ -421,8 +420,8 @@ export default function SearchPage() {
 
   // ── Derived State ─────────────────────────────────────────────────────────
 
-  const featuredProduct = null; // disabled — show all in grid
-  const gridProducts = filteredProducts;
+  const featuredProduct = filteredProducts[0] || null;
+  const gridProducts = filteredProducts.slice(1);
   const showEmpty = !loading && query && filteredProducts.length === 0;
   const showResults = !loading && filteredProducts.length > 0;
   const showLanding = !query && !loading;
@@ -573,7 +572,7 @@ export default function SearchPage() {
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {/* All products grid */}
+              {featuredProduct && <FeaturedCard product={featuredProduct} />}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {gridProducts.map((product, i) => (
                   <ResultCard key={product.id || i} product={product} index={i} />

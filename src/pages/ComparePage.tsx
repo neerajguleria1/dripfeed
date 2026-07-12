@@ -131,12 +131,36 @@ export default function ComparePage() {
           bestPlatform: data.bestPlatform || '',
           confidence: data.confidence,
         });
+        setAiLoading(false);
+        return;
       }
-    } catch {
-      setAiError(true);
-    } finally {
-      setAiLoading(false);
-    }
+    } catch { /* fall through to client-side fallback */ }
+    finally { setAiLoading(false); }
+
+    // Client-side fallback — rule-based advice when API is unavailable
+    const sorted = [...platformData].sort((a, b) => a.price - b.price);
+    const cheapest = sorted[0];
+    const mostExpensive = sorted[sorted.length - 1];
+    const savings = mostExpensive.price - cheapest.price;
+    const avgDiscount = Math.round(
+      platformData.reduce((acc, p) => acc + (p.discount || 0), 0) / platformData.length
+    );
+    setAiAdvice({
+      summary: `${productTitle} is available across ${platformData.length} platform${platformData.length > 1 ? 's' : ''}. ${savings > 0 ? `You can save up to ₹${savings.toLocaleString('en-IN')} by choosing the right platform.` : 'Prices are similar across platforms.'}`,
+      pros: [
+        `Available on ${platformData.length} platform${platformData.length > 1 ? 's' : ''} for easy comparison`,
+        avgDiscount > 0 ? `Average discount of ${avgDiscount}% off MRP` : 'Competitive pricing across platforms',
+        cheapest.platform ? `Lowest price on ${cheapest.platform}` : 'Multiple buying options',
+      ],
+      cons: [
+        'Prices may change — check before buying',
+        'Stock availability varies by platform',
+      ],
+      recommendation: cheapest ? `Buy from ${cheapest.platform} at ₹${cheapest.price.toLocaleString('en-IN')} for the best price.` : 'Compare prices before buying.',
+      bestPlatform: cheapest?.platform || '',
+      confidence: 0.6,
+    });
+    setAiLoading(false);
   }, []);
 
   async function fetchComparison(searchQ: string) {
@@ -276,9 +300,7 @@ export default function ComparePage() {
                         src={productImage}
                         alt={productTitle}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
                       />
                     </div>
                   )}

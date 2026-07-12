@@ -1,6 +1,8 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { searchProducts } from '../search.js';
+import { connectDB } from '../db.js';
+import Product from '../models/Product.js';
 
 const TRENDING_SEARCHES = [
   'kurta',
@@ -32,78 +34,64 @@ function extractProductNameFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    const path = parsed.pathname;
+    const parts = parsed.pathname.split('/').filter(Boolean);
 
-    // Flipkart: /product-name/p/itm123 or /product-name/pid
-    if (host.includes('flipkart')) {
-      const parts = path.split('/').filter(Boolean);
-      // Find slug before /p/ or first meaningful slug
-      const pIndex = parts.indexOf('p');
-      const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
-      const cleaned = slug.replace(/[-_]/g, ' ').replace(/\b(p|pid|itm\w+)\b/gi, '').trim();
-      return cleaned.length >= 3 ? cleaned : null;
-    }
-
-    // Myntra: /brand-product-name/12345678/buy
-    if (host.includes('myntra')) {
-      const parts = path.split('/').filter(Boolean);
-      // Find the slug part (non-numeric, longer than 3 chars)
-      const slug = parts.find(p => p.length > 3 && !/^\d+$/.test(p));
-      if (slug) return slug.replace(/[-_]/g, ' ').trim();
-      return null;
-    }
-
-    // Amazon: /dp/ASIN or /product-name/dp/ASIN
+    // Amazon: /dp/ASIN or /product-name/dp/ASIN or /s?k=query
     if (host.includes('amazon')) {
-      const parts = path.split('/').filter(Boolean);
-      const dpIndex = parts.indexOf('dp');
-      if (dpIndex > 0) {
-        return parts[dpIndex - 1].replace(/[-_]/g, ' ').trim();
-      }
-      // /s?k=query
       const kParam = parsed.searchParams.get('k');
       if (kParam) return kParam;
+      const dpIndex = parts.indexOf('dp');
+      // /product-name/dp/ASIN — slug is before dp
+      if (dpIndex > 0) return parts[dpIndex - 1].replace(/[-_]/g, ' ').trim();
+      // /dp/ASIN — fetch title from ASIN directly via structured API
+      // Return the ASIN as search term — Amazon structured will find it
+      if (dpIndex === 0 && parts[1]) return parts[1]; // return ASIN, handled below
       return parts[0]?.replace(/[-_]/g, ' ').trim() || null;
     }
 
-    // Ajio: /p/product-slug or /brand/product-slug
+    // Flipkart: /product-name-slug/p/itemid
+    if (host.includes('flipkart')) {
+      const pIndex = parts.indexOf('p');
+      const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
+      return slug.replace(/[-_]/g, ' ').replace(/\b(itm\w+)\b/gi, '').trim() || null;
+    }
+
+    // Myntra: /category/brand/brand-product-long-name/productId/buy
+    // Pick the LONGEST non-numeric segment — that's the full product slug
+    if (host.includes('myntra')) {
+      const slug = parts
+        .filter(p => !/^\d+$/.test(p) && p !== 'buy' && p.length > 3)
+        .sort((a, b) => b.length - a.length)[0] || '';
+      return slug.replace(/[-_]/g, ' ').trim() || null;
+    }
+
+    // Ajio: /brand/product-slug/p/productcode
     if (host.includes('ajio')) {
-      const parts = path.split('/').filter(Boolean);
-      // Get last meaningful segment (skip 'p')
-      const slug = parts.filter(p => p !== 'p' && p.length > 3).pop() || '';
-      return slug.replace(/[-_]/g, ' ').replace(/\d{8,}/g, '').trim() || null;
+      const slug = parts
+        .filter(p => p !== 'p' && p !== 's' && p.length > 3 && !/^[A-Z0-9]{8,}$/.test(p))
+        .sort((a, b) => b.length - a.length)[0] || '';
+      return slug.replace(/[-_]/g, ' ').replace(/\d{4,}/g, '').trim() || null;
     }
 
     // Meesho: /product-name/p/product-id
     if (host.includes('meesho')) {
-      const parts = path.split('/').filter(Boolean);
       const pIndex = parts.indexOf('p');
       const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
       return slug.replace(/[-_]/g, ' ').trim() || null;
     }
 
-    // Nykaa: /product-name/p/product-id
-    if (host.includes('nykaa')) {
-      const parts = path.split('/').filter(Boolean);
+    // Nykaa / TataCliq: /product-name/p/product-id
+    if (host.includes('nykaa') || host.includes('tatacliq')) {
       const pIndex = parts.indexOf('p');
       const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
       return slug.replace(/[-_]/g, ' ').trim() || null;
     }
 
-    // TataCliq: /product-name/p/product-id
-    if (host.includes('tatacliq')) {
-      const parts = path.split('/').filter(Boolean);
-      const pIndex = parts.indexOf('p');
-      const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
-      return slug.replace(/[-_]/g, ' ').trim() || null;
-    }
-
-    // Generic: use last meaningful path segment
-    const parts = path.split('/').filter(Boolean);
-    const slug = parts.find(p => p.length > 3 && !/^\d+$/.test(p) && !['p', 'dp', 'buy', 'itm'].includes(p));
-    if (slug) return slug.replace(/[-_]/g, ' ').trim();
-
-    return null;
+    // Generic: longest non-numeric segment
+    const slug = parts
+      .filter(p => p.length > 3 && !/^\d+$/.test(p) && !['p', 'dp', 'buy', 'itm', 'search'].includes(p))
+      .sort((a, b) => b.length - a.length)[0] || '';
+    return slug.replace(/[-_]/g, ' ').trim() || null;
   } catch {
     return null;
   }

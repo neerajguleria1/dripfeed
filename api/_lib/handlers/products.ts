@@ -117,25 +117,68 @@ async function compare(req: VercelRequest, res: VercelResponse) {
     const searchTerm = bodyQuery || '';
 
     if (url) {
-      // URL-based comparison: extract product name from URL path, then search
       try {
         const parsed = new URL(url);
-        const pathParts = parsed.pathname.split('/').filter(Boolean);
-        // Try to get a meaningful product name from the URL slug
-        const slug = pathParts[pathParts.length - 1] || pathParts[0] || '';
-        const { searchProducts, slugToSearchQuery } = await import('../search.js');
-        const productName = slugToSearchQuery(slug);
+        const host = parsed.hostname.toLowerCase();
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        let productName = '';
 
-        if (!productName || productName.length < 3) {
-          return res.status(400).json({ error: 'Could not extract product name from URL' });
+        if (host.includes('amazon')) {
+          const kParam = parsed.searchParams.get('k');
+          if (kParam) { productName = kParam; }
+          else {
+            const dpIdx = parts.indexOf('dp');
+            if (dpIdx > 0) productName = parts[dpIdx - 1].replace(/[-_]/g, ' ').trim();
+            else if (dpIdx === 0 && parts[1]) {
+              // /dp/ASIN — look up ASIN directly via structured API
+              const { searchProducts: sp } = await import('../search.js');
+              const asin = parts[1];
+              const r = await sp(asin);
+              if (r.length > 0) {
+                const sorted = r.sort((a, b) => a.price - b.price);
+                return res.json({ platforms: sorted, products: sorted, query: sorted[0].title, sourceUrl: url });
+              }
+              productName = asin;
+            }
+            else productName = parts[0]?.replace(/[-_]/g, ' ').trim() || '';
+          }
+        } else if (host.includes('flipkart')) {
+          const pIdx = parts.indexOf('p');
+          const slug = pIdx > 0 ? parts[pIdx - 1] : parts[0] || '';
+          productName = slug.replace(/[-_]/g, ' ').replace(/\b(itm\w+)\b/gi, '').trim();
+        } else if (host.includes('myntra')) {
+          // Pick longest non-numeric segment
+          productName = parts
+            .filter(p => !/^\d+$/.test(p) && p !== 'buy' && p.length > 3)
+            .sort((a, b) => b.length - a.length)[0]?.replace(/[-_]/g, ' ').trim() || '';
+        } else if (host.includes('ajio')) {
+          productName = parts
+            .filter(p => p !== 'p' && p !== 's' && p.length > 3 && !/^[A-Z0-9]{8,}$/.test(p))
+            .sort((a, b) => b.length - a.length)[0]?.replace(/[-_]/g, ' ').replace(/\d{4,}/g, '').trim() || '';
+        } else if (host.includes('meesho') || host.includes('nykaa') || host.includes('tatacliq')) {
+          const pIdx = parts.indexOf('p');
+          const slug = pIdx > 0 ? parts[pIdx - 1] : parts[0] || '';
+          productName = slug.replace(/[-_]/g, ' ').trim();
+        } else {
+          productName = parts
+            .filter(p => p.length > 3 && !/^\d+$/.test(p) && !['p', 'dp', 'buy', 'itm', 'search'].includes(p))
+            .sort((a, b) => b.length - a.length)[0]?.replace(/[-_]/g, ' ').trim() || '';
         }
-        const results = await searchProducts(productName);
+
+        const { searchProducts, slugToSearchQuery } = await import('../search.js');
+        const cleanedName = slugToSearchQuery(productName);
+
+        if (!cleanedName || cleanedName.length < 3) {
+          return res.status(400).json({ error: 'Could not extract product name from URL. Try searching by product name instead.' });
+        }
+
+        const results = await searchProducts(cleanedName);
         const sorted = results.sort((a, b) => a.price - b.price);
 
         return res.json({
           platforms: sorted,
           products: sorted,
-          query: productName,
+          query: cleanedName,
           sourceUrl: url,
         });
       } catch (e: any) {

@@ -73,7 +73,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       { platform: 'flipkart', price: 1049, originalPrice: 1999, url: 'https://www.flipkart.com' },
       { platform: 'amazon', price: 1199, originalPrice: 1999, url: 'https://www.amazon.in' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&h=533&fit=crop',
   },
 
   // ─── Western Wear ───
@@ -278,7 +278,7 @@ export const SEED_PRODUCTS_EXTENDED: SeedProduct[] = [
   { title: 'Marks & Spencer Velvet Blazer', brand: 'M&S', category: 'western', platforms: [{ platform: 'myntra', price: 4999, originalPrice: 7999, url: 'https://www.myntra.com' }, { platform: 'tatacliq', price: 5299, originalPrice: 7999, url: 'https://www.tatacliq.com' }], imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&h=533&fit=crop' },
   { title: 'Mango Pleated Midi Skirt', brand: 'Mango', category: 'western', platforms: [{ platform: 'myntra', price: 1990, originalPrice: 3490, url: 'https://www.myntra.com' }, { platform: 'ajio', price: 2190, originalPrice: 3490, url: 'https://www.ajio.com' }], imageUrl: 'https://images.unsplash.com/photo-1583496661160-fb5886a0aebd?w=400&h=533&fit=crop' },
   // Kurtas
-  { title: 'Manyavar Silk Nehru Jacket Set', brand: 'Manyavar', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 5999, originalPrice: 9999, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 6499, originalPrice: 9999, url: 'https://www.flipkart.com' }], imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&h=533&fit=crop' },
+  { title: 'Manyavar Silk Nehru Jacket Set', brand: 'Manyavar', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 5999, originalPrice: 9999, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 6499, originalPrice: 9999, url: 'https://www.flipkart.com' }], imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=533&fit=crop' },
   { title: 'Kishwer Merchant x Anouk Palazzo Set', brand: 'Anouk', category: 'ethnic-wear', platforms: [{ platform: 'myntra', price: 1799, originalPrice: 3499, url: 'https://www.myntra.com' }, { platform: 'ajio', price: 1999, originalPrice: 3499, url: 'https://www.ajio.com' }, { platform: 'meesho', price: 1599, originalPrice: 3499, url: 'https://www.meesho.com' }], imageUrl: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=533&fit=crop' },
   // Sneakers
   { title: 'Nike Air Max 90 Essential', brand: 'Nike', category: 'footwear', platforms: [{ platform: 'myntra', price: 8995, originalPrice: 11995, url: 'https://www.myntra.com' }, { platform: 'flipkart', price: 9295, originalPrice: 11995, url: 'https://www.flipkart.com' }, { platform: 'amazon', price: 9195, originalPrice: 11995, url: 'https://www.amazon.in' }], imageUrl: 'https://images.unsplash.com/photo-1514989940723-e8e51635b782?w=400&h=533&fit=crop' },
@@ -688,7 +688,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'flipkart', price: 1899, originalPrice: 3499, url: 'https://www.flipkart.com' },
       { platform: 'amazon', price: 2099, originalPrice: 3499, url: 'https://www.amazon.in' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400&h=533&fit=crop',
   },
   {
     title: 'Crocs Classic Clog - Lavender',
@@ -1069,7 +1069,7 @@ export const SEED_PRODUCTS_PREMIUM: SeedProduct[] = [
       { platform: 'ajio', price: 8499, originalPrice: 11999, url: 'https://www.ajio.com' },
       { platform: 'tatacliq', price: 8299, originalPrice: 11999, url: 'https://www.tatacliq.com' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=533&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1449505278894-297fdb3edbc1?w=400&h=533&fit=crop',
   },
   {
     title: 'Hidesign Leather Messenger Bag - Vintage',
