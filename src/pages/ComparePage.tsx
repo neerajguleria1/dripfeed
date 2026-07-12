@@ -158,7 +158,7 @@ export default function ComparePage() {
       ],
       recommendation: cheapest ? `Buy from ${cheapest.platform} at ₹${cheapest.price.toLocaleString('en-IN')} for the best price.` : 'Compare prices before buying.',
       bestPlatform: cheapest?.platform || '',
-      confidence: 0.6,
+      confidence: '0.6',
     });
     setAiLoading(false);
   }, []);
@@ -230,7 +230,7 @@ export default function ComparePage() {
         description={`Compare ${productTitle} prices across ${platforms.length} platforms. Find the best deal on DripFeed India.`}
         image={productImage}
         jsonLd={
-          lowest
+          (lowest
             ? {
                 '@context': 'https://schema.org',
                 '@type': 'Product',
@@ -239,14 +239,14 @@ export default function ComparePage() {
                 brand: productBrand ? { '@type': 'Brand', name: productBrand } : undefined,
                 offers: platforms.map((p) => ({
                   '@type': 'Offer',
-                  price: p.price,
+                  price: String(p.price),
                   priceCurrency: 'INR',
                   url: p.url,
                   seller: { '@type': 'Organization', name: p.platform },
                   availability: 'https://schema.org/InStock',
                 })),
               }
-            : undefined
+            : undefined) as any
         }
       />
 
