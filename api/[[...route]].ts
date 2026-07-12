@@ -1,5 +1,7 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export const config = { maxDuration: 60 };
 import { handleAuth } from './_lib/handlers/auth.js';
 import { handleProducts } from './_lib/handlers/products.js';
 import { handleSearch } from './_lib/handlers/search.js';

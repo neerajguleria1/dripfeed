@@ -182,22 +182,24 @@ function mapAmazonProduct(p: any, page: number, i: number, query: string): Searc
 }
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEYS.length) return [];
+  if (!SCRAPER_KEYS.length) { console.error('[Amazon] No API keys'); return []; }
   const key = getNextRoundRobinKey();
   const params = { api_key: key, query, country_code: 'in', tld: 'in', page };
   try {
     const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
-      params, timeout: 25000,
+      params, timeout: 20000,
     });
     const products: any[] = data?.results || data?.organic_results || [];
+    console.log(`[Amazon] ${products.length} raw results`);
     return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter(p => isValidProduct(p));
   } catch (e: any) {
+    console.error('[Amazon] error:', e?.response?.status, e?.message?.slice(0, 100));
     if (e?.response?.status === 429) {
       const fallbackKey = getNextKey(key);
       if (fallbackKey === key) return [];
       try {
         const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
-          params: { ...params, api_key: fallbackKey }, timeout: 25000,
+          params: { ...params, api_key: fallbackKey }, timeout: 20000,
         });
         const products: any[] = data?.results || data?.organic_results || [];
         return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter((p: any) => isValidProduct(p));
@@ -226,7 +228,7 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         render: false,
         country_code: 'in',
       },
-      timeout: 20000,
+      timeout: 15000,
     });
     if (typeof html !== 'string') return [];
 
@@ -272,7 +274,7 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
           : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
       };
     }).filter(p => isValidProduct(p));
-  } catch { return []; }
+  } catch(e: any) { console.error('[Flipkart] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
 }
 
 // ─── Myntra ───────────────────────────────────────────────────────────────────
@@ -389,7 +391,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
         render: true,
         country_code: 'in',
       },
-      timeout: 65000,
+      timeout: 8000,
     });
     if (typeof html !== 'string') return [];
 
@@ -419,7 +421,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
         rating: p.rating || undefined,
       };
     }).filter(p => isValidProduct(p));
-  } catch { return []; }
+  } catch(e: any) { console.error('[Myntra] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
 }
 
 // ─── Google Shopping ──────────────────────────────────────────────────────────
@@ -455,7 +457,7 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
   try {
     const { data } = await axios.get('https://api.scraperapi.com/structured/google/shopping', {
       params: { api_key: getNextRoundRobinKey(), query, country_code: 'in', tld: 'co.in' },
-      timeout: 45000,
+      timeout: 30000,
     });
 
     const results: any[] = data?.shopping_results || [];
@@ -489,7 +491,7 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
       })
       // Filter: price must be > 100 (real fashion item), title must be descriptive
       .filter(p => p.price > 100 && p.title.length >= 8 && p.url);
-  } catch { return []; }
+  } catch(e: any) { console.error('[Google] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -497,6 +499,7 @@ async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
 export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cacheKey = normalizeQuery(query);
   const searchTerm = query.toLowerCase().trim();
+  console.log(`[search] keys=${SCRAPER_KEYS.length} key0=${SCRAPER_KEYS[0]?.slice(0,8)}... query=${searchTerm}`);
 
   const mem = getMemCached(cacheKey);
   if (mem) return mem;
@@ -504,32 +507,22 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  const [az1, fk, mn, gs] = await Promise.all([
+  const [az1, fk, gs] = await Promise.all([
     fetchAmazonPage(searchTerm, 1).catch(() => []),
     fetchFlipkart(searchTerm).catch(() => []),
-    fetchMyntra(searchTerm).catch(() => []),
     fetchGoogleShopping(searchTerm).catch(() => []),
   ]);
 
-  const [az2result] = await Promise.allSettled([
-    az1.length < 10 ? fetchAmazonPage(searchTerm, 2) : Promise.resolve([] as SearchProduct[]),
-  ]);
-
-  const amazonResults = [
-    ...az1,
-    ...(az2result.status === 'fulfilled' ? az2result.value : []),
-  ];
-
   // Deduplicate Amazon by ASIN
   const seenAsins = new Set<string>();
-  const dedupedAmazon = amazonResults.filter(p => {
+  const dedupedAmazon = az1.filter(p => {
     const asin = p.url.split('/dp/')[1]?.split('?')[0];
     if (!asin || seenAsins.has(asin)) return false;
     seenAsins.add(asin);
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk, ...mn, ...gs]
+  const allResults = [...dedupedAmazon, ...fk, ...gs]
     .filter(p => isValidProduct(p))
     .sort((a, b) => a.price - b.price);
 

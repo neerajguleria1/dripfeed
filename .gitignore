@@ -30,3 +30,6 @@ browser-data/
 
 # Environment files
 .env
+
+.vercel
+.env*
