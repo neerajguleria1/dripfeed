@@ -117,7 +117,6 @@ function normalizeQuery(q: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ')
-    .replace(/s\b/g, '')
     .replace(/[^a-z0-9 ]/g, '')
     .split(' ')
     .filter(Boolean)
@@ -299,8 +298,10 @@ const SLUG_MAP: Record<string, string> = {
 // Slugs that return 500 on Myntra — must use search?q= instead
 const MYNTRA_500_SLUGS = new Set([
   'sarees', 'jeans', 'dresses', 'leggings', 'skirts', 'tops', 'shoes',
-  'sandals', 'sneakers', 'boots', 'blazers', 'hoodies', 'pants', 'shorts',
-  'suits', 'coats', 'bags', 'watches',
+  'blazers', 'hoodies', 'pants', 'shorts', 'suits', 'coats', 'bags', 'watches',
+  // additional confirmed 500s
+  'heels', 'lehenga', 'lehnga', 'kurta-men', 'kurti-women', 'tops-women',
+  'kurtas', 'kurtis',
 ]);
 
 function buildMyntraUrl(query: string): string {
@@ -314,16 +315,21 @@ function buildMyntraUrl(query: string): string {
   if (BAD_SLUGS.has(q)) {
     return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
   }
-  // Brand queries
-  const BRANDS = new Set(['levis', 'zara', 'h&m', 'hm', 'puma', 'adidas', 'reebok', 'gap', 'mango', 'only', 'vero', 'forever']);
+  // Brand queries — some brands work on search, some 500. Use search for all brand queries.
+  const BRANDS = new Set(['levis', 'zara', 'h&m', 'hm', 'puma', 'adidas', 'reebok', 'gap', 'mango', 'only', 'vero', 'forever', 'nike', 'bata', 'woodland', 'fastrack']);
   const words = q.split(' ');
-  if (words.length >= 2 && BRANDS.has(words[0])) {
-    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+  if (BRANDS.has(words[0])) {
+    // Try brand slug first only for single-word brand queries, else search
+    if (words.length >= 2) return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
   }
   // Apply singular→plural correction
   const corrected = SLUG_MAP[q] || q.replace(/\s+/g, '-');
   // If the corrected slug is known to 500, use search
   if (MYNTRA_500_SLUGS.has(corrected)) {
+    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+  }
+  // Multi-word slugs with known-bad patterns
+  if (/^(kurta|kurti|tops?)-/.test(corrected)) {
     return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
   }
   return `https://www.myntra.com/${corrected}`;
@@ -536,6 +542,85 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   setDbCache(cacheKey, withAffiliate);
 
   return withAffiliate;
+}
+
+// ─── Related queries map ──────────────────────────────────────────────────────
+// Maps a search intent to related product queries for "Complete the Look"
+const RELATED_QUERIES: Record<string, { label: string; queries: string[] }> = {
+  // Footwear
+  shoes:          { label: 'Complete the Look', queries: ['socks', 'belt men', 'jeans men'] },
+  sneakers:       { label: 'Complete the Look', queries: ['socks', 'track pants', 'cap men'] },
+  'sports shoes': { label: 'Complete the Look', queries: ['track pants', 'sports bra', 'gym bag'] },
+  heels:          { label: 'Complete the Look', queries: ['dress women', 'handbag women', 'earrings'] },
+  sandals:        { label: 'Complete the Look', queries: ['shorts women', 'sunglasses women', 'handbag women'] },
+  // Tops
+  'tshirt men':   { label: 'Complete the Look', queries: ['jeans men', 'sneakers', 'cap men'] },
+  'shirt men':    { label: 'Complete the Look', queries: ['trousers men', 'belt men', 'formal shoes'] },
+  'kurta men':    { label: 'Complete the Look', queries: ['churidar men', 'mojari', 'watch men'] },
+  'kurti women':  { label: 'Complete the Look', queries: ['leggings women', 'juttis', 'dupatta'] },
+  'top women':    { label: 'Complete the Look', queries: ['jeans women', 'sneakers', 'handbag women'] },
+  'crop top':     { label: 'Complete the Look', queries: ['high waist jeans', 'sneakers', 'sunglasses women'] },
+  // Bottoms
+  'jeans men':    { label: 'Complete the Look', queries: ['shirt men', 'sneakers', 'belt men'] },
+  'jeans women':  { label: 'Complete the Look', queries: ['top women', 'sneakers', 'handbag women'] },
+  'trousers men': { label: 'Complete the Look', queries: ['formal shirt', 'formal shoes', 'belt men'] },
+  'leggings women': { label: 'Complete the Look', queries: ['kurti women', 'juttis', 'dupatta'] },
+  // Ethnic
+  saree:          { label: 'Complete the Look', queries: ['blouse women', 'heels', 'clutch bag'] },
+  lehenga:        { label: 'Complete the Look', queries: ['heels', 'clutch bag', 'earrings'] },
+  'salwar suit':  { label: 'Complete the Look', queries: ['dupatta', 'juttis', 'earrings'] },
+  'kurta set women': { label: 'Complete the Look', queries: ['juttis', 'dupatta', 'earrings'] },
+  sherwani:       { label: 'Complete the Look', queries: ['mojari', 'watch men', 'pocket square'] },
+  // Outerwear
+  'jacket men':   { label: 'Complete the Look', queries: ['jeans men', 'sneakers', 'tshirt men'] },
+  'jacket women': { label: 'Complete the Look', queries: ['jeans women', 'sneakers', 'handbag women'] },
+  'hoodie men':   { label: 'Complete the Look', queries: ['joggers', 'sneakers', 'cap men'] },
+  // Sports / Gym
+  gym:            { label: 'Complete the Look', queries: ['track pants', 'sports shoes', 'gym bag'] },
+  'gym wear men': { label: 'Complete the Look', queries: ['sports shoes', 'gym bag', 'socks'] },
+  'gym wear women': { label: 'Complete the Look', queries: ['sports shoes', 'sports bra', 'gym bag'] },
+  'track pants':  { label: 'Complete the Look', queries: ['sports shoes', 'tshirt men', 'socks'] },
+  'yoga pants':   { label: 'Complete the Look', queries: ['sports bra', 'yoga mat', 'sports shoes'] },
+  // Accessories
+  'watch men':    { label: 'Style with', queries: ['shirt men', 'belt men', 'wallet men'] },
+  'handbag women': { label: 'Style with', queries: ['dress women', 'heels', 'sunglasses women'] },
+  backpack:       { label: 'Style with', queries: ['sneakers', 'jeans men', 'cap men'] },
+  // Use-case based
+  wedding:        { label: 'Wedding Collection', queries: ['lehenga', 'heels', 'clutch bag', 'earrings'] },
+  office:         { label: 'Office Look', queries: ['formal shirt', 'trousers men', 'formal shoes', 'belt men'] },
+  casual:         { label: 'Casual Look', queries: ['jeans men', 'tshirt men', 'sneakers'] },
+  beach:          { label: 'Beach Look', queries: ['shorts men', 'flip flops', 'sunglasses men'] },
+  party:          { label: 'Party Look', queries: ['dress women', 'heels', 'clutch bag'] },
+};
+
+// Find related queries for a given search term
+function findRelated(query: string): { label: string; queries: string[] } | null {
+  const q = query.toLowerCase().trim();
+  // exact match
+  if (RELATED_QUERIES[q]) return RELATED_QUERIES[q];
+  // partial match — check if query contains a key
+  for (const [key, val] of Object.entries(RELATED_QUERIES)) {
+    if (q.includes(key) || key.includes(q)) return val;
+  }
+  return null;
+}
+
+export async function getRelatedProducts(query: string): Promise<{ label: string; sections: { query: string; products: SearchProduct[] }[] }> {
+  const related = findRelated(query);
+  if (!related) return { label: 'You may also like', sections: [] };
+
+  // Fetch all related queries in parallel — they'll hit cache if already searched
+  const sections = await Promise.all(
+    related.queries.slice(0, 3).map(async (q) => {
+      const products = await searchProducts(q).catch(() => []);
+      return { query: q, products: products.slice(0, 4) };
+    })
+  );
+
+  return {
+    label: related.label,
+    sections: sections.filter(s => s.products.length > 0),
+  };
 }
 
 const TRENDING_QUERIES = ['kurta sets women', 'sneakers men india', 'sarees silk', 'watches men under 5000'];

@@ -315,6 +315,7 @@ export default function SearchPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [hasMore, setHasMore] = useState(false);
   const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
+  const [relatedSections, setRelatedSections] = useState<{ label: string; sections: { query: string; products: ProductData[] }[] } | null>(null);
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
@@ -322,11 +323,16 @@ export default function SearchPage() {
     if (!searchQuery.trim()) { setProducts([]); return; }
     setLoading(true);
     setProducts([]);
+    setRelatedSections(null);
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
       const fetched: ProductData[] = data.products || [];
       setProducts(fetched);
       setHasMore(false);
+      // Fetch related products in background after main results load
+      api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
+        .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
+        .catch(() => {});
     } catch {
       setProducts([]);
     } finally {
@@ -576,6 +582,42 @@ export default function SearchPage() {
                 ))}
               </div>
             </InfiniteScroll>
+          </div>
+        </section>
+      )}
+
+      {/* ── Complete the Look ─────────────────────────────────────────────── */}
+      {showResults && relatedSections && relatedSections.sections.length > 0 && (
+        <section className="bg-white border-t border-neutral-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+            <div className="flex items-center gap-2.5 mb-8">
+              <Sparkles className="w-4 h-4 text-[#C9A96E]" />
+              <h2 className="text-[12px] font-semibold text-[#C9A96E] uppercase tracking-[0.08em]">
+                {relatedSections.label}
+              </h2>
+            </div>
+            <div className="space-y-10">
+              {relatedSections.sections.map((section) => (
+                <div key={section.query}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[16px] font-semibold text-[#0F0F1A] capitalize">
+                      {section.query}
+                    </h3>
+                    <button
+                      onClick={() => handleTrendingClick(section.query)}
+                      className="text-[12px] text-[#C9A96E] font-medium hover:underline flex items-center gap-1"
+                    >
+                      See all <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {section.products.map((product, i) => (
+                      <ResultCard key={product.id || i} product={product} index={i} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}

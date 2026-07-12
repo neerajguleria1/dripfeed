@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { searchProducts } from '../search.js';
+import { searchProducts, getRelatedProducts } from '../search.js';
 import { connectDB } from '../db.js';
 import Product from '../models/Product.js';
 
@@ -170,10 +170,25 @@ async function suggestions(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// --- Related Products ---
+
+async function relatedProducts(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  const query = (req.query.q as string || '').trim();
+  if (!query) return res.status(400).json({ error: 'Query is required' });
+  try {
+    const result = await getRelatedProducts(query);
+    return res.json(result);
+  } catch (e: any) {
+    return res.status(500).json({ error: 'Failed', message: e.message });
+  }
+}
+
 export async function handleSearch(req: VercelRequest, res: VercelResponse, subpath: string) {
   switch (subpath) {
     case 'product': return productSearch(req, res);
     case 'suggestions': return suggestions(req, res);
+    case 'related': return relatedProducts(req, res);
     default: return res.status(404).json({ error: 'Not found' });
   }
 }
