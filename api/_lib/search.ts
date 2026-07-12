@@ -277,139 +277,64 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   } catch(e: any) { console.error('[Flipkart] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
 }
 
-// ─── Myntra ───────────────────────────────────────────────────────────────────
-// Research findings:
-//   - Data is in window.__myx.searchData.results.products[]
-//   - Products are deeply nested (brace depth 4) — self-contained block regex FAILS
-//   - Must extract products array using balanced-brace parser
-//   - Product fields: productId, productName, brand, mrp, discount (AMOUNT not %), price (final price!),
-//     searchImage (http://assets.myntassets.com/...), landingPageUrl
-//   - ALL images are http:// — must convert to https://
-//   - Use p.price directly (Myntra provides final price, no need to compute mrp-discount)
-//   - 500 errors on: sarees, jeans, dresses — use search?q= for those
+// ─── Myntra (session-based, 0 credits) ──────────────────────────────────────
+// Bypass: hit homepage first to get session cookies, then call search API
+// Works because Myntra checks for valid session cookies, not IP
 
-const SLUG_MAP: Record<string, string> = {
-  saree: 'sarees', kurta: 'kurtas', jean: 'jeans', trouser: 'trousers',
-  legging: 'leggings', dress: 'dresses', skirt: 'skirts', top: 'tops',
-  shoe: 'shoes', sandal: 'sandals', sneaker: 'sneakers', boot: 'boots',
-  jacket: 'jackets', blazer: 'blazers', hoodie: 'hoodies', shirt: 'shirts',
-  pant: 'pants', short: 'shorts', suit: 'suits', coat: 'coats',
-  bag: 'bags', watch: 'watches', sari: 'sarees',
-};
+let myntraSessionCookies = '';
+let myntraCookieTs = 0;
+const MYNTRA_COOKIE_TTL = 25 * 60 * 1000; // 25 min
 
-// Slugs that return 500 on Myntra — must use search?q= instead
-const MYNTRA_500_SLUGS = new Set([
-  'sarees', 'jeans', 'dresses', 'leggings', 'skirts', 'tops', 'shoes',
-  'blazers', 'hoodies', 'pants', 'shorts', 'suits', 'coats', 'bags', 'watches',
-  // additional confirmed 500s
-  'heels', 'lehenga', 'lehnga', 'kurta-men', 'kurti-women', 'tops-women',
-  'kurtas', 'kurtis',
-]);
-
-function buildMyntraUrl(query: string): string {
-  const q = query.toLowerCase().trim();
-  // Price intent queries
-  if (/under\s*\d+|below\s*\d+|\d+\s*to\s*\d+/.test(q)) {
-    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
+async function getMyntraSession(): Promise<string> {
+  if (myntraSessionCookies && Date.now() - myntraCookieTs < MYNTRA_COOKIE_TTL) {
+    return myntraSessionCookies;
   }
-  // Known bad single-word slugs
-  const BAD_SLUGS = new Set(['kurti', 'jean', 'kurtas', 'ladies', 'gents', 'women', 'men']);
-  if (BAD_SLUGS.has(q)) {
-    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
-  }
-  // Brand queries — some brands work on search, some 500. Use search for all brand queries.
-  const BRANDS = new Set(['levis', 'zara', 'h&m', 'hm', 'puma', 'adidas', 'reebok', 'gap', 'mango', 'only', 'vero', 'forever', 'nike', 'bata', 'woodland', 'fastrack']);
-  const words = q.split(' ');
-  if (BRANDS.has(words[0])) {
-    // Try brand slug first only for single-word brand queries, else search
-    if (words.length >= 2) return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
-  }
-  // Apply singular→plural correction
-  const corrected = SLUG_MAP[q] || q.replace(/\s+/g, '-');
-  // If the corrected slug is known to 500, use search
-  if (MYNTRA_500_SLUGS.has(corrected)) {
-    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
-  }
-  // Multi-word slugs with known-bad patterns
-  if (/^(kurta|kurti|tops?)-/.test(corrected)) {
-    return `https://www.myntra.com/search?q=${encodeURIComponent(q)}`;
-  }
-  return `https://www.myntra.com/${corrected}`;
-}
-
-// Extract individual product objects from Myntra's deeply-nested JSON
-// using a balanced-brace parser anchored on "products":[{
-function extractMyntraProducts(html: string): any[] {
-  // Find the products array — it's inside window.__myx.searchData.results
-  const startMarker = '"products":[{';
-  const startIdx = html.indexOf(startMarker);
-  if (startIdx < 0) return [];
-
-  const arrayStart = startIdx + '"products":'.length;
-  const objects: any[] = [];
-  let i = arrayStart;
-
-  // Skip the opening [
-  while (i < html.length && html[i] !== '[') i++;
-  i++; // skip [
-
-  while (i < html.length) {
-    if (html[i] === '{') {
-      // Extract balanced object
-      let depth = 0;
-      const objStart = i;
-      while (i < html.length) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
-          depth--;
-          if (depth === 0) {
-            try {
-              objects.push(JSON.parse(html.slice(objStart, i + 1)));
-            } catch { /* skip malformed */ }
-            i++;
-            break;
-          }
-        }
-        i++;
-      }
-    } else if (html[i] === ']') {
-      break; // end of products array
-    } else {
-      i++;
-    }
-  }
-  return objects;
+  try {
+    const resp = await axios.get('https://www.myntra.com/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-IN,en;q=0.9',
+      },
+      timeout: 10000,
+      maxRedirects: 5,
+    });
+    const raw: string[] = (resp.headers['set-cookie'] as string[]) || [];
+    myntraSessionCookies = raw.map((c: string) => c.split(';')[0]).join('; ');
+    myntraCookieTs = Date.now();
+    return myntraSessionCookies;
+  } catch { return ''; }
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEYS.length) return [];
   try {
-    const { data: html } = await axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: getNextRoundRobinKey(),
-        url: buildMyntraUrl(query),
-        render: true,
-        country_code: 'in',
-      },
-      timeout: 8000,
-    });
-    if (typeof html !== 'string') return [];
-
-    const products = extractMyntraProducts(html);
-    if (!products.length) return [];
-
-    return products.slice(0, 40).map((p: any) => {
-      // p.price = final selling price (Myntra provides this directly)
-      // p.mrp = original price
-      // p.discount = discount AMOUNT (not %)
+    const cookies = await getMyntraSession();
+    if (!cookies) return [];
+    const { data } = await axios.get(
+      `https://www.myntra.com/gateway/v2/search/${encodeURIComponent(query)}?p=1&rows=20&o=0&plaEnabled=false&sort=price_asc`,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'en-IN,en;q=0.9',
+          'Referer': 'https://www.myntra.com/',
+          'Cookie': cookies,
+          'x-myntraweb': 'Yes',
+          'x-location-code': 'MH',
+          'sec-fetch-site': 'same-origin',
+          'sec-fetch-mode': 'cors',
+        },
+        timeout: 15000,
+      }
+    );
+    const products: any[] = data?.products || [];
+    return products.map((p: any) => {
       const price = p.price || 0;
       const mrp = p.mrp || 0;
       const discPct = mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : undefined;
-      // ALL Myntra images are http:// — convert to https://
       const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://');
-      const slug = p.landingPageUrl || '';
       return {
-        id: `mn_${p.productId || Math.random()}`,
+        id: `mn_${p.productId}`,
         title: cleanText(`${p.brand || ''} ${p.productName || p.product || ''}`.trim()),
         brand: p.brand || undefined,
         price,
@@ -417,82 +342,14 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
         discount: discPct,
         imageUrl,
         platform: 'Myntra',
-        url: slug ? `https://www.myntra.com/${slug}` : `https://www.myntra.com/search?q=${encodeURIComponent(query)}`,
+        url: p.landingPageUrl ? `https://www.myntra.com/${p.landingPageUrl}` : `https://www.myntra.com/search?q=${encodeURIComponent(query)}`,
         rating: p.rating || undefined,
       };
     }).filter(p => isValidProduct(p));
   } catch(e: any) { console.error('[Myntra] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
 }
 
-// ─── Google Shopping ──────────────────────────────────────────────────────────
-// Research findings:
-//   - price field uses European format: "1.260 ₹" = ₹1260, "360 ₹" = ₹360
-//   - extracted_price divides by 100 (bug in ScraperAPI): 12.6 for ₹1260
-//   - CORRECT approach: use parsePrice(r.price) with dot-as-thousands fix
-//   - link = Google catalog URL (not retailer URL) — no product_link/merchant_link field
-//   - thumbnail: mix of https:// (20) and data:base64 (20) — both valid
-//   - Sources include: Ajio, Myntra, Amazon, Libas, Soch, Westside, Manyavar, Koskii etc.
 
-const GOOGLE_SKIP_PLATFORMS = new Set(['amazon.in', 'flipkart', 'myntra']);
-
-function normalizePlatformName(source: string): string {
-  const s = source.toLowerCase();
-  if (s.includes('ajio')) return 'Ajio';
-  if (s.includes('meesho')) return 'Meesho';
-  if (s.includes('nykaa')) return 'Nykaa';
-  if (s.includes('tatacliq') || s.includes('tata cliq')) return 'TataCliq';
-  if (s.includes('westside')) return 'Westside';
-  if (s.includes('libas')) return 'Libas';
-  if (s.includes('manyavar')) return 'Manyavar';
-  if (s.includes('soch')) return 'Soch';
-  if (s.includes('koskii')) return 'Koskii';
-  if (s.includes('jaypore')) return 'Jaypore';
-  if (s.includes('biba')) return 'Biba';
-  if (s.includes('w for woman') || s === 'w') return 'W';
-  return source;
-}
-
-async function fetchGoogleShopping(query: string): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEYS.length) return [];
-  try {
-    const { data } = await axios.get('https://api.scraperapi.com/structured/google/shopping', {
-      params: { api_key: getNextRoundRobinKey(), query, country_code: 'in', tld: 'co.in' },
-      timeout: 30000,
-    });
-
-    const results: any[] = data?.shopping_results || [];
-    if (!results.length) return [];
-
-    return results
-      .filter(r => {
-        const s = (r.source || '').toLowerCase();
-        return !Array.from(GOOGLE_SKIP_PLATFORMS).some(p => s.includes(p));
-      })
-      .slice(0, 20)
-      .map((r, i): SearchProduct => {
-        // Use parsePrice on the raw price string — our fixed parsePrice handles
-        // European dot-as-thousands: "1.260 ₹" → 1260, "360 ₹" → 360
-        const price = parsePrice(r.price || '0');
-        const imageUrl = typeof r.thumbnail === 'string' && r.thumbnail.startsWith('https://')
-          ? r.thumbnail
-          : typeof r.thumbnail === 'string' && r.thumbnail.startsWith('data:')
-          ? r.thumbnail
-          : '';
-        const platform = normalizePlatformName(r.source || '');
-        return {
-          id: `gs_${i}_${r.docid || i}`,
-          title: cleanText(r.title || ''),
-          price,
-          imageUrl,
-          platform,
-          // link is a Google catalog URL — best we have without a second API call
-          url: r.link || '',
-        };
-      })
-      // Filter: price must be > 100 (real fashion item), title must be descriptive
-      .filter(p => p.price > 100 && p.title.length >= 8 && p.url);
-  } catch(e: any) { console.error('[Google] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
-}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -507,9 +364,10 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  const [az1, fk] = await Promise.all([
+  const [az1, fk, mn] = await Promise.all([
     fetchAmazonPage(searchTerm, 1).catch(() => []),
     fetchFlipkart(searchTerm).catch(() => []),
+    fetchMyntra(searchTerm).catch(() => []),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -521,7 +379,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk]
+  const allResults = [...dedupedAmazon, ...fk, ...mn]
     .filter(p => isValidProduct(p))
     .sort((a, b) => a.price - b.price);
 

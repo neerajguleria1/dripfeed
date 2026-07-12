@@ -3,7 +3,6 @@ import axios from 'axios';
 // Try common subdomain patterns
 const subdomains = [
   'dripfeed-proxy.amitashkumarrr.workers.dev',
-  'dripfeed-proxy.dripfeed.workers.dev',
 ];
 
 const q = 'saree';
