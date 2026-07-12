@@ -286,6 +286,13 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
 function ResultsSkeleton() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+      {/* Searching message */}
+      <div className="text-center mb-10">
+        <p className="text-[13px] text-neutral-400 animate-pulse">
+          Searching Amazon, Flipkart, Myntra, Ajio &amp; more…
+        </p>
+        <p className="text-[11px] text-neutral-300 mt-1">This takes up to 60 seconds on first search</p>
+      </div>
       {/* Featured skeleton */}
       <div className="flex flex-col md:flex-row gap-8 bg-white rounded-2xl border border-neutral-100 overflow-hidden mb-8 animate-pulse">
         <div className="w-full md:w-[320px] flex-shrink-0 bg-neutral-100 aspect-[3/4]" />
