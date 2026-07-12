@@ -1,5 +1,3 @@
-import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
 
 export interface FilterState {
   platforms: string[];
@@ -42,20 +40,12 @@ const DISCOUNT_OPTIONS = [
   { value: 50, label: '50%+' },
 ];
 
-const SORT_OPTIONS = [
-  { value: 'price-asc' as const, label: 'Lowest Price' },
-  { value: 'discount-desc' as const, label: 'Highest Discount' },
-  { value: 'newest' as const, label: 'Newest' },
-];
-
 export function SearchFilters({
   filters,
   onFilterChange,
   resultCount,
   platformsSearched,
 }: SearchFiltersProps) {
-  const [showSort, setShowSort] = useState(false);
-
   function togglePlatform(platform: string) {
     const current = filters.platforms;
     const next = current.includes(platform)
@@ -72,20 +62,15 @@ export function SearchFilters({
     onFilterChange({ ...filters, minDiscount: min });
   }
 
-  function setSort(sort: FilterState['sort']) {
-    onFilterChange({ ...filters, sort });
-    setShowSort(false);
-  }
-
   return (
     <div className="space-y-3">
       {/* Result summary */}
       {resultCount !== undefined && (
         <p className="text-sm text-[var(--df-accent-navy)]/60">
-          {resultCount} result{resultCount !== 1 ? 's' : ''}
-          {platformsSearched && platformsSearched.length > 0 && (
-            <> from {platformsSearched.length} platform{platformsSearched.length !== 1 ? 's' : ''}</>
-          )}
+          {resultCount} {resultCount !== 1 ? 'results' : 'result'}
+          {platformsSearched && platformsSearched.length > 0 &&
+            ` across ${platformsSearched.length} ${platformsSearched.length !== 1 ? 'platforms' : 'platform'}`
+          }
         </p>
       )}
 
@@ -162,36 +147,7 @@ export function SearchFilters({
             );
           })}
 
-          {/* Sort dropdown */}
-          <div className="relative ml-auto">
-            <button
-              type="button"
-              onClick={() => setShowSort(!showSort)}
-              className="flex items-center gap-1 px-3 py-2 sm:py-1.5 rounded-full text-[13px] sm:text-xs font-medium border border-gray-200 bg-white text-gray-600 hover:border-gray-300 transition-colors whitespace-nowrap min-h-[44px] sm:min-h-0"
-            >
-              Sort: {SORT_OPTIONS.find((s) => s.value === filters.sort)?.label || 'Lowest Price'}
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            {showSort && (
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-100 shadow-lg z-20 min-w-[140px]">
-                {SORT_OPTIONS.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setSort(s.value)}
-                    className={[
-                      'block w-full text-left px-3 py-2 text-xs transition-colors',
-                      filters.sort === s.value
-                        ? 'bg-gray-50 text-[var(--df-accent-navy)] font-medium'
-                        : 'text-gray-600 hover:bg-gray-50',
-                    ].join(' ')}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+
         </div>
       </div>
     </div>
