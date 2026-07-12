@@ -507,10 +507,9 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  const [az1, fk, gs] = await Promise.all([
+  const [az1, fk] = await Promise.all([
     fetchAmazonPage(searchTerm, 1).catch(() => []),
     fetchFlipkart(searchTerm).catch(() => []),
-    fetchGoogleShopping(searchTerm).catch(() => []),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -522,7 +521,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk, ...gs]
+  const allResults = [...dedupedAmazon, ...fk]
     .filter(p => isValidProduct(p))
     .sort((a, b) => a.price - b.price);
 
