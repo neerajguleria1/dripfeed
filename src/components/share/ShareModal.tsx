@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Link, MessageCircle, Share2 } from 'lucide-react';
+import { Link, MessageCircle, Share2, Camera } from 'lucide-react';
 import Modal from '../ui/Modal';
 import { useToast } from '../../context/ToastContext';
 
@@ -60,6 +60,33 @@ export function ShareModal({ open, onClose, title, url, savings }: ShareModalPro
 
   const hasNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
 
+  // Instagram has no public web share-link API (unlike WhatsApp's wa.me).
+  // On mobile, the OS share sheet (native share button below) already lists
+  // Instagram as an option if the Instagram app is installed. This button is
+  // a direct shortcut into that same OS share sheet, just labeled for
+  // Instagram so users who specifically want to share there see it clearly.
+  // On desktop (no navigator.share), we fall back to copying the link and
+  // instructing the user to paste it into Instagram manually.
+  const handleInstagram = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text: savings ? `${title} — save up to ₹${savings} on DripFeed` : `${title} on DripFeed`,
+          url: shareUrl,
+        });
+      } catch { /* User cancelled */ }
+      return;
+    }
+    // Desktop fallback: copy link, guide user to paste into IG manually.
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied! Paste it into your Instagram Story or DM.');
+    } catch {
+      toast.error('Could not copy link automatically. Copy it manually to share on Instagram.');
+    }
+  }, [title, savings, shareUrl, toast]);
+
   return (
     <Modal open={open} onClose={onClose} title="Share" size="sm">
       <div className="flex flex-col gap-3">
@@ -86,6 +113,21 @@ export function ShareModal({ open, onClose, title, url, savings }: ShareModalPro
           <div>
             <p className="font-medium text-gray-900">WhatsApp</p>
             <p className="text-sm text-gray-500">Send to contacts</p>
+          </div>
+        </button>
+
+        <button
+          onClick={handleInstagram}
+          className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-left w-full"
+        >
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-pink-50 text-pink-600 shrink-0">
+            <Camera className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="font-medium text-gray-900">Instagram</p>
+            <p className="text-sm text-gray-500">
+              {hasNativeShare ? 'Share to Story or DM' : 'Copy link to paste in Instagram'}
+            </p>
           </div>
         </button>
 

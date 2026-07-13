@@ -14,6 +14,8 @@ interface AIRecommendation {
   recommendation: string;
   bestPlatform: string | null;
   confidence: number;
+  /** true only when this came from the real Groq model call. */
+  isAiGenerated?: boolean;
 }
 
 const EMPTY_RESPONSE: AIRecommendation = {
@@ -23,6 +25,7 @@ const EMPTY_RESPONSE: AIRecommendation = {
   recommendation: '',
   bestPlatform: null,
   confidence: 0,
+  isAiGenerated: false,
 };
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -42,16 +45,35 @@ async function aiRecommend(req: VercelRequest, res: VercelResponse) {
     const { productTitle, platforms, priceHistory: _priceHistory } = req.body || {};
     if (!productTitle) return res.status(400).json({ error: 'productTitle is required' });
 
+    // Rule-based check (not AI): flag platforms whose discount % looks inflated
+    // by an artificially high MRP — a common Indian e-commerce tactic where a
+    // "70% off" badge is calculated against a price nobody ever actually paid.
+    // We flag when a platform's MRP is >40% above the median MRP across all
+    // platforms for the same product — a real signal price alone can't show.
+    const mrps = (platforms || [])
+      .map((p: any) => p.originalPrice)
+      .filter((v: any) => typeof v === 'number' && v > 0)
+      .sort((a: number, b: number) => a - b);
+    const medianMrp = mrps.length ? mrps[Math.floor(mrps.length / 2)] : null;
+    const inflatedDiscountPlatforms = (platforms || [])
+      .filter((p: any) => medianMrp && p.originalPrice && p.originalPrice > medianMrp * 1.4)
+      .map((p: any) => p.platform);
+
     if (!process.env.GROQ_API_KEY) {
       const sorted = (platforms || []).slice().sort((a: any, b: any) => (a.price || 0) - (b.price || 0));
       const cheapest = sorted[0];
+      const cons = ['Prices may change', 'Stock availability varies'];
+      if (inflatedDiscountPlatforms.length) {
+        cons.push(`Watch out: ${inflatedDiscountPlatforms.join(', ')} may show an inflated discount %`);
+      }
       return res.json({
         summary: `Comparing ${productTitle} across ${platforms?.length || 0} platforms.`,
         pros: ['Multiple options available', 'Price comparison saves money'],
-        cons: ['Prices may change', 'Stock availability varies'],
+        cons,
         recommendation: cheapest ? `Buy from ${cheapest.platform} for the lowest price.` : 'Compare prices before buying.',
         bestPlatform: cheapest?.platform || null,
         confidence: 0.5,
+        isAiGenerated: false,
       } satisfies AIRecommendation);
     }
 
@@ -59,27 +81,41 @@ async function aiRecommend(req: VercelRequest, res: VercelResponse) {
 
     const priceList = (platforms || [])
       .filter((p: any) => p.price)
-      .map((p: any) => `- ${p.platform}: ₹${p.price.toLocaleString('en-IN')}`)
+      .map((p: any) => {
+        const parts = [`${p.platform}: ₹${p.price.toLocaleString('en-IN')}`];
+        if (p.originalPrice) parts.push(`MRP ₹${p.originalPrice.toLocaleString('en-IN')}`);
+        if (p.discount) parts.push(`${p.discount}% off`);
+        if (p.rating) parts.push(`${p.rating}★ rating`);
+        return `- ${parts.join(', ')}`;
+      })
       .join('\n');
 
-    const prompt = `Analyze this product for an Indian shopper:
+    const brandLine = platforms?.find((p: any) => p.brand)?.brand
+      ? `Brand: ${platforms.find((p: any) => p.brand).brand}\n`
+      : '';
+
+    const flagLine = inflatedDiscountPlatforms.length
+      ? `\nData flag (verified, not a guess): ${inflatedDiscountPlatforms.join(', ')} shows a discount % calculated against an MRP significantly higher than other platforms for the same product — the displayed discount may be inflated. Mention this directly in your cons if relevant.\n`
+      : '';
+
+    const prompt = `Analyze this product for an Indian shopper. Base your pros/cons ONLY on the data given below — do not invent product quality claims you have no evidence for.
 
 Product: ${productTitle}
-
+${brandLine}
 Prices across platforms:
 ${priceList || 'No price data available.'}
-
+${flagLine}
 Return ONLY valid JSON (no markdown, no backticks):
 {
-  "summary": "2-sentence product overview",
+  "summary": "2-sentence overview grounded in the price/rating data above, not invented product claims",
   "pros": ["pro1", "pro2", "pro3"],
   "cons": ["con1", "con2"],
-  "recommendation": "brief buy/wait advice in 1 sentence",
-  "bestPlatform": "platform name with best value or null",
+  "recommendation": "brief buy/wait advice in 1 sentence, based on price spread and any discount flags",
+  "bestPlatform": "platform name with best value (lowest genuine price, factoring in any inflated-discount flag) or null",
   "confidence": 0.85
 }
 
-confidence should be a number between 0 and 1 indicating how confident you are in the recommendation.`;
+confidence should be a number between 0 and 1 indicating how confident you are in the recommendation. Lower confidence if data is sparse (e.g. only 1-2 platforms or no ratings available).`;
 
     const completion = await withTimeout(
       client.chat.completions.create({
@@ -98,6 +134,7 @@ confidence should be a number between 0 and 1 indicating how confident you are i
     if (typeof result.confidence !== 'number') {
       result.confidence = 0.7;
     }
+    result.isAiGenerated = true;
 
     return res.json(result);
   } catch {

@@ -120,7 +120,14 @@ export default function ComparePage() {
     try {
       const { data } = await api.post('/products/ai-recommend', {
         productTitle,
-        platforms: platformData.map((p) => ({ platform: p.platform, price: p.price })),
+        platforms: platformData.map((p) => ({
+          platform: p.platform,
+          price: p.price,
+          originalPrice: p.originalPrice,
+          discount: p.discount,
+          brand: p.brand,
+          rating: p.rating,
+        })),
       });
       if (data?.summary) {
         setAiAdvice({
@@ -130,6 +137,7 @@ export default function ComparePage() {
           recommendation: data.recommendation || '',
           bestPlatform: data.bestPlatform || '',
           confidence: data.confidence,
+          isAiGenerated: true,
         });
         setAiLoading(false);
         return;
@@ -159,6 +167,7 @@ export default function ComparePage() {
       recommendation: cheapest ? `Buy from ${cheapest.platform} at ₹${cheapest.price.toLocaleString('en-IN')} for the best price.` : 'Compare prices before buying.',
       bestPlatform: cheapest?.platform || '',
       confidence: '0.6',
+      isAiGenerated: false,
     });
     setAiLoading(false);
   }, []);

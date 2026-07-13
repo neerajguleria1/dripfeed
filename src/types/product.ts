@@ -6,6 +6,7 @@ export interface ProductData {
   price: number;
   originalPrice?: number;
   discount?: number;
+  rating?: number;
   platform: string;
   url: string;
 }

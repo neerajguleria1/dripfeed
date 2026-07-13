@@ -8,6 +8,9 @@ export interface AIAdvice {
   recommendation: string;
   bestPlatform: string;
   confidence?: string;
+  /** true when this came from the real Groq model; false/undefined when it's
+   * the client-side rule-based fallback used because the AI call failed. */
+  isAiGenerated?: boolean;
 }
 
 export interface AIAdviceCardProps {
@@ -49,7 +52,11 @@ export function AIAdviceCard({ advice, loading = false, error = false }: AIAdvic
         <span className="text-xl">🤖</span>
         <div>
           <h3 className="font-bold text-gray-900 text-base">AI Shopping Advisor</h3>
-          <p className="text-[10px] text-gray-400">Powered by DripFeed AI</p>
+          <p className="text-[10px] text-gray-400">
+            {advice?.isAiGenerated === false
+              ? 'Quick price-based tips (AI insights unavailable right now)'
+              : 'Powered by DripFeed AI'}
+          </p>
         </div>
       </div>
 
