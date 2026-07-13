@@ -18,25 +18,29 @@ export interface SearchProduct {
 }
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
+// Platforms that only work via costly ScraperAPI tiers (premium/ultra_premium)
+// get a much longer cache TTL so one expensive scrape serves many users instead
+// of re-paying the credit cost every few hours.
 const memCache = new Map<string, { data: SearchProduct[]; ts: number }>();
-const MEM_TTL   = 2 * 60 * 60 * 1000;
-const DB_TTL_MS = 6 * 60 * 60 * 1000;
+const MEM_TTL           = 2 * 60 * 60 * 1000;   // 2h — cheap platforms (Amazon/Flipkart)
+const DB_TTL_MS         = 6 * 60 * 60 * 1000;   // 6h — cheap platforms
+const EXPENSIVE_TTL_MS  = 24 * 60 * 60 * 1000;  // 24h — Ajio (may hit premium tier)
 
-function getMemCached(key: string): SearchProduct[] | null {
+function getMemCached(key: string, ttl = MEM_TTL): SearchProduct[] | null {
   const entry = memCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.ts > MEM_TTL) { memCache.delete(key); return null; }
+  if (Date.now() - entry.ts > ttl) { memCache.delete(key); return null; }
   return entry.data;
 }
 function setMemCache(key: string, data: SearchProduct[]) {
   memCache.set(key, { data, ts: Date.now() });
 }
-async function getDbCached(query: string): Promise<SearchProduct[] | null> {
+async function getDbCached(query: string, ttl = DB_TTL_MS): Promise<SearchProduct[] | null> {
   try {
     await connectDB();
     const doc = await SearchCache.findOne({ query }).lean();
     if (!doc) return null;
-    if (Date.now() - new Date(doc.cachedAt).getTime() > DB_TTL_MS) return null;
+    if (Date.now() - new Date(doc.cachedAt).getTime() > ttl) return null;
     return doc.results as SearchProduct[];
   } catch { return null; }
 }
@@ -148,6 +152,123 @@ function getNextRoundRobinKey(): string {
 function getNextKey(currentKey: string): string {
   const idx = SCRAPER_KEYS.indexOf(currentKey);
   return SCRAPER_KEYS[(idx + 1) % SCRAPER_KEYS.length] || currentKey;
+}
+
+// ─── Per-platform circuit breaker ────────────────────────────────────────────
+// After N consecutive failures, skip a platform for a cooldown window instead
+// of burning credits retrying a site that is actively blocking every request.
+const FAILURE_THRESHOLD = 3;
+const COOLDOWN_MS = 30 * 60 * 1000; // 30 min
+const platformFailures = new Map<string, { count: number; openedAt: number }>();
+
+function isCircuitOpen(platform: string): boolean {
+  const entry = platformFailures.get(platform);
+  if (!entry) return false;
+  if (entry.count < FAILURE_THRESHOLD) return false;
+  if (Date.now() - entry.openedAt > COOLDOWN_MS) {
+    platformFailures.delete(platform); // cooldown expired, allow retry
+    return false;
+  }
+  return true;
+}
+function recordFailure(platform: string) {
+  const entry = platformFailures.get(platform) || { count: 0, openedAt: 0 };
+  entry.count += 1;
+  if (entry.count === FAILURE_THRESHOLD) entry.openedAt = Date.now();
+  platformFailures.set(platform, entry);
+}
+function recordSuccess(platform: string) {
+  platformFailures.delete(platform);
+}
+
+// ─── Credit-efficient escalation ladder ──────────────────────────────────────
+// Tries the cheapest ScraperAPI tier first and only pays for a costlier tier
+// when the cheaper one is actually blocked (403/429/503). Tier costs:
+//   plain = 1 credit | render = 10 | premium+render = 25 | ultra_premium+render = 75
+type EscalationTier = 'plain' | 'render' | 'premium' | 'ultra';
+
+interface EscalationResult {
+  html: string | null;
+  tier: string;
+  credits: number;
+}
+
+const BLOCK_STATUS_CODES = new Set([403, 429, 503]);
+
+async function fetchWithEscalation(
+  targetUrl: string,
+  platform: string,
+  maxTier: EscalationTier = 'premium',
+  needsRender = true, // false for JSON APIs where JS rendering is irrelevant — saves credits
+  minTier: EscalationTier = 'plain', // set to 'render' for sites that never have data at the plain tier (e.g. client-rendered SPAs like Meesho)
+  isSuccess?: (html: string) => boolean // custom content validator; defaults to size + block-keyword check
+): Promise<EscalationResult> {
+  if (!SCRAPER_KEYS.length) return { html: null, tier: 'no-keys', credits: 0 };
+  if (isCircuitOpen(platform)) return { html: null, tier: 'circuit-open', credits: 0 };
+
+  const tierOrder: EscalationTier[] = ['plain', 'render', 'premium', 'ultra'];
+  const minIdx = tierOrder.indexOf(minTier);
+
+  let tiers: { key: EscalationTier; name: string; params: Record<string, unknown>; credits: number }[] = needsRender
+    ? [
+        { key: 'plain', name: 'plain', params: {}, credits: 1 },
+        { key: 'render', name: 'render', params: { render: true }, credits: 10 },
+      ]
+    : [
+        { key: 'plain', name: 'plain', params: {}, credits: 1 },
+      ];
+
+  if (maxTier === 'premium' || maxTier === 'ultra') {
+    tiers.push(needsRender
+      ? { key: 'premium', name: 'premium+render', params: { premium: true, render: true }, credits: 25 }
+      : { key: 'premium', name: 'premium', params: { premium: true }, credits: 10 });
+  }
+  if (maxTier === 'ultra') {
+    tiers.push(needsRender
+      ? { key: 'ultra', name: 'ultra_premium+render', params: { ultra_premium: true, render: true }, credits: 75 }
+      : { key: 'ultra', name: 'ultra_premium', params: { ultra_premium: true }, credits: 30 });
+  }
+
+  // Skip tiers below the platform's known minimum (e.g. Meesho never has data
+  // at 'plain', so don't waste a request confirming that every time).
+  tiers = tiers.filter(t => tierOrder.indexOf(t.key) >= minIdx);
+
+  const defaultValidator = (data: string) => {
+    const looksBlocked = /access denied|captcha|are you a human|blocked/i.test(data.slice(0, 800));
+    return data.length > 2000 && !looksBlocked;
+  };
+  const validate = isSuccess || defaultValidator;
+
+  for (const tier of tiers) {
+    try {
+      const { data } = await axios.get('https://api.scraperapi.com/', {
+        params: {
+          api_key: getNextRoundRobinKey(),
+          url: targetUrl,
+          country_code: 'in',
+          ...tier.params,
+        },
+        timeout: tier.params.render ? 40000 : 15000,
+        transformResponse: [(res) => res], // keep raw string even for JSON content-type responses
+      });
+      const text = typeof data === 'string' ? data : String(data);
+      if (validate(text)) {
+        recordSuccess(platform);
+        return { html: text, tier: tier.name, credits: tier.credits };
+      }
+      // Response didn't pass content validation — escalate to next tier.
+    } catch (e: any) {
+      const status = e?.response?.status;
+      const isTimeout = e?.code === 'ECONNABORTED' || /timeout/i.test(e?.message || '');
+      if (!isTimeout && !BLOCK_STATUS_CODES.has(status)) {
+        // Non-bot-related, non-timeout error (e.g. DNS, network) — no point escalating tiers.
+        break;
+      }
+      // Bot-block status or timeout — try the next, more expensive/patient tier.
+    }
+  }
+  recordFailure(platform);
+  return { html: null, tier: 'failed', credits: 0 };
 }
 
 // ─── Amazon ───────────────────────────────────────────────────────────────────
@@ -306,10 +427,31 @@ async function getMyntraSession(): Promise<string> {
   } catch { return ''; }
 }
 
-async function fetchMyntra(query: string): Promise<SearchProduct[]> {
+function mapMyntraProduct(p: any): SearchProduct {
+  const price = p.price || 0;
+  const mrp = p.mrp || 0;
+  const discPct = mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : undefined;
+  const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://');
+  return {
+    id: `mn_${p.productId}`,
+    title: cleanText(`${p.brand || ''} ${p.productName || p.product || ''}`.trim()),
+    brand: p.brand || undefined,
+    price,
+    originalPrice: mrp > price ? mrp : undefined,
+    discount: discPct,
+    imageUrl,
+    platform: 'Myntra',
+    url: p.landingPageUrl ? `https://www.myntra.com/${p.landingPageUrl}` : `https://www.myntra.com/search?q=${encodeURIComponent(p.query || '')}`,
+    rating: p.rating || undefined,
+  };
+}
+
+// Step 1 — free direct call (0 credits) using bootstrapped session cookies.
+// Works when the request originates from a non-flagged (residential) IP.
+async function fetchMyntraDirect(query: string): Promise<SearchProduct[] | null> {
   try {
     const cookies = await getMyntraSession();
-    if (!cookies) return [];
+    if (!cookies) return null;
     const { data } = await axios.get(
       `https://www.myntra.com/gateway/v2/search/${encodeURIComponent(query)}?p=1&rows=20&o=0&plaEnabled=false&sort=price_asc`,
       {
@@ -324,50 +466,111 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
           'sec-fetch-site': 'same-origin',
           'sec-fetch-mode': 'cors',
         },
-        timeout: 15000,
+        timeout: 10000,
       }
     );
     const products: any[] = data?.products || [];
-    return products.map((p: any) => {
-      const price = p.price || 0;
-      const mrp = p.mrp || 0;
-      const discPct = mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : undefined;
-      const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://');
-      return {
-        id: `mn_${p.productId}`,
-        title: cleanText(`${p.brand || ''} ${p.productName || p.product || ''}`.trim()),
-        brand: p.brand || undefined,
-        price,
-        originalPrice: mrp > price ? mrp : undefined,
-        discount: discPct,
-        imageUrl,
-        platform: 'Myntra',
-        url: p.landingPageUrl ? `https://www.myntra.com/${p.landingPageUrl}` : `https://www.myntra.com/search?q=${encodeURIComponent(query)}`,
-        rating: p.rating || undefined,
-      };
-    }).filter(p => isValidProduct(p));
-  } catch(e: any) { console.error('[Myntra] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
+    if (!products.length) return null; // treat empty as failure, not success
+    return products.map(p => mapMyntraProduct({ ...p, query })).filter(p => isValidProduct(p));
+  } catch { return null; } // silent — this path is expected to fail on cloud IPs
 }
 
+// Step 2 — ScraperAPI escalation ladder (costs credits). Only runs if the
+// free direct call above failed. JSON endpoint, so JS rendering isn't needed.
+async function fetchMyntraViaScraperApi(query: string): Promise<SearchProduct[]> {
+  const targetUrl = `https://www.myntra.com/gateway/v2/search/${encodeURIComponent(query)}?p=1&rows=20&o=0&plaEnabled=false&sort=price_asc`;
+  const { html, tier, credits } = await fetchWithEscalation(targetUrl, 'myntra', 'premium', false);
+  console.log(`[Myntra] ScraperAPI tier=${tier} credits=${credits}`);
+  if (!html) return [];
+  try {
+    const data = JSON.parse(html);
+    const products: any[] = data?.products || [];
+    return products.map(p => mapMyntraProduct({ ...p, query })).filter(p => isValidProduct(p));
+  } catch { return []; }
+}
 
+async function fetchMyntra(query: string): Promise<SearchProduct[]> {
+  const direct = await fetchMyntraDirect(query);
+  if (direct && direct.length) return direct; // succeeded for free — skip ScraperAPI entirely
+  return fetchMyntraViaScraperApi(query);
+}
+
+// Meesho was evaluated and removed from the active pipeline: its search
+// results only render via a client-side XHR behind Akamai bot protection,
+// requiring the render=true tier on every call (10 credits, no cheaper
+// fallback), and it was unreliable in testing — sometimes only 5 products,
+// sometimes a 40s timeout with 0 results and wasted latency for the whole
+// search response. Not worth the credit cost until a more reliable path
+// (e.g. a dedicated Meesho scraper API) is adopted.
+
+
+// ─── Ajio ─────────────────────────────────────────────────────────────────────
+// Verified against a live ScraperAPI response: Ajio exposes its internal
+// search API directly at /api/search?query=... which returns full structured
+// JSON (price, wasPrice/MRP, images, brand, url) at the plain tier — no
+// premium or render needed. This is the cheapest platform to support besides
+// Amazon/Flipkart. (Note: /api/search?text=... — the pattern the frontend's
+// own JS references — returns only a stub; ?query=... is the one that works.)
+async function fetchAjio(query: string): Promise<SearchProduct[]> {
+  const targetUrl = `https://www.ajio.com/api/search?query=${encodeURIComponent(query)}`;
+  const { html, tier, credits } = await fetchWithEscalation(
+    targetUrl, 'ajio', 'premium', false, 'plain',
+    (data) => data.includes('"products"') && data.length > 5000
+  );
+  console.log(`[Ajio] ScraperAPI tier=${tier} credits=${credits}`);
+  if (!html) return [];
+
+  try {
+    const data = JSON.parse(html);
+    const products: any[] = data?.products || [];
+    if (!products.length) return [];
+
+    return products.slice(0, 20).map((p: any, i: number) => {
+      const price = parsePrice(p.price?.value ?? 0);
+      const mrp = parsePrice(p.wasPriceData?.value ?? 0);
+      const imageUrl = (p.images?.[0]?.url || p.fnlColorVariantData?.outfitPictureURL || '').replace(/^http:\/\//, 'https://');
+      const title = cleanText(`${p.fnlColorVariantData?.brandName || ''} ${p.name || ''}`.trim());
+      return {
+        id: `aj_${p.code || i}`,
+        title,
+        brand: p.fnlColorVariantData?.brandName || undefined,
+        price,
+        originalPrice: mrp > price ? mrp : undefined,
+        discount: mrp > price && mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : undefined,
+        imageUrl,
+        platform: 'Ajio',
+        url: p.url ? `https://www.ajio.com${p.url}` : `https://www.ajio.com/search/?text=${encodeURIComponent(query)}`,
+      };
+    }).filter(p => isValidProduct(p));
+  } catch (e: any) {
+    console.error('[Ajio] parse error:', e?.message?.slice(0, 100));
+    return [];
+  }
+}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+// Exported for diagnostic/testing purposes only (per-platform isolation).
+export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio };
 
 export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cacheKey = normalizeQuery(query);
   const searchTerm = query.toLowerCase().trim();
   console.log(`[search] keys=${SCRAPER_KEYS.length} key0=${SCRAPER_KEYS[0]?.slice(0,8)}... query=${searchTerm}`);
 
-  const mem = getMemCached(cacheKey);
+  // Expensive platforms (Ajio may hit paid ScraperAPI tiers) get a longer
+  // cache TTL so one costly scrape serves many searches, not just 6h worth.
+  const mem = getMemCached(cacheKey, EXPENSIVE_TTL_MS);
   if (mem) return mem;
 
-  const db = await getDbCached(cacheKey);
+  const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  const [az1, fk, mn] = await Promise.all([
+  const [az1, fk, mn, aj] = await Promise.all([
     fetchAmazonPage(searchTerm, 1).catch(() => []),
     fetchFlipkart(searchTerm).catch(() => []),
     fetchMyntra(searchTerm).catch(() => []),
+    fetchAjio(searchTerm).catch(() => []),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -379,7 +582,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk, ...mn]
+  const allResults = [...dedupedAmazon, ...fk, ...mn, ...aj]
     .filter(p => isValidProduct(p))
     .sort((a, b) => a.price - b.price);
 
