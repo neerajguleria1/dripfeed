@@ -103,6 +103,25 @@ const STOP_WORDS = new Set([
   'latest', 'exclusive', 'special', 'offer', 'sale', 'free', 'shipping',
 ]);
 
+// ─── Relevance filter ─────────────────────────────────────────────────────────
+// Platform search APIs sometimes return loosely-matched or unrelated products
+// (e.g. searching "nail paint" occasionally surfaces a mobile case). We only
+// check basic quality in isValidProduct() — this adds a real relevance check:
+// require at least half of the query's significant words to appear in the
+// product's title or brand before it's allowed into results.
+function isRelevantToQuery(product: { title: string; brand?: string }, query: string): boolean {
+  const queryTerms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(t => t.length > 2 && !STOP_WORDS.has(t));
+  if (queryTerms.length === 0) return true; // nothing meaningful to check against
+
+  const haystack = `${product.title} ${product.brand || ''}`.toLowerCase();
+  const matchCount = queryTerms.filter(t => haystack.includes(t)).length;
+  const requiredMatches = Math.max(1, Math.ceil(queryTerms.length / 2));
+  return matchCount >= requiredMatches;
+}
+
 export function slugToSearchQuery(slug: string): string {
   return slug
     .toLowerCase()
@@ -584,6 +603,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
 
   const allResults = [...dedupedAmazon, ...fk, ...mn, ...aj]
     .filter(p => isValidProduct(p))
+    .filter(p => isRelevantToQuery(p, searchTerm))
     .sort((a, b) => a.price - b.price);
 
   const withAffiliate = allResults.map(p => ({
