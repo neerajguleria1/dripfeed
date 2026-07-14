@@ -272,7 +272,7 @@ function ResultsSkeleton() {
         <p className="text-[13px] text-neutral-400 animate-pulse">
           Searching Amazon, Flipkart, Myntra, Ajio &amp; more…
         </p>
-        <p className="text-[11px] text-neutral-300 mt-1">This takes up to 60 seconds on first search</p>
+        <p className="text-[11px] text-neutral-300 mt-1">Results appear as each platform responds</p>
       </div>
       {/* Featured skeleton */}
       <div className="flex flex-col md:flex-row gap-8 bg-white rounded-2xl border border-neutral-100 overflow-hidden mb-8 animate-pulse">
@@ -394,28 +394,87 @@ export default function SearchPage() {
     );
   }, []);
 
-  const fetchResults = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) { setProducts([]); return; }
+  // Progressive/streaming search: renders each platform's results the moment
+  // they arrive instead of waiting for the slowest platform (Myntra/Ajio can
+  // take 40-90s on ScraperAPI escalation, while Amazon/Flipkart often resolve
+  // in a few seconds). Falls back to the original blocking endpoint if the
+  // browser doesn't support EventSource or the stream errors immediately.
+  const fetchResultsStreaming = useCallback((searchQuery: string): boolean => {
+    if (typeof window === 'undefined' || typeof window.EventSource === 'undefined') return false;
+
+    const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+    const url = `${base}/search/product/stream?q=${encodeURIComponent(searchQuery)}`;
+
+    let settled = false;
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'platform' && Array.isArray(payload.products) && payload.products.length) {
+          settled = true;
+          setLoading(false);
+          setProducts((prev) => {
+            const existingIds = new Set(prev.map((p) => p.id));
+            const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
+            return [...prev, ...newOnes].sort((a, b) => a.price - b.price);
+          });
+        } else if (payload.type === 'done') {
+          setLoading(false);
+          setHasMore(false);
+          es.close();
+        } else if (payload.type === 'error') {
+          setLoading(false);
+          es.close();
+        }
+      } catch {
+        // ignore malformed SSE frames
+      }
+    };
+
+    es.onerror = () => {
+      // If we never received any platform data before the stream errored,
+      // let the caller fall back to the blocking endpoint. If we already got
+      // partial results, just end gracefully — the user still sees them.
+      es.close();
+      if (!settled) fetchResultsBlocking(searchQuery);
+      else setLoading(false);
+    };
+
+    return true;
+  }, []);
+
+  const fetchResultsBlocking = useCallback(async (searchQuery: string) => {
     setLoading(true);
-    setProducts([]);
-    setRelatedSections(null);
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
       const fetched: ProductData[] = data.products || [];
       setProducts(fetched);
       setHasMore(false);
-      // Fetch Indian platforms in background via Mumbai proxy
-      fetchIndianPlatforms(searchQuery);
-      // Fetch related products in background
-      api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
-        .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
-        .catch(() => {});
     } catch {
       setProducts([]);
     } finally {
       setLoading(false);
     }
-  }, [fetchIndianPlatforms]);
+  }, []);
+
+  const fetchResults = useCallback((searchQuery: string) => {
+    if (!searchQuery.trim()) { setProducts([]); return; }
+    setLoading(true);
+    setProducts([]);
+    setRelatedSections(null);
+
+    const streamed = fetchResultsStreaming(searchQuery);
+    if (!streamed) fetchResultsBlocking(searchQuery);
+
+    // Fetch Indian platforms in background via Mumbai proxy (unrelated to the
+    // streamed platforms above — kept as additional coverage)
+    fetchIndianPlatforms(searchQuery);
+    // Fetch related products in background
+    api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
+      .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
+      .catch(() => {});
+  }, [fetchIndianPlatforms, fetchResultsStreaming, fetchResultsBlocking]);
 
   // Fetch real trending products for landing page
   useEffect(() => {

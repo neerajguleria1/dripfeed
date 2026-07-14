@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { searchProducts, getRelatedProducts } from '../search.js';
+import { searchProducts, searchProductsStreaming, getRelatedProducts } from '../search.js';
 import { connectDB } from '../db.js';
 import Product from '../models/Product.js';
 
@@ -133,6 +133,63 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// --- Streaming Product Search (Server-Sent Events) ---
+// Sends partial results the moment each platform (Amazon/Flipkart/Myntra/Ajio)
+// resolves, instead of making the client wait for the slowest platform.
+// Event types sent to the client:
+//   { type: 'platform', platform: 'amazon', products: [...] }  — sent per platform as it completes
+//   { type: 'done', query }                                     — sent once all platforms have resolved
+//   { type: 'error', message }                                  — sent on unexpected failure
+
+async function productSearchStream(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  const rawQuery = (req.query.q as string) || '';
+  if (!rawQuery || !rawQuery.trim()) return res.status(400).json({ error: 'Query parameter q is required' });
+
+  let searchTerm = rawQuery.trim();
+  if (searchTerm.startsWith('http://') || searchTerm.startsWith('https://')) {
+    const extracted = extractProductNameFromUrl(searchTerm);
+    if (extracted && extracted.length >= 3) {
+      searchTerm = extracted;
+    } else {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Could not extract product name from this URL.' }));
+    }
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // disable proxy buffering so events flush immediately
+  });
+
+  const send = (payload: Record<string, unknown>) => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    // @ts-ignore — flush exists on Node's http response when compression isn't applied
+    if (typeof res.flush === 'function') res.flush();
+  };
+
+  // Keep the connection alive across long-running platform escalations
+  // (Myntra/Ajio can take up to ~90s) — some proxies/load balancers close
+  // idle SSE connections after ~30s of silence otherwise.
+  const heartbeat = setInterval(() => res.write(':\n\n'), 15000);
+
+  try {
+    await searchProductsStreaming(searchTerm, (platform, products) => {
+      const cleaned = products.map((p) => ({ ...p, title: cleanProductTitle(p.title) }));
+      send({ type: 'platform', platform, products: cleaned });
+    });
+    send({ type: 'done', query: searchTerm });
+  } catch (e: any) {
+    send({ type: 'error', message: e?.message || 'Search failed' });
+  } finally {
+    clearInterval(heartbeat);
+    res.end();
+  }
+}
+
 // --- Suggestions ---
 
 async function suggestions(req: VercelRequest, res: VercelResponse) {
@@ -187,6 +244,7 @@ async function relatedProducts(req: VercelRequest, res: VercelResponse) {
 export async function handleSearch(req: VercelRequest, res: VercelResponse, subpath: string) {
   switch (subpath) {
     case 'product': return productSearch(req, res);
+    case 'product/stream': return productSearchStream(req, res);
     case 'suggestions': return suggestions(req, res);
     case 'related': return relatedProducts(req, res);
     default: return res.status(404).json({ error: 'Not found' });

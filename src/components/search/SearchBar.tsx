@@ -22,6 +22,11 @@ export function SearchBar({
   const [query, setQuery] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+
+  // Sync input value when the URL query changes (e.g. user searches from another page)
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,11 +74,12 @@ export function SearchBar({
   };
 
   const handleBlur = () => {
-    // Delay to allow pill clicks to register
+    // 300ms delay — gives mobile tap events (touchstart → touchend → click)
+    // enough time to fire before the dropdown/button disappears
     setTimeout(() => {
       setFocused(false);
       setShowDropdown(false);
-    }, 200);
+    }, 300);
   };
 
   useEffect(() => {
@@ -109,21 +115,37 @@ export function SearchBar({
             isHero ? 'w-5 h-5' : 'w-4 h-4',
           ].join(' ')}
         />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={handleInputChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          placeholder="Search fashion across 7+ platforms..."
-          aria-label="Search products"
-          className={[
-            'flex-1 bg-transparent outline-none placeholder:text-gray-400 text-[var(--df-accent-navy)]',
-            isHero ? 'text-lg ml-3' : 'text-sm ml-2',
-          ].join(' ')}
-        />
+        <form
+          className="flex flex-1 items-center"
+          onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }}
+        >
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={handleInputChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            placeholder="Search fashion across 7+ platforms..."
+            aria-label="Search products"
+            className={[
+              'flex-1 bg-transparent outline-none placeholder:text-gray-400 text-[var(--df-accent-navy)]',
+              isHero ? 'text-lg ml-3' : 'text-sm ml-2',
+            ].join(' ')}
+          />
+          <button
+            type="submit"
+            aria-label="Search"
+            onTouchStart={(e) => e.stopPropagation()}
+            className={[
+              'shrink-0 flex items-center justify-center rounded-xl bg-[#C9A96E] text-white font-semibold transition-colors hover:bg-[#b8935a] active:bg-[#a07d4a]',
+              isHero ? 'ml-2 px-4 py-2 text-[13px]' : 'ml-1.5 px-3 py-1.5 text-[12px]',
+            ].join(' ')}
+          >
+            {isHero ? 'Search' : '→'}
+          </button>
+        </form>
       </div>
 
       {/* Trending Dropdown */}

@@ -17,6 +17,44 @@ export interface SearchProduct {
   affiliateUrl?: string;
 }
 
+// ─── ScraperAPI concurrency limiter ──────────────────────────────────────────
+// Our ScraperAPI plan caps concurrent requests at 5 (concurrencyLimit=5). When
+// Amazon/Flipkart/Myntra/Ajio all fire in parallel (searchProducts uses
+// Promise.all), it's easy to momentarily exceed that limit — observed as
+// random 403s or connection timeouts on whichever request loses the race,
+// even though every platform works fine when called alone. This is a simple
+// FIFO semaphore so at most MAX_CONCURRENT_SCRAPER_REQUESTS calls to
+// api.scraperapi.com are ever in flight at once; everything else queues and
+// runs as soon as a slot frees up, instead of racing and failing.
+const MAX_CONCURRENT_SCRAPER_REQUESTS = 4; // stay one below the account's hard limit of 5
+let activeScraperRequests = 0;
+const scraperRequestQueue: Array<() => void> = [];
+
+async function acquireScraperSlot(): Promise<void> {
+  if (activeScraperRequests < MAX_CONCURRENT_SCRAPER_REQUESTS) {
+    activeScraperRequests++;
+    return;
+  }
+  await new Promise<void>((resolve) => scraperRequestQueue.push(resolve));
+  activeScraperRequests++;
+}
+
+function releaseScraperSlot(): void {
+  activeScraperRequests--;
+  const next = scraperRequestQueue.shift();
+  if (next) next();
+}
+
+/** Runs `fn` with an acquired ScraperAPI concurrency slot, always releasing it afterward. */
+async function withScraperSlot<T>(fn: () => Promise<T>): Promise<T> {
+  await acquireScraperSlot();
+  try {
+    return await fn();
+  } finally {
+    releaseScraperSlot();
+  }
+}
+
 // ─── Cache ────────────────────────────────────────────────────────────────────
 // Platforms that only work via costly ScraperAPI tiers (premium/ultra_premium)
 // get a much longer cache TTL so one expensive scrape serves many users instead
@@ -260,7 +298,7 @@ async function fetchWithEscalation(
 
   for (const tier of tiers) {
     try {
-      const { data } = await axios.get('https://api.scraperapi.com/', {
+      const { data } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
         params: {
           api_key: getNextRoundRobinKey(),
           url: targetUrl,
@@ -269,7 +307,7 @@ async function fetchWithEscalation(
         },
         timeout: tier.params.render ? 40000 : 15000,
         transformResponse: [(res) => res], // keep raw string even for JSON content-type responses
-      });
+      }));
       const text = typeof data === 'string' ? data : String(data);
       if (validate(text)) {
         recordSuccess(platform);
@@ -326,9 +364,9 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
   const key = getNextRoundRobinKey();
   const params = { api_key: key, query, country_code: 'in', tld: 'in', page };
   try {
-    const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
+    const { data } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/structured/amazon/search', {
       params, timeout: 20000,
-    });
+    }));
     const products: any[] = data?.results || data?.organic_results || [];
     console.log(`[Amazon] ${products.length} raw results`);
     return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter(p => isValidProduct(p));
@@ -338,9 +376,9 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       const fallbackKey = getNextKey(key);
       if (fallbackKey === key) return [];
       try {
-        const { data } = await axios.get('https://api.scraperapi.com/structured/amazon/search', {
+        const { data } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/structured/amazon/search', {
           params: { ...params, api_key: fallbackKey }, timeout: 20000,
-        });
+        }));
         const products: any[] = data?.results || data?.organic_results || [];
         return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter((p: any) => isValidProduct(p));
       } catch { return []; }
@@ -361,7 +399,7 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
 async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
   try {
-    const { data: html } = await axios.get('https://api.scraperapi.com/', {
+    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
       params: {
         api_key: getNextRoundRobinKey(),
         url: `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
@@ -369,7 +407,7 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         country_code: 'in',
       },
       timeout: 15000,
-    });
+    }));
     if (typeof html !== 'string') return [];
 
     const jsonMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
@@ -617,6 +655,70 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   setDbCache(cacheKey, withAffiliate);
 
   return withAffiliate;
+}
+
+/**
+ * Streaming variant of searchProducts(). Fires all platform fetchers in
+ * parallel exactly like searchProducts(), but invokes `onPlatform` as soon as
+ * EACH platform's results are ready — instead of waiting for the slowest one
+ * (Myntra/Ajio can take 40-90s on ScraperAPI escalation, while Amazon/Flipkart
+ * often resolve in a few seconds). This lets callers (e.g. an SSE endpoint)
+ * show partial results immediately rather than blocking on the whole batch.
+ *
+ * Caching, dedup, validity/relevance filtering, and affiliate URL generation
+ * are identical to searchProducts() — only the delivery timing differs.
+ */
+export async function searchProductsStreaming(
+  query: string,
+  onPlatform: (platform: string, products: SearchProduct[]) => void,
+): Promise<SearchProduct[]> {
+  const cacheKey = normalizeQuery(query);
+  const searchTerm = query.toLowerCase().trim();
+
+  const mem = getMemCached(cacheKey, EXPENSIVE_TTL_MS);
+  if (mem) { if (mem.length) onPlatform('cache', mem); return mem; }
+
+  const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
+  if (db) { setMemCache(cacheKey, db); if (db.length) onPlatform('cache', db); return db; }
+
+  const seenAsins = new Set<string>();
+  const collected: SearchProduct[] = [];
+
+  function processed(platform: string, raw: SearchProduct[]) {
+    let items = raw;
+    if (platform === 'amazon') {
+      items = raw.filter(p => {
+        const asin = p.url.split('/dp/')[1]?.split('?')[0];
+        if (!asin || seenAsins.has(asin)) return false;
+        seenAsins.add(asin);
+        return true;
+      });
+    }
+    const valid = items
+      .filter(p => isValidProduct(p))
+      .filter(p => isRelevantToQuery(p, searchTerm));
+    const withAffiliate = valid.map(p => ({ ...p, affiliateUrl: buildAffiliateUrl(p.platform, p.url) }));
+    collected.push(...withAffiliate);
+    if (withAffiliate.length) {
+      onPlatform(platform, [...withAffiliate].sort((a, b) => a.price - b.price));
+    }
+  }
+
+  await Promise.all([
+    fetchAmazonPage(searchTerm, 1).catch(() => []).then(r => processed('amazon', r)),
+    fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
+    fetchMyntra(searchTerm).catch(() => []).then(r => processed('myntra', r)),
+    fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
+  ]);
+
+  const sorted = collected.sort((a, b) => a.price - b.price);
+
+  if (sorted.length) {
+    setMemCache(cacheKey, sorted);
+    setDbCache(cacheKey, sorted);
+  }
+
+  return sorted;
 }
 
 // ─── Related queries map ──────────────────────────────────────────────────────
