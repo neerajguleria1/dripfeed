@@ -155,7 +155,7 @@ function isRelevantToQuery(product: { title: string; brand?: string }, query: st
   if (queryTerms.length === 0) return true; // nothing meaningful to check against
 
   const haystack = `${product.title} ${product.brand || ''}`.toLowerCase();
-  const matchCount = queryTerms.filter(t => haystack.includes(t)).length;
+  const matchCount = queryTerms.filter(t => new RegExp(`\\b${t}`, 'i').test(haystack)).length;
   const requiredMatches = Math.max(1, Math.ceil(queryTerms.length / 2));
   return matchCount >= requiredMatches;
 }
