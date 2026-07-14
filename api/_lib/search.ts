@@ -463,6 +463,14 @@ let myntraSessionCookies = '';
 let myntraCookieTs = 0;
 const MYNTRA_COOKIE_TTL = 25 * 60 * 1000; // 25 min
 
+// Pre-warm: fetch cookies immediately on module load so the first search
+// doesn't pay the ~5s homepage round-trip cost. Refresh every 20 min.
+function scheduleMyntraWarmup() {
+  getMyntraSession().catch(() => {});
+  setInterval(() => getMyntraSession().catch(() => {}), 20 * 60 * 1000);
+}
+scheduleMyntraWarmup();
+
 async function getMyntraSession(): Promise<string> {
   if (myntraSessionCookies && Date.now() - myntraCookieTs < MYNTRA_COOKIE_TTL) {
     return myntraSessionCookies;
