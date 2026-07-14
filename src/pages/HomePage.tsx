@@ -1,28 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, ArrowRight, Zap, ChevronRight } from 'lucide-react';
+import { Search, ArrowRight, Zap, ChevronRight, TrendingDown } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import SiteNav from '../components/SiteNav';
-import type { ProductData, DealData } from '../types/product';
-import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
+import api from '../services/api';
+import type { DealData } from '../types/product';
+import {
+  mapDealApiToDealData,
+  mapTrendingApiToDealData,
+  type DealApiItem,
+  type TrendingApiItem,
+} from '../utils/homeDealsMapping';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
-
-const MOCK_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.map((sp, i) => {
-  const cheapest = sp.platforms.reduce((a, b) => (a.price < b.price ? a : b));
-  return {
-    id: String(i + 1),
-    title: sp.title,
-    brand: sp.brand,
-    price: cheapest.price,
-    originalPrice: cheapest.originalPrice,
-    discount: Math.round(((cheapest.originalPrice - cheapest.price) / cheapest.originalPrice) * 100),
-    platform: cheapest.platform,
-    url: cheapest.url,
-    imageUrl: sp.imageUrl,
-  };
-});
 
 const PLATFORMS = [
   { name: 'Myntra', color: '#FF3F6C' },
@@ -57,11 +48,25 @@ function Reveal({ children, className = '' }: { children: React.ReactNode; class
   );
 }
 
+function HomeDealCardSkeleton() {
+  return (
+    <div className="rounded-2xl overflow-hidden border border-neutral-100 animate-pulse">
+      <div className="aspect-[3/4] bg-neutral-100" />
+      <div className="p-3.5 sm:p-4 space-y-2">
+        <div className="h-2.5 bg-neutral-100 rounded-full w-1/3" />
+        <div className="h-3.5 bg-neutral-100 rounded-full w-3/4" />
+        <div className="h-3.5 bg-neutral-100 rounded-full w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [deals, setDeals] = useState<DealData[]>([]);
+  const [dealsSectionState, setDealsSectionState] = useState<'loading' | 'deals' | 'trending' | 'empty'>('loading');
   const [searchQuery, setSearchQuery] = useState('');
   const [comparisonCount, setComparisonCount] = useState(12847);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -74,11 +79,47 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const mockDeals = MOCK_PRODUCTS
-      .filter((p) => (p.discount ?? 0) > 0)
-      .sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0))
-      .slice(0, 8);
-    setDeals(mockDeals as DealData[]);
+    let cancelled = false;
+
+    async function loadDeals() {
+      try {
+        const { data } = await api.get('/products/deals');
+        const apiDeals: DealApiItem[] = data?.deals || [];
+        if (apiDeals.length > 0) {
+          if (!cancelled) {
+            setDeals(apiDeals.slice(0, 8).map(mapDealApiToDealData));
+            setDealsSectionState('deals');
+          }
+          return;
+        }
+      } catch {
+        // fall through to trending
+      }
+
+      try {
+        const { data } = await api.get('/products/trending');
+        const trendingProducts: TrendingApiItem[] = data?.products || [];
+        if (!cancelled) {
+          if (trendingProducts.length > 0) {
+            setDeals(trendingProducts.slice(0, 8).map(mapTrendingApiToDealData));
+            setDealsSectionState('trending');
+          } else {
+            setDeals([]);
+            setDealsSectionState('empty');
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setDeals([]);
+          setDealsSectionState('empty');
+        }
+      }
+    }
+
+    loadDeals();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -299,51 +340,62 @@ export default function HomePage() {
             </Link>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-            {deals.slice(0, 8).map((deal, i) => (
-              <motion.div
-                key={deal.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03, duration: 0.4 }}
-              >
-                <Link
-                  to={`/compare?q=${encodeURIComponent(deal.title)}`}
-                  className="group block bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-[0_8px_30px_-8px_rgba(0,0,0,0.12)] hover:border-neutral-200 transition-all duration-300"
+          {dealsSectionState === 'empty' ? (
+            <motion.div variants={fadeUp} className="max-w-md mx-auto text-center py-20">
+              <TrendingDown className="w-7 h-7 text-neutral-300 mx-auto mb-5" />
+              <p className="text-[15px] text-neutral-500 leading-relaxed">
+                No new deals right now — check back soon
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+              {dealsSectionState === 'loading'
+                ? Array.from({ length: 8 }).map((_, i) => <HomeDealCardSkeleton key={i} />)
+                : deals.slice(0, 8).map((deal, i) => (
+                <motion.div
+                  key={deal.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03, duration: 0.4 }}
                 >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50">
-                    <img
-                      src={deal.imageUrl}
-                      alt={deal.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                      loading="lazy"
-                    />
-                    {deal.discount > 0 && (
-                      <span className="absolute top-3 left-3 bg-[#171310] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                        −{deal.discount}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-3.5 sm:p-4">
-                    <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wide mb-1">{deal.platform}</p>
-                    <h3 className="text-[13px] sm:text-[14px] font-medium text-[#171310] line-clamp-2 leading-snug mb-2.5">
-                      {deal.title}
-                    </h3>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[16px] font-bold text-[#171310] tabular-nums">
-                        ₹{deal.price.toLocaleString('en-IN')}
-                      </span>
-                      {deal.originalPrice && deal.originalPrice > deal.price && (
-                        <span className="text-[12px] text-neutral-400 line-through tabular-nums">
-                          ₹{deal.originalPrice.toLocaleString('en-IN')}
+                  <Link
+                    to={`/compare?q=${encodeURIComponent(deal.title)}`}
+                    className="group block bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-[0_8px_30px_-8px_rgba(0,0,0,0.12)] hover:border-neutral-200 transition-all duration-300"
+                  >
+                    <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50">
+                      <img
+                        src={deal.imageUrl}
+                        alt={deal.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                        loading="lazy"
+                      />
+                      {deal.discount > 0 && (
+                        <span className="absolute top-3 left-3 bg-[#171310] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                          −{deal.discount}%
                         </span>
                       )}
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
+                    <div className="p-3.5 sm:p-4">
+                      <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wide mb-1">{deal.platform}</p>
+                      <h3 className="text-[13px] sm:text-[14px] font-medium text-[#171310] line-clamp-2 leading-snug mb-2.5">
+                        {deal.title}
+                      </h3>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[16px] font-bold text-[#171310] tabular-nums">
+                          ₹{deal.price.toLocaleString('en-IN')}
+                        </span>
+                        {deal.originalPrice && deal.originalPrice > deal.price && (
+                          <span className="text-[12px] text-neutral-400 line-through tabular-nums">
+                            ₹{deal.originalPrice.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
 
           {/* Mobile CTA */}
           <div className="mt-8 text-center sm:hidden">

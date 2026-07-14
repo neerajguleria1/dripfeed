@@ -7,7 +7,6 @@ import { PlatformBadge } from '../components/ui/PlatformBadge';
 import { formatINR } from '../utils/format';
 import { staggerChildren } from '../design-system/animations';
 import api from '../services/api';
-import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -211,46 +210,15 @@ export default function DealsPage() {
   const [platformFilter, setPlatformFilter] = useState('All');
   const [minDiscount, setMinDiscount] = useState(0);
 
-  // Distinguish between "never loaded" vs "loaded but empty after filters"
-  const [hasEverLoaded, setHasEverLoaded] = useState(false);
-
   useEffect(() => {
     api.get('/products/deals')
       .then(({ data }) => setDeals(data.deals || []))
       .catch(() => setDeals([]))
-      .finally(() => { setLoading(false); setHasEverLoaded(true); });
+      .finally(() => setLoading(false));
   }, []);
 
-  // When API returns empty and no filters applied, show seed data as fallback
-  const hasActiveFilters = platformFilter !== 'All' || minDiscount > 0;
-
   const filteredDeals = useMemo(() => {
-    // If API returned empty and no filters applied, use seed data as fallback
-    let source = deals;
-    if (source.length === 0 && !hasActiveFilters && hasEverLoaded) {
-      source = ALL_SEED_PRODUCTS
-        .flatMap((sp) =>
-          sp.platforms
-            .filter((p) => p.originalPrice > p.price)
-            .map((p) => ({
-              _id: `seed_${sp.title}_${p.platform}`,
-              title: sp.title,
-              brand: sp.brand,
-              category: sp.category,
-              imageUrl: sp.imageUrl,
-              platform: p.platform.charAt(0).toUpperCase() + p.platform.slice(1),
-              currentPrice: p.price,
-              originalPrice: p.originalPrice,
-              dropPercent: Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100),
-              url: p.url,
-              detectedAt: new Date().toISOString(),
-            }))
-        )
-        .sort((a, b) => b.dropPercent - a.dropPercent)
-        .slice(0, 18);
-    }
-
-    let result = [...source];
+    let result = [...deals];
     if (platformFilter !== 'All') {
       result = result.filter((d) => d.platform.toLowerCase() === platformFilter.toLowerCase());
     }
@@ -265,7 +233,7 @@ export default function DealsPage() {
       return b.dropPercent - a.dropPercent;
     });
     return result;
-  }, [deals, platformFilter, minDiscount, hasActiveFilters, hasEverLoaded]);
+  }, [deals, platformFilter, minDiscount]);
 
   const platformCounts = useMemo(() => {
     const counts: Record<string, number> = {};
