@@ -39,19 +39,5 @@ if (cuelinksPubId) {
   document.head.appendChild(s)
 }
 
-// Google Analytics: tracks page views, user engagement, and conversions
-// Set VITE_GA_ID in Vercel env vars (e.g., G-XXXXXXXXXX)
-const gaId = import.meta.env.VITE_GA_ID
-if (gaId) {
-  const gs = document.createElement('script')
-  gs.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`
-  gs.async = true
-  document.head.appendChild(gs)
-  gs.onload = () => {
-    ;(window as any).dataLayer = (window as any).dataLayer || []
-    function gtag(...args: any[]) { (window as any).dataLayer.push(args) }
-    gtag('js', new Date())
-    gtag('config', gaId, { send_page_view: true })
-    ;(window as any).gtag = gtag
-  }
-}
+// GA4 is loaded via index.html script tag (G-1HJVDPGNLB)
+// gtag() is available globally for custom events

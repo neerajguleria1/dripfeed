@@ -103,7 +103,15 @@ function formatPrice(price: number): string {
 // Featured Product Card — Premium gold-accented lede card
 // ─────────────────────────────────────────────────────────────────────────────
 
+function gtagEvent(name: string, params: Record<string, unknown>) {
+  if (typeof (window as any).gtag === 'function') (window as any).gtag('event', name, params);
+}
+
 async function trackAndOpen(product: ProductData) {
+  gtagEvent('select_item', {
+    item_list_name: 'search_results',
+    items: [{ item_name: product.title, item_brand: product.brand, item_category: product.platform, price: product.price }],
+  });
   try {
     const res = await fetch('/api/affiliate/redirect', {
       method: 'POST',
@@ -530,7 +538,7 @@ export default function SearchPage() {
   function handleSearch(newQuery: string) {
     const trimmed = newQuery.trim();
     if (!trimmed) return;
-    // If it's a URL, route to compare page instead
+    gtagEvent('search', { search_term: trimmed });
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
     } else {
