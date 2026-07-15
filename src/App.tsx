@@ -29,6 +29,7 @@ import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import DealsPage from './pages/DealsPage';
 import { PrivacyPage, TermsPage, AffiliateDisclosurePage, NotFoundPage } from './pages/LegalPages';
+import ClickStatsPage from './pages/ClickStatsPage';
 
 // Auth pages — no header, no persistent bg
 function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -81,6 +82,7 @@ function App() {
         <Route path="/thrift" element={<AppLayout><ThriftBrowsePage /></AppLayout>} />
         <Route path="/thrift/list" element={<AppLayout><ProtectedRoute><ThriftListPage /></ProtectedRoute></AppLayout>} />
         <Route path="/admin" element={<AppLayout><AdminRoute><AdminPage /></AdminRoute></AppLayout>} />
+        <Route path="/stats" element={<AppLayout><ClickStatsPage /></AppLayout>} />
 
         {/* Legal */}
         <Route path="/privacy" element={<AppLayout><PrivacyPage /></AppLayout>} />

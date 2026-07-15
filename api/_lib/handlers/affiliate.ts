@@ -86,9 +86,28 @@ async function redirect(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+async function stats(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  try {
+    await connectDB();
+    const [byPlatform, total, recent] = await Promise.all([
+      AffiliateClick.aggregate([
+        { $group: { _id: '$platform', clicks: { $sum: 1 } } },
+        { $sort: { clicks: -1 } },
+      ]),
+      AffiliateClick.countDocuments(),
+      AffiliateClick.find().sort({ createdAt: -1 }).limit(20).select('platform productTitle device createdAt').lean(),
+    ]);
+    return res.json({ total, byPlatform, recent });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 export async function handleAffiliate(req: VercelRequest, res: VercelResponse, subpath: string) {
   switch (subpath) {
     case 'redirect': return redirect(req, res);
+    case 'stats': return stats(req, res);
     default: return res.status(404).json({ error: 'Not found' });
   }
 }

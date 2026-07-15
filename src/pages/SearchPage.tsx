@@ -103,6 +103,30 @@ function formatPrice(price: number): string {
 // Featured Product Card — Premium gold-accented lede card
 // ─────────────────────────────────────────────────────────────────────────────
 
+async function trackAndOpen(product: ProductData) {
+  try {
+    const res = await fetch('/api/affiliate/redirect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: product.platform,
+        productUrl: product.url,
+        productName: product.title,
+        device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'web',
+        sessionId: sessionStorage.getItem('df_sid') || (() => {
+          const id = Math.random().toString(36).slice(2);
+          sessionStorage.setItem('df_sid', id);
+          return id;
+        })(),
+      }),
+    });
+    const { affiliateUrl } = await res.json();
+    window.open(affiliateUrl || product.url, '_blank', 'noopener,noreferrer');
+  } catch {
+    window.open(product.url, '_blank', 'noopener,noreferrer');
+  }
+}
+
 function FeaturedCard({ product }: { product: ProductData }) {
   const savings = product.originalPrice && product.originalPrice > product.price
     ? product.originalPrice - product.price
@@ -113,6 +137,7 @@ function FeaturedCard({ product }: { product: ProductData }) {
       href={product.url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
@@ -197,6 +222,7 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
       href={product.url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
