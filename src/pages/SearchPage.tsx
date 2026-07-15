@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
+import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle } from 'lucide-react';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
@@ -11,9 +11,18 @@ import { staggerChildren, staggerItem } from '../design-system/animations';
 import type { ProductData } from '../types/product';
 import type { FilterState } from '../components/search/SearchFilters';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
+interface ThriftResult {
+  _id: string;
+  title: string;
+  brand?: string;
+  price: number;
+  images: string[];
+  condition: string;
+  size: string;
+  city: string;
+  whatsappNumber: string;
+}
+
 
 const DEFAULT_FILTERS: FilterState = {
   platforms: [],
@@ -351,6 +360,8 @@ export default function SearchPage() {
   const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
   const [relatedSections, setRelatedSections] = useState<{ label: string; sections: { query: string; products: ProductData[] }[] } | null>(null);
 
+  const [thriftResults, setThriftResults] = useState<ThriftResult[]>([]);
+
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
   const fetchIndianPlatforms = useCallback(async (searchQuery: string) => {
@@ -492,6 +503,13 @@ export default function SearchPage() {
     }
   }, []);
 
+  const fetchThrift = useCallback(async (searchQuery: string) => {
+    try {
+      const { data } = await api.get('/thrift', { params: { q: searchQuery, limit: '4' } });
+      setThriftResults(data.listings || []);
+    } catch { setThriftResults([]); }
+  }, []);
+
   const fetchResults = useCallback((searchQuery: string) => {
     if (!searchQuery.trim()) { setProducts([]); return; }
     setLoading(true);
@@ -501,14 +519,12 @@ export default function SearchPage() {
     const streamed = fetchResultsStreaming(searchQuery);
     if (!streamed) fetchResultsBlocking(searchQuery);
 
-    // Fetch Indian platforms in background via Mumbai proxy (unrelated to the
-    // streamed platforms above — kept as additional coverage)
     fetchIndianPlatforms(searchQuery);
-    // Fetch related products in background
+    fetchThrift(searchQuery);
     api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
       .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
       .catch(() => {});
-  }, [fetchIndianPlatforms, fetchResultsStreaming, fetchResultsBlocking]);
+  }, [fetchIndianPlatforms, fetchResultsStreaming, fetchResultsBlocking, fetchThrift]);
 
   // Fetch real trending products for landing page
   useEffect(() => {
@@ -751,6 +767,48 @@ export default function SearchPage() {
                 ))}
               </div>
             </InfiniteScroll>
+          </div>
+        </section>
+      )}
+
+      {/* ── Thrift Section ───────────────────────────────────────────────── */}
+      {showResults && thriftResults.length > 0 && (
+        <section className="bg-white border-t border-neutral-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2.5">
+                <Recycle className="w-4 h-4 text-emerald-600" />
+                <h2 className="text-[12px] font-semibold text-emerald-600 uppercase tracking-[0.08em]">
+                  Found cheaper secondhand
+                </h2>
+              </div>
+              <button onClick={() => navigate('/thrift')} className="text-[12px] text-[#C9A96E] font-medium hover:underline flex items-center gap-1">
+                See all <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {thriftResults.map((t) => {
+                const wa = `https://wa.me/${t.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${t.title}" listed on DripFeed.`)}`;
+                return (
+                  <a key={t._id} href={wa} target="_blank" rel="noopener noreferrer"
+                    className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:border-emerald-200 hover:shadow-[0_4px_20px_-4px_rgba(16,185,129,0.1)] transition-all duration-300">
+                    <div className="overflow-hidden bg-neutral-50">
+                      {t.images[0]
+                        ? <img src={t.images[0]} alt={t.title} className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
+                        : <div className="w-full aspect-[3/4] flex items-center justify-center text-3xl">👗</div>}
+                    </div>
+                    <div className="p-3 flex flex-col gap-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 w-fit capitalize">{t.condition.replace('-', ' ')}</span>
+                      {t.brand && <p className="text-[11px] text-neutral-400 uppercase tracking-wide">{t.brand}</p>}
+                      <p className="text-[13px] font-medium text-[#0F0F1A] line-clamp-2">{t.title}</p>
+                      <p className="text-[11px] text-neutral-400">{t.city} · Size {t.size}</p>
+                      <p className="text-[15px] font-bold text-[#0F0F1A] font-serif tabular-nums mt-1">₹{t.price.toLocaleString('en-IN')}</p>
+                      <span className="text-[11px] text-emerald-600 font-medium mt-0.5">WhatsApp Seller →</span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}

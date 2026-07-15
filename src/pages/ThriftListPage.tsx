@@ -58,7 +58,7 @@ export default function ThriftListPage() {
   async function handleSubmit() {
     setSubmitting(true);
     try {
-      await api.post('/thrift', {
+      await api.post('/thrift', { sellerId: 'guest',
         title,
         brand,
         category,
@@ -78,10 +78,13 @@ export default function ThriftListPage() {
     }
   }
 
+  const [imageInput, setImageInput] = useState('');
+
   function handleImageUrl() {
-    const url = prompt('Paste image URL (Cloudinary or similar):');
+    const url = imageInput.trim();
     if (url && images.length < 5) {
       setImages([...images, url]);
+      setImageInput('');
     }
   }
 
@@ -135,13 +138,23 @@ export default function ThriftListPage() {
                     </div>
                   ))}
                   {images.length < 5 && (
-                    <button
-                      onClick={handleImageUrl}
-                      className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-[#0F0F1A] hover:text-[#0F0F1A] transition-colors"
-                    >
-                      <Camera className="w-6 h-6 mb-1" />
-                      <span className="text-xs">Add</span>
-                    </button>
+                    <div className="col-span-3 flex gap-2 mt-1">
+                      <input
+                        type="url"
+                        value={imageInput}
+                        onChange={(e) => setImageInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleImageUrl()}
+                        placeholder="Paste image URL..."
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F0F1A]/20"
+                      />
+                      <button
+                        onClick={handleImageUrl}
+                        disabled={!imageInput.trim() || images.length >= 5}
+                        className="px-4 py-2 bg-[#0F0F1A] text-white text-sm rounded-lg disabled:opacity-40"
+                      >
+                        Add
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

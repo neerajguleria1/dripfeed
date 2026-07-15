@@ -26,6 +26,9 @@ async function index(req: VercelRequest, res: VercelResponse) {
     if (size && typeof size === 'string') filter.size = size;
     if (city && typeof city === 'string') filter.city = new RegExp(city as string, 'i');
     if (condition && typeof condition === 'string') filter.condition = condition;
+    if (req.query.q && typeof req.query.q === 'string') {
+      filter.title = new RegExp(req.query.q.trim(), 'i');
+    }
 
     if (minPrice || maxPrice) {
       filter.price = {};
@@ -52,8 +55,6 @@ async function index(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST') {
     const user = getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
     const { title, brand, category, size, condition, price, description, images, city, whatsappNumber } = req.body || {};
 
     if (!title || !category || !size || !condition || !price || !city || !whatsappNumber) {
@@ -64,8 +65,9 @@ async function index(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Maximum 5 images allowed' });
     }
 
+    const mongoose = await import('mongoose');
     const listing = await ThriftListing.create({
-      sellerId: user.userId,
+      sellerId: user?.userId || new mongoose.Types.ObjectId(),
       title,
       brand,
       category,
