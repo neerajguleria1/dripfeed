@@ -41,6 +41,6 @@
   ],
   "crons": [
     { "path": "/api/cron/prewarm-cache", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/price-check", "schedule": "0 */6 * * *" }
+    { "path": "/api/cron/price-check", "schedule": "0 9 * * *" }
   ]
 }
