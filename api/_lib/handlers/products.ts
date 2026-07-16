@@ -179,18 +179,28 @@ async function compare(req: VercelRequest, res: VercelResponse) {
           if (kParam) { productName = kParam; }
           else {
             const dpIdx = parts.indexOf('dp');
-            if (dpIdx > 0) productName = parts[dpIdx - 1].replace(/[-_]/g, ' ').trim();
-            else if (dpIdx >= 0 && parts[dpIdx + 1]) {
-              // Only ASIN available (e.g. /dp/B0GW3H8KXY) — search by ASIN directly
+            if (dpIdx > 0) {
+              productName = parts[dpIdx - 1].replace(/[-_]/g, ' ').trim();
+            } else if (dpIdx >= 0 && parts[dpIdx + 1]) {
+              // Only ASIN, no slug — fetch product title from Amazon page
               const asin = parts[dpIdx + 1];
-              const { searchProducts: sp } = await import('../search.js');
-              const r = await sp(asin);
-              if (r.length > 0) {
-                const sorted = r.sort((a, b) => a.price - b.price);
-                return res.json({ platforms: sorted, products: sorted, query: sorted[0].title, sourceUrl: url });
-              }
-              // ASIN search returned nothing — use ASIN as fallback query
-              productName = asin;
+              try {
+                const pageRes = await fetch(`https://www.amazon.in/dp/${asin}`, {
+                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' },
+                  redirect: 'follow',
+                });
+                const finalUrl = pageRes.url;
+                const finalParts = new URL(finalUrl).pathname.split('/').filter(Boolean);
+                const finalDpIdx = finalParts.indexOf('dp');
+                if (finalDpIdx > 0) {
+                  productName = finalParts[finalDpIdx - 1].replace(/[-_]/g, ' ').trim();
+                } else {
+                  // Parse title from HTML as last resort
+                  const html = await pageRes.text();
+                  const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+                  productName = titleMatch ? titleMatch[1].split(':')[0].replace(/amazon\.in/i, '').trim() : asin;
+                }
+              } catch { productName = asin; }
             }
             else productName = parts[0]?.replace(/[-_]/g, ' ').trim() || '';
           }
