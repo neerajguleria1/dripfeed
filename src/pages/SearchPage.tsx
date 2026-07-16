@@ -6,6 +6,7 @@ import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
+import { SaveButton } from '../components/product/SaveButton';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import type { ProductData } from '../types/product';
@@ -220,6 +221,13 @@ function FeaturedCard({ product }: { product: ProductData }) {
             Save {formatPrice(savings)}
           </span>
         )}
+
+        <div className="mt-4">
+          <SaveButton
+            productTitle={product.title}
+            productData={{ imageUrl: product.imageUrl, brand: product.brand, price: product.price, platform: product.platform, url: product.url }}
+          />
+        </div>
       </div>
     </motion.a>
   );
@@ -298,6 +306,12 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
             {Math.round(Number(product.discount))}% off
           </span>
         )}
+        <div className="mt-3">
+          <SaveButton
+            productTitle={product.title}
+            productData={{ imageUrl: product.imageUrl, brand: product.brand, price: product.price, platform: product.platform, url: product.url }}
+          />
+        </div>
       </div>
     </motion.a>
   );

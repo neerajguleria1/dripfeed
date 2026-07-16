@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Trash2, TrendingDown, TrendingUp, GitCompare, FolderHeart } from 'lucide-react';
+import { Heart, Trash2, TrendingDown, TrendingUp, GitCompare, FolderHeart, Bell, BellOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SEOHead } from '../components/common/SEOHead';
 import AffiliateButton from '../components/ui/AffiliateButton';
@@ -21,6 +21,7 @@ interface WishlistItem {
   savedPrice: number;
   lowestPrice?: number;
   lowestPlatform?: string;
+  notifyOnDrop: boolean;
 }
 
 // Mock sparkline data generator for now
@@ -45,6 +46,13 @@ export default function WishlistPage() {
     try {
       await api.delete(`/wishlist/${id}`);
       setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch { /* ignore */ }
+  }
+
+  async function handleToggleNotify(id: string, current: boolean) {
+    try {
+      await api.patch(`/wishlist/${id}`, { notifyOnDrop: !current });
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, notifyOnDrop: !current } : i));
     } catch { /* ignore */ }
   }
 
@@ -192,6 +200,18 @@ export default function WishlistPage() {
                       >
                         <GitCompare className="w-3 h-3" /> Compare
                       </Link>
+                      <button
+                        onClick={() => handleToggleNotify(item.id, item.notifyOnDrop)}
+                        title={item.notifyOnDrop ? 'Disable price alert' : 'Enable price alert'}
+                        className={['flex items-center gap-1 text-xs px-3 py-2 rounded-lg border transition-colors',
+                          item.notifyOnDrop
+                            ? 'bg-[#C9A96E]/10 border-[#C9A96E]/40 text-[#8B7340]'
+                            : 'border-[#0F0F1A]/15 text-[#0F0F1A]/50 hover:text-[#0F0F1A]'
+                        ].join(' ')}
+                      >
+                        {item.notifyOnDrop ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+                        {item.notifyOnDrop ? 'Alert on' : 'Alert off'}
+                      </button>
                       <button
                         onClick={() => handleRemove(item.id)}
                         className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-100 px-3 py-2 rounded-lg"
