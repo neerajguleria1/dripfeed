@@ -10,6 +10,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 import { formatINR } from '../utils/format';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import api from '../services/api';
+import { enablePushNotifications, isPushSupported } from '../utils/push';
 
 interface WishlistItem {
   id: string;
@@ -53,9 +54,23 @@ export default function WishlistPage() {
   }
 
   async function handleToggleNotify(id: string, current: boolean) {
+    const turningOn = !current;
+
+    // Turning alerts ON: ask for browser notification permission and
+    // subscribe this device to push, so the user actually receives the
+    // alert when a price drop is detected. If permission is denied or
+    // push isn't supported, we still save the preference — the drop will
+    // just be tracked without a delivery channel for this device.
+    if (turningOn && isPushSupported()) {
+      const granted = await enablePushNotifications().catch(() => false);
+      if (!granted) {
+        alert('Enable notifications in your browser settings to get price drop alerts.');
+      }
+    }
+
     try {
-      await api.patch(`/wishlist/${id}`, { notifyOnDrop: !current });
-      setItems((prev) => prev.map((i) => i.id === id ? { ...i, notifyOnDrop: !current } : i));
+      await api.patch(`/wishlist/${id}`, { notifyOnDrop: turningOn });
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, notifyOnDrop: turningOn } : i));
     } catch { /* ignore */ }
   }
 

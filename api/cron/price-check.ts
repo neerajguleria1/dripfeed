@@ -1,9 +1,10 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectDB } from '../_lib/db.js';
-import WishlistItem from '../_lib/models/WishlistItem.js';
+import { WishlistItem } from '../_lib/models/WishlistItem.js';
 import Deal from '../_lib/models/Deal.js';
 import { searchProducts } from '../_lib/search.js';
+import { sendPushToUser } from '../_lib/push.js';
 
 async function sendDropEmail(to: string, productTitle: string, savedPrice: number, currentPrice: number, platform: string, url: string) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -14,10 +15,10 @@ async function sendDropEmail(to: string, productTitle: string, savedPrice: numbe
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'DripFeed <alerts@dripfeed.in>',
+      from: 'TagCheck <onboarding@resend.dev>',
       to,
       subject: `🔔 Price dropped ${drop}% — ${productTitle}`,
-      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto"><h2 style="color:#C9A96E">Price Drop Alert 🎉</h2><p><strong>${productTitle}</strong> on <strong>${platform}</strong> just dropped!</p><p style="font-size:24px"><s style="color:#999">${fmt(savedPrice)}</s> → <strong style="color:#0F0F1A">${fmt(currentPrice)}</strong> <span style="color:#22C55E">(${drop}% off)</span></p><a href="${url}" style="display:inline-block;background:#C9A96E;color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none;font-weight:600;margin-top:16px">Buy Now →</a><p style="color:#999;font-size:12px;margin-top:24px">You're receiving this because you enabled price alerts on DripFeed. <a href="https://dripfeed-v21.vercel.app/wishlist">Manage alerts</a></p></div>`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto"><h2 style="color:#C9A96E">Price Drop Alert 🎉</h2><p><strong>${productTitle}</strong> on <strong>${platform}</strong> just dropped!</p><p style="font-size:24px"><s style="color:#999">${fmt(savedPrice)}</s> → <strong style="color:#0F0F1A">${fmt(currentPrice)}</strong> <span style="color:#22C55E">(${drop}% off)</span></p><a href="${url}" style="display:inline-block;background:#C9A96E;color:#fff;padding:12px 24px;border-radius:24px;text-decoration:none;font-weight:600;margin-top:16px">Buy Now →</a><p style="color:#999;font-size:12px;margin-top:24px">You're receiving this because you enabled price alerts on TagCheck. <a href="https://dripfeed-v21.vercel.app/wishlist">Manage alerts</a></p></div>`,
     }),
   });
 }
@@ -100,8 +101,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (listing.price >= item.savedPrice) continue; // no drop for this tracker
 
         drops++;
-        if (item.notifyOnDrop && item.userEmail) {
-          sendDropEmail(item.userEmail, representative.productTitle, item.savedPrice, listing.price, listing.platform, listing.url).catch(() => {});
+        if (item.notifyOnDrop) {
+          const dropPct = Math.round(((item.savedPrice - listing.price) / item.savedPrice) * 100);
+          sendPushToUser(item.userId, {
+            title: `Price dropped ${dropPct}% 🎉`,
+            body: `${representative.productTitle} on ${listing.platform} — now ${listing.price}`,
+            url: '/wishlist',
+          }).catch(() => {});
+
+          if (item.userEmail) {
+            sendDropEmail(item.userEmail, representative.productTitle, item.savedPrice, listing.price, listing.platform, listing.url).catch(() => {});
+          }
         }
         const listingKey = `${listing.platform}::${listing.url}`;
         const existing = dropsByListing.get(listingKey);

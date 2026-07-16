@@ -12,6 +12,7 @@ import { handleFeed } from './_lib/handlers/feed.js';
 import { handlePreferences } from './_lib/handlers/preferences.js';
 import { handleAffiliate } from './_lib/handlers/affiliate.js';
 import { handleDebug } from './_lib/handlers/debug.js';
+import { handlePush } from './_lib/handlers/push.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { url } = req;
@@ -29,6 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path.startsWith('affiliate/')) return handleAffiliate(req, res, path.replace('affiliate/', ''));
   if (path.startsWith('analytics/')) return res.status(200).json({ ok: true });
   if (path.startsWith('debug/')) return handleDebug(req, res, path.replace('debug/', ''));
+  if (path.startsWith('push/')) return handlePush(req, res, path.replace('push/', ''));
 
   return res.status(404).json({ error: 'Not found' });
 }
