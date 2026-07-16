@@ -95,59 +95,62 @@ export function SearchBar({
         'relative',
         isHero ? 'max-w-xl mx-auto w-full' : 'w-full',
         className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      ].filter(Boolean).join(' ')}
     >
-      {/* Search Input */}
-      <div
-        className={[
-          'relative flex items-center border-2 transition-all duration-200',
-          isHero
-            ? 'bg-[#221D17] h-[56px] sm:h-[60px] rounded-2xl px-5'
-            : 'bg-white h-11 rounded-full px-4 shadow-sm',
-          focused
-            ? 'border-[#C9A96E]'
-            : isHero ? 'border-white/20' : 'border-neutral-200 hover:border-neutral-300',
-        ].filter(Boolean).join(' ')}
-      >
-        <Search className={['shrink-0', isHero ? 'w-5 h-5 text-white/40' : 'w-4 h-4 text-neutral-400'].join(' ')} />
-        <form
-          className="flex flex-1 items-center"
-          onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={handleInputChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            placeholder={isHero ? "Search 'kurta set' or paste any product URL..." : 'Search...'}
-            aria-label="Search products"
-            className={[
-              'flex-1 bg-transparent outline-none',
-              isHero
-                ? 'text-white placeholder:text-white/35 text-[15px] ml-3 min-h-[44px]'
-                : 'text-[#0F0F1A] placeholder:text-neutral-400 text-sm ml-2',
-            ].join(' ')}
-          />
-          <button
-            type="submit"
-            aria-label="Search"
-            onTouchStart={(e) => e.stopPropagation()}
-            className={[
-              'shrink-0 flex items-center justify-center font-semibold transition-colors',
-              isHero
-                ? 'hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#171310] hover:bg-[#E8D5A8] px-5 py-2.5 rounded-xl text-[13px] ml-3'
-                : 'rounded-full bg-[#0F0F1A] text-white hover:bg-[#C9A96E] ml-2 w-8 h-8',
-            ].join(' ')}
-          >
-            {isHero ? <>Compare <ArrowRight className="w-3.5 h-3.5" /></> : <Search className="w-3.5 h-3.5" />}
-          </button>
+      {isHero ? (
+        /* ── Hero: exact homepage style ── */
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }} className="relative group">
+          <div className={[
+            'flex items-center bg-[#221D17] border-2 rounded-2xl h-[56px] sm:h-[60px] px-5 transition-colors duration-200',
+            focused ? 'border-[#C9A96E]' : 'border-white/20 group-focus-within:border-[#C9A96E]',
+          ].join(' ')}>
+            <Search className="w-5 h-5 text-white/40 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={handleInputChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              placeholder="Search 'kurta set' or paste any product URL..."
+              aria-label="Search products"
+              className="flex-1 bg-transparent outline-none text-white placeholder:text-white/35 text-[15px] ml-3 min-h-[44px]"
+            />
+            <button
+              type="submit"
+              className="hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#171310] font-semibold px-5 py-2.5 rounded-xl text-[13px] hover:bg-[#E8D5A8] transition-colors"
+            >
+              Compare <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </form>
-      </div>
+      ) : (
+        /* ── Default: small white pill ── */
+        <div className={[
+          'relative flex items-center bg-white border transition-all duration-200 h-11 rounded-full px-4 shadow-sm',
+          focused ? 'border-[#C9A96E]' : 'border-neutral-200 hover:border-neutral-300',
+        ].join(' ')}>
+          <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+          <form className="flex flex-1 items-center" onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={handleInputChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              placeholder="Search..."
+              aria-label="Search products"
+              className="flex-1 bg-transparent outline-none text-[#0F0F1A] placeholder:text-neutral-400 text-sm ml-2"
+            />
+            <button type="submit" aria-label="Search" className="shrink-0 flex items-center justify-center rounded-full bg-[#0F0F1A] text-white hover:bg-[#C9A96E] ml-2 w-8 h-8 transition-colors">
+              <Search className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Trending Dropdown */}
       <AnimatePresence>

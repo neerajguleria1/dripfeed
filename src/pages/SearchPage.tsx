@@ -631,14 +631,14 @@ export default function SearchPage() {
       />
 
       {/* ── Hero Search ──────────────────────────────────────────────────────── */}
-      <section className="pb-8 sm:pb-10 bg-white border-b border-neutral-100">
+      <section className="pb-8 sm:pb-10 bg-[#171310] border-b-2 border-[#C9A96E]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
           {!query && (
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-              className="text-[24px] sm:text-[36px] lg:text-[40px] font-bold text-[#0F0F1A]
+              className="text-[24px] sm:text-[36px] lg:text-[40px] font-bold text-white
                 text-center mb-6 sm:mb-8 leading-[1.15] tracking-[-0.02em]"
             >
               What are you looking for?
@@ -649,7 +649,7 @@ export default function SearchPage() {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-[11px] text-neutral-400 text-center mb-4 tracking-[0.08em] uppercase font-medium"
+              className="text-[11px] text-white/50 text-center mb-4 tracking-[0.08em] uppercase font-medium"
             >
               Search results
             </motion.p>
