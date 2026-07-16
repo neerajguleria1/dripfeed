@@ -613,6 +613,34 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
   }
 }
 
+// ─── Per-platform retry wrapper ──────────────────────────────────────────────
+// A single transient failure (momentary rate limit, timeout, one-off block)
+// shouldn't zero out a whole platform for the user. Retries once after a
+// short delay before giving up — this is why search sometimes returned zero
+// results for a platform that works fine on the next request.
+async function withRetry<T>(
+  fn: () => Promise<T[]>,
+  label: string,
+  delayMs = 800
+): Promise<T[]> {
+  try {
+    const result = await fn();
+    if (result.length) return result;
+    // Empty (not thrown) result — could be a transient miss, retry once.
+    await new Promise((r) => setTimeout(r, delayMs));
+    return await fn();
+  } catch {
+    // First attempt threw — wait briefly and retry once before giving up.
+    try {
+      await new Promise((r) => setTimeout(r, delayMs));
+      return await fn();
+    } catch (e: any) {
+      console.error(`[${label}] failed after retry:`, e?.message?.slice(0, 100));
+      return [];
+    }
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 // Exported for diagnostic/testing purposes only (per-platform isolation).
@@ -632,10 +660,10 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   if (db) { setMemCache(cacheKey, db); return db; }
 
   const [az1, fk, mn, aj] = await Promise.all([
-    fetchAmazonPage(searchTerm, 1).catch(() => []),
-    fetchFlipkart(searchTerm).catch(() => []),
-    fetchMyntra(searchTerm).catch(() => []),
-    fetchAjio(searchTerm).catch(() => []),
+    withRetry(() => fetchAmazonPage(searchTerm, 1), 'Amazon'),
+    withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
+    withRetry(() => fetchMyntra(searchTerm), 'Myntra'),
+    withRetry(() => fetchAjio(searchTerm), 'Ajio'),
   ]);
 
   // Deduplicate Amazon by ASIN
