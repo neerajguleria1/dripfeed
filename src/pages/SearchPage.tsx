@@ -537,7 +537,6 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (query) {
-      // If the query is a URL, redirect to compare page
       if (query.startsWith('http://') || query.startsWith('https://')) {
         navigate(`/compare?url=${encodeURIComponent(query)}`, { replace: true });
         return;
@@ -547,7 +546,7 @@ export default function SearchPage() {
       setProducts([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, fetchResults, navigate]);
+  }, [query]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
