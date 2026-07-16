@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TRENDING_SEARCHES = ['kurta', 'sneakers', 'saree', 'lehenga', 'jeans'];
 
 export interface SearchBarProps {
-  size?: 'default' | 'hero';
+  size?: 'default' | 'hero' | 'lg';
   initialQuery?: string;
   onSearch?: (query: string) => void;
   className?: string;
@@ -32,6 +32,7 @@ export function SearchBar({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isHero = size === 'hero';
+  const isLg = size === 'lg';
 
   const handleSubmit = useCallback(
     (searchQuery: string) => {
@@ -93,7 +94,7 @@ export function SearchBar({
       ref={containerRef}
       className={[
         'relative',
-        isHero ? 'max-w-xl mx-auto w-full' : 'w-full',
+        isHero ? 'max-w-xl mx-auto w-full' : isLg ? 'w-full' : 'w-full',
         className,
       ].filter(Boolean).join(' ')}
     >
@@ -120,6 +121,34 @@ export function SearchBar({
             <button
               type="submit"
               className="hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#171310] font-semibold px-5 py-2.5 rounded-xl text-[13px] hover:bg-[#E8D5A8] transition-colors"
+            >
+              Compare <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </form>
+      ) : isLg ? (
+        /* ── Lg: full-width white bar with Compare button ── */
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }} className="relative group w-full">
+          <div className={[
+            'flex items-center bg-white border-2 rounded-2xl h-[52px] sm:h-[56px] px-5 transition-colors duration-200 shadow-sm',
+            focused ? 'border-[#C9A96E]' : 'border-neutral-200 group-focus-within:border-[#C9A96E]',
+          ].join(' ')}>
+            <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={handleInputChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              placeholder="Search 'kurta set' or paste any product URL..."
+              aria-label="Search products"
+              className="flex-1 bg-transparent outline-none text-[#0F0F1A] placeholder:text-neutral-400 text-[15px] ml-3 min-h-[44px]"
+            />
+            <button
+              type="submit"
+              className="hidden sm:flex items-center gap-1.5 bg-[#0F0F1A] text-white font-semibold px-5 py-2.5 rounded-xl text-[13px] hover:bg-[#C9A96E] transition-colors"
             >
               Compare <ArrowRight className="w-3.5 h-3.5" />
             </button>
