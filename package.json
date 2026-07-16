@@ -48,6 +48,7 @@
     "@types/web-push": "^3.6.4",
     "@vercel/node": "^5.8.22",
     "@vitejs/plugin-react": "^6.0.1",
+    "dotenv": "^17.4.2",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
