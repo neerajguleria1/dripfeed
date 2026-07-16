@@ -655,10 +655,8 @@ export default function SearchPage() {
             </motion.p>
           )}
 
-          {/* Search bar with gold focus ring */}
-          <div className="[&_input:focus]:ring-2 [&_input:focus]:ring-[#C9A96E]/40 [&_input:focus]:border-[#C9A96E]">
-            <SearchBar size="hero" initialQuery={query} onSearch={handleSearch} />
-          </div>
+          {/* Search bar */}
+          <SearchBar size="hero" initialQuery={query} onSearch={handleSearch} />
 
           {/* Results summary with platform badges */}
           {query && !loading && products.length > 0 && (

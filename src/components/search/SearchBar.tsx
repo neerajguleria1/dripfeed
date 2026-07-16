@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -102,21 +102,16 @@ export function SearchBar({
       {/* Search Input */}
       <div
         className={[
-          'relative flex items-center bg-white border transition-all duration-200',
+          'relative flex items-center border-2 transition-all duration-200',
           isHero
-            ? 'h-[56px] rounded-full px-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)]'
-            : 'h-11 rounded-full px-4 shadow-sm',
+            ? 'bg-[#221D17] h-[56px] sm:h-[60px] rounded-2xl px-5'
+            : 'bg-white h-11 rounded-full px-4 shadow-sm',
           focused
-            ? 'border-[#C9A96E] shadow-[0_0_0_3px_rgba(201,169,110,0.12)]'
-            : 'border-neutral-200 hover:border-neutral-300',
+            ? 'border-[#C9A96E]'
+            : isHero ? 'border-white/20' : 'border-neutral-200 hover:border-neutral-300',
         ].filter(Boolean).join(' ')}
       >
-        <Search
-          className={[
-            'text-gray-400 shrink-0',
-            isHero ? 'w-5 h-5' : 'w-4 h-4',
-          ].join(' ')}
-        />
+        <Search className={['shrink-0', isHero ? 'w-5 h-5 text-white/40' : 'w-4 h-4 text-neutral-400'].join(' ')} />
         <form
           className="flex flex-1 items-center"
           onSubmit={(e) => { e.preventDefault(); handleSubmit(query); }}
@@ -129,11 +124,13 @@ export function SearchBar({
             onFocus={handleFocus}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            placeholder={isHero ? 'Search fashion across 4+ platforms...' : 'Search...'}
+            placeholder={isHero ? "Search 'kurta set' or paste any product URL..." : 'Search...'}
             aria-label="Search products"
             className={[
-              'flex-1 bg-transparent outline-none placeholder:text-neutral-400 text-[#0F0F1A]',
-              isHero ? 'text-[15px] ml-3' : 'text-sm ml-2',
+              'flex-1 bg-transparent outline-none',
+              isHero
+                ? 'text-white placeholder:text-white/35 text-[15px] ml-3 min-h-[44px]'
+                : 'text-[#0F0F1A] placeholder:text-neutral-400 text-sm ml-2',
             ].join(' ')}
           />
           <button
@@ -141,11 +138,13 @@ export function SearchBar({
             aria-label="Search"
             onTouchStart={(e) => e.stopPropagation()}
             className={[
-              'shrink-0 flex items-center justify-center rounded-full bg-[#0F0F1A] text-white font-semibold transition-colors hover:bg-[#C9A96E] active:bg-[#b8935a]',
-              isHero ? 'ml-3 px-5 py-2 text-[13px] h-9' : 'ml-2 w-8 h-8',
+              'shrink-0 flex items-center justify-center font-semibold transition-colors',
+              isHero
+                ? 'hidden sm:flex items-center gap-1.5 bg-[#C9A96E] text-[#171310] hover:bg-[#E8D5A8] px-5 py-2.5 rounded-xl text-[13px] ml-3'
+                : 'rounded-full bg-[#0F0F1A] text-white hover:bg-[#C9A96E] ml-2 w-8 h-8',
             ].join(' ')}
           >
-            {isHero ? 'Search' : <Search className="w-3.5 h-3.5" />}
+            {isHero ? <>Compare <ArrowRight className="w-3.5 h-3.5" /></> : <Search className="w-3.5 h-3.5" />}
           </button>
         </form>
       </div>
