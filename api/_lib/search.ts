@@ -615,29 +615,53 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
 
 // ─── Per-platform retry wrapper ──────────────────────────────────────────────
 // A single transient failure (momentary rate limit, timeout, one-off block)
-// shouldn't zero out a whole platform for the user. Retries once after a
-// short delay before giving up — this is why search sometimes returned zero
-// results for a platform that works fine on the next request.
+// shouldn't zero out a whole platform for the user. But blindly retrying is
+// dangerous: if the first attempt was already slow (e.g. it escalated through
+// ScraperAPI's render/premium tiers, which can take up to 40s), a retry would
+// just repeat that same slow path and make the overall search feel worse, not
+// better. So we only retry when the first attempt failed FAST (< FAST_FAIL_MS)
+// — that pattern usually means a quick network blip or an instant block
+// response, not a slow escalation ladder that's unlikely to succeed twice in
+// a row on retry anyway. We also cap the total time any single platform gets
+// so one slow/hanging platform can never block the whole search response.
+const FAST_FAIL_MS = 4000;
+const PLATFORM_BUDGET_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T[]>, ms: number): Promise<T[]> {
+  return Promise.race([
+    promise,
+    new Promise<T[]>((resolve) => setTimeout(() => resolve([]), ms)),
+  ]);
+}
+
 async function withRetry<T>(
   fn: () => Promise<T[]>,
-  label: string,
-  delayMs = 800
+  label: string
 ): Promise<T[]> {
+  const start = Date.now();
+  let firstResult: T[] = [];
   try {
-    const result = await fn();
-    if (result.length) return result;
-    // Empty (not thrown) result — could be a transient miss, retry once.
-    await new Promise((r) => setTimeout(r, delayMs));
-    return await fn();
+    firstResult = await withTimeout(fn(), PLATFORM_BUDGET_MS);
   } catch {
-    // First attempt threw — wait briefly and retry once before giving up.
-    try {
-      await new Promise((r) => setTimeout(r, delayMs));
-      return await fn();
-    } catch (e: any) {
-      console.error(`[${label}] failed after retry:`, e?.message?.slice(0, 100));
-      return [];
-    }
+    firstResult = [];
+  }
+  if (firstResult.length) return firstResult;
+
+  const elapsed = Date.now() - start;
+  if (elapsed >= FAST_FAIL_MS) {
+    // Already slow (likely went through a costly escalation tier) — a retry
+    // would just repeat that same delay for little chance of a different
+    // outcome. Better to return empty now than double the wait.
+    return [];
+  }
+
+  // Fast, empty/failed result — likely a transient blip. One quick retry,
+  // still bounded so it can't blow past the remaining time budget.
+  try {
+    return await withTimeout(fn(), PLATFORM_BUDGET_MS - elapsed);
+  } catch (e: any) {
+    console.error(`[${label}] failed after retry:`, e?.message?.slice(0, 100));
+    return [];
   }
 }
 
