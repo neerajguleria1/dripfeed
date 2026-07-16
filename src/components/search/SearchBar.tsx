@@ -102,12 +102,14 @@ export function SearchBar({
       {/* Search Input */}
       <div
         className={[
-          'relative flex items-center bg-white/80 backdrop-blur-md border border-white/60 shadow-lg transition-all duration-200',
-          isHero ? 'h-14 rounded-2xl px-5' : 'h-10 rounded-xl px-3',
-          focused ? 'ring-2 ring-[var(--df-accent-gold)]/30 border-[var(--df-accent-gold)]' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+          'relative flex items-center bg-white border transition-all duration-200',
+          isHero
+            ? 'h-[56px] rounded-full px-5 shadow-[0_2px_16px_rgba(0,0,0,0.06)]'
+            : 'h-11 rounded-full px-4 shadow-sm',
+          focused
+            ? 'border-[#C9A96E] shadow-[0_0_0_3px_rgba(201,169,110,0.12)]'
+            : 'border-neutral-200 hover:border-neutral-300',
+        ].filter(Boolean).join(' ')}
       >
         <Search
           className={[
@@ -121,17 +123,17 @@ export function SearchBar({
         >
           <input
             ref={inputRef}
-            type="search"
+            type="text"
             value={query}
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            placeholder="Search fashion across 4+ platforms..."
+            placeholder={isHero ? 'Search fashion across 4+ platforms...' : 'Search...'}
             aria-label="Search products"
             className={[
-              'flex-1 bg-transparent outline-none placeholder:text-gray-400 text-[var(--df-accent-navy)]',
-              isHero ? 'text-lg ml-3' : 'text-sm ml-2',
+              'flex-1 bg-transparent outline-none placeholder:text-neutral-400 text-[#0F0F1A]',
+              isHero ? 'text-[15px] ml-3' : 'text-sm ml-2',
             ].join(' ')}
           />
           <button
@@ -139,11 +141,11 @@ export function SearchBar({
             aria-label="Search"
             onTouchStart={(e) => e.stopPropagation()}
             className={[
-              'shrink-0 flex items-center justify-center rounded-xl bg-[#C9A96E] text-white font-semibold transition-colors hover:bg-[#b8935a] active:bg-[#a07d4a]',
-              isHero ? 'ml-2 px-4 py-2 text-[13px]' : 'ml-1.5 px-3 py-1.5 text-[12px]',
+              'shrink-0 flex items-center justify-center rounded-full bg-[#0F0F1A] text-white font-semibold transition-colors hover:bg-[#C9A96E] active:bg-[#b8935a]',
+              isHero ? 'ml-3 px-5 py-2 text-[13px] h-9' : 'ml-2 w-8 h-8',
             ].join(' ')}
           >
-            {isHero ? 'Search' : '→'}
+            {isHero ? 'Search' : <Search className="w-3.5 h-3.5" />}
           </button>
         </form>
       </div>
@@ -156,9 +158,9 @@ export function SearchBar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md rounded-xl border border-gray-100 shadow-lg p-3 z-50"
+            className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-neutral-100 shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-4 z-50"
           >
-            <p className="text-xs text-gray-500 mb-2 font-medium">Trending searches</p>
+            <p className="text-[11px] text-neutral-400 mb-3 font-semibold uppercase tracking-[0.08em]">Trending searches</p>
             <div className="flex flex-wrap gap-2">
               {TRENDING_SEARCHES.map((term) => (
                 <button
@@ -166,7 +168,7 @@ export function SearchBar({
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handlePillClick(term)}
-                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-[var(--df-accent-gold-light)] text-[var(--df-accent-navy)] rounded-full transition-colors duration-150 capitalize"
+                  className="px-4 py-1.5 text-[13px] bg-neutral-50 hover:bg-[#C9A96E]/10 hover:text-[#8B7340] border border-neutral-100 hover:border-[#C9A96E]/30 text-neutral-600 rounded-full transition-all duration-150 capitalize font-medium"
                 >
                   {term}
                 </button>
