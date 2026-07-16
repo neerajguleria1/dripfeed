@@ -393,7 +393,7 @@ export default function DealsPage() {
       <footer className="px-4 sm:px-8 lg:px-16 py-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] sm:text-[12px] text-neutral-400">
-            &copy; 2026 DripFeed India
+            &copy; 2026 TagCheck India
           </p>
           <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
             <button
@@ -416,7 +416,7 @@ export default function DealsPage() {
             </button>
           </div>
           <p className="text-[13px] sm:text-[10px] text-neutral-300">
-            #Ad: DripFeed earns commission on purchases through our links.
+            #Ad: TagCheck earns commission on purchases through our links.
           </p>
         </div>
       </footer>

@@ -82,7 +82,7 @@ export default function GetStarted() {
               ref={badgeRef}
               className="inline-block px-4 py-1.5 rounded-full border border-[#0F0F1A]/10 bg-white/60 text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/40 mb-6"
             >
-              DripFeed
+              TagCheck
             </span>
             <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium leading-[0.85] tracking-[-0.06em] text-center text-[#0F0F1A]">
               Your Fashion Companion Awaits.

@@ -28,7 +28,7 @@ const conditionLabels: Record<string, string> = {
 };
 
 export function ThriftCard({ title, brand, images, price, condition, city, size, whatsappNumber }: ThriftCardProps) {
-  const whatsappLink = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${title}" listed on DripFeed.`)}`;
+  const whatsappLink = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${title}" listed on TagCheck.`)}`;
 
   return (
     <Card variant="outlined" padding="none" hover className="overflow-hidden">

@@ -22,7 +22,7 @@ const features = [
   { icon: Sparkles, title: 'Curated discovery', desc: 'Your products appear in high-intent environments\u2014styled looks, curated edits, and search\u2014where shoppers are ready to buy.', tag: 'Discovery' },
   { icon: Users, title: 'Make customers', desc: 'We reach shoppers you\'re not converting today and drive them to full-price and in-season products.', tag: 'Growth' },
   { icon: Package, title: 'Lower returns by 50%', desc: 'Sizing insights and retargeting help shoppers choose right the first time, reducing costly returns.', tag: 'Efficiency' },
-  { icon: Megaphone, title: 'Media Opportunities', desc: 'Get added visibility through DripFeed-owned media: founders\' channels, company content, and in-app placements.', tag: 'Visibility' },
+  { icon: Megaphone, title: 'Media Opportunities', desc: 'Get added visibility through TagCheck-owned media: founders\' channels, company content, and in-app placements.', tag: 'Visibility' },
   { icon: LineChart, title: 'Actionable data', desc: 'Access dashboards with performance & benchmarks for merchandising and marketing. (available Jan 2026)', tag: 'Analytics' },
   { icon: Shield, title: 'Brand safety', desc: 'Your products appear only in curated, on-brand environments that protect your equity and reputation.', tag: 'Trust' },
 ];
@@ -31,14 +31,14 @@ const mediaFeatures = [
   { title: 'Curated Editorials', desc: 'Magazine-style edits curated to shoppers\' taste \u2014 think "Office Look Essentials," "Winter Capsule," etc \u2014 where products appear as part of styled, shop-ready outfits.', benefit: 'Boosts brand relevance and storytelling: Appear alongside on-trend looks, seasonal themes, and style moments that reflect what users are actively searching for.', icon: Star },
   { title: 'Personalized Feeds', desc: 'A fully personalized shopping feed that surfaces products based on each shopper\'s browsing patterns, saved items, and style signals.', benefit: 'Targeted exposure: Your products appear in front of shoppers who\'ve shown interest in similar categories, materials, silhouettes, or price points.', icon: Target },
   { title: 'Brand Spotlights', desc: 'A dedicated in-app page where shoppers browse your products and revisit items they\'ve viewed or saved.', benefit: 'High-intent discovery: Shoppers arrive here specifically to explore your brand\u2014not to scroll through discounts or low-intent traffic.', icon: Globe },
-  { title: 'Social Activations', desc: 'Visibility across DripFeed\'s social channels where we share trending products, brand moments, and seasonal stories with our 1.4M+ followers.', benefit: 'Amplified reach: Put your products in front of a broader audience of fashion-focused consumers who follow DripFeed for inspiration.', icon: Heart },
+  { title: 'Social Activations', desc: 'Visibility across TagCheck\'s social channels where we share trending products, brand moments, and seasonal stories with our 1.4M+ followers.', benefit: 'Amplified reach: Put your products in front of a broader audience of fashion-focused consumers who follow TagCheck for inspiration.', icon: Heart },
 ];
 
 const steps = [
   { num: '01', title: 'No integration fees', desc: 'We connect via your existing affiliate setup', icon: Shield },
   { num: '02', title: 'Set commercial offer', desc: 'Via your affiliate network (typically 20%)', icon: TrendingUp },
   { num: '03', title: '1-2 weeks setup', desc: 'Tracking, product catalog, quality checks', icon: RotateCcw },
-  { num: '04', title: 'Go live on DripFeed', desc: 'Your brand appears in DripFeed\'s discovery feed, search and curated edits', icon: Zap },
+  { num: '04', title: 'Go live on TagCheck', desc: 'Your brand appears in TagCheck\'s discovery feed, search and curated edits', icon: Zap },
   { num: '05', title: 'Performance review', desc: 'Evaluate results and ways to scale (exposure, exclusives, media packages)', icon: BarChart3 },
 ];
 
@@ -87,7 +87,7 @@ export default function BrandsPage() {
               <a href="#problems" className="text-sm font-medium text-[#0F0F1A] hover:text-[#0F0F1A]/70 transition-colors">Brands</a>
             </div>
           </div>
-          <Link to="/" className="text-[#0F0F1A] font-serif text-xl font-bold tracking-tight">DripFeed</Link>
+          <Link to="/" className="text-[#0F0F1A] font-serif text-xl font-bold tracking-tight">TagCheck</Link>
           <button onClick={() => navigate('/', { state: { scrollTo: 'early-join' } })}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#0F0F1A] text-[#0F0F1A] text-sm font-medium hover:bg-[#0F0F1A] hover:text-white transition-all duration-300">
             Partner with us
@@ -100,7 +100,7 @@ export default function BrandsPage() {
         <div className="max-w-[800px] mx-auto text-center">
           <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#0F0F1A]/8 bg-white/80 mb-8">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/60">Partner with DripFeed</span>
+            <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/60">Partner with TagCheck</span>
           </div>
           <h1 className="hero-title font-serif text-5xl sm:text-6xl md:text-7xl lg:text-[5rem] font-bold leading-[1.05] tracking-[-0.02em] text-[#0F0F1A] mb-6">
             The next era of fashion
@@ -169,7 +169,7 @@ export default function BrandsPage() {
                   <Sparkles className="w-3 h-3" />AI Shopping Assistant
                 </span>
                 <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-tight mb-6">
-                  DripFeed is an AI shopping platform that helps shoppers find the right products faster with recommendations tailored to each shopper's style and behavior.
+                  TagCheck is an AI shopping platform that helps shoppers find the right products faster with recommendations tailored to each shopper's style and behavior.
                 </h2>
 
               </div>
@@ -199,7 +199,7 @@ export default function BrandsPage() {
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
             <span className="inline-block px-4 py-1.5 rounded-full border border-[#0F0F1A]/8 bg-white/80 text-[10px] font-mono tracking-[0.2em] uppercase text-[#0F0F1A]/50 mb-4">Why Partner</span>
-            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-[-0.02em] text-[#0F0F1A]">Why partner with DripFeed?</h2>
+            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-[-0.02em] text-[#0F0F1A]">Why partner with TagCheck?</h2>
             <p className="text-[#0F0F1A]/50 text-base max-w-2xl mx-auto mt-4">We turn high-intent discovery into incremental revenue, bringing you new customers and higher-quality orders while protecting your brand equity.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -286,7 +286,7 @@ export default function BrandsPage() {
       <section className="relative z-10 px-6 lg:px-8 py-24 md:py-32 text-center">
         <div className="max-w-[600px] mx-auto">
           <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-[-0.02em] text-[#0F0F1A] mb-6">Ready to get started?</h2>
-          <p className="text-[#0F0F1A]/50 text-base max-w-md mx-auto mb-10">Join hundreds of brands already driving sales with DripFeed.</p>
+          <p className="text-[#0F0F1A]/50 text-base max-w-md mx-auto mb-10">Join hundreds of brands already driving sales with TagCheck.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button onClick={() => navigate('/', { state: { scrollTo: 'early-join' } })}
               className="group inline-flex items-center gap-3 bg-[#0F0F1A] rounded-full text-white font-semibold text-sm px-8 py-4 transition-all duration-500 hover:gap-4 hover:shadow-2xl hover:shadow-[#0F0F1A]/20">

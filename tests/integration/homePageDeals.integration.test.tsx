@@ -256,7 +256,7 @@ describe('HomePage deals section: full fetch chain integration', () => {
     expect(screen.getByText('Platforms compared')).toBeInTheDocument();
     expect(screen.getByText(/Start saving\./i)).toBeInTheDocument();
     expect(screen.getByText('Start Comparing')).toBeInTheDocument();
-    expect(screen.getByText('© 2026 DripFeed India')).toBeInTheDocument();
+    expect(screen.getByText('© 2026 TagCheck India')).toBeInTheDocument();
 
     consoleErrorSpy.mockRestore();
   });

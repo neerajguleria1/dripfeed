@@ -50,7 +50,7 @@ export default function ClickStatsPage() {
             <span className="text-[11px] font-semibold text-[#C9A96E] uppercase tracking-[0.08em]">Live Metrics</span>
           </div>
           <h1 className="text-[28px] sm:text-[36px] font-bold text-[#0F0F1A] tracking-[-0.02em]">
-            DripFeed Click Analytics
+            TagCheck Click Analytics
           </h1>
           <p className="text-[14px] text-neutral-500 mt-1">
             Every "Buy Now" click tracked in real time across platforms.
@@ -79,7 +79,7 @@ export default function ClickStatsPage() {
                 <p className="text-[42px] font-bold text-[#0F0F1A] leading-none tracking-[-0.02em] tabular-nums">
                   {data.total.toLocaleString('en-IN')}
                 </p>
-                <p className="text-[12px] text-neutral-400 mt-1">users clicked "Buy Now" from DripFeed</p>
+                <p className="text-[12px] text-neutral-400 mt-1">users clicked "Buy Now" from TagCheck</p>
               </div>
             </motion.div>
 

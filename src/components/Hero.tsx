@@ -48,7 +48,7 @@ export default function Hero() {
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#0F0F1A] mb-4" style={{ fontFamily: "'Lobster Two', cursive" }}>
-          DripFeed
+          TagCheck
         </h1>
 
         <p className="text-[#0F0F1A]/70 text-base sm:text-lg mb-8 max-w-lg mx-auto">

@@ -40,7 +40,7 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
             Back
           </Link>
           <Link to="/" className="text-[#0F0F1A]/40 text-xs hover:text-[#0F0F1A]/70 transition-colors">
-            DripFeed
+            TagCheck
           </Link>
         </div>
       </div>
@@ -62,7 +62,7 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
 
       {/* Footer hint */}
       <div className="relative z-10 text-center pb-6 text-[#0F0F1A]/20 text-xs">
-        DripFeed — AI Fashion Companion
+        TagCheck — AI Fashion Companion
       </div>
     </div>
   );

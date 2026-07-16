@@ -101,7 +101,7 @@ export default function ThriftBrowsePage() {
   return (
     <div className="min-h-screen bg-[#FAF9F7]">
       <SEOHead
-        title="Pre-loved Fashion Archive — DripFeed"
+        title="Pre-loved Fashion Archive — TagCheck"
         description="A curated archive of pre-loved fashion from verified sellers across India. Sustainable luxury at considered prices."
       />
 
@@ -340,14 +340,14 @@ export default function ThriftBrowsePage() {
       {/* ─── Footer ─────────────────────────────────── */}
       <footer className="px-4 sm:px-10 lg:px-20 py-10 pb-24 sm:pb-12 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[13px] sm:text-[12px] text-neutral-400">&copy; 2026 DripFeed India</p>
+          <p className="text-[13px] sm:text-[12px] text-neutral-400">&copy; 2026 TagCheck India</p>
           <div className="flex gap-5 sm:gap-6 text-[13px] sm:text-[12px] text-neutral-400">
             <button onClick={() => navigate('/privacy')} className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center">Privacy</button>
             <button onClick={() => navigate('/terms')} className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center">Terms</button>
             <button onClick={() => navigate('/affiliate-disclosure')} className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center">Affiliate Disclosure</button>
           </div>
           <p className="text-[13px] sm:text-[10px] text-neutral-300">
-            #Ad: DripFeed earns commission on purchases through our links.
+            #Ad: TagCheck earns commission on purchases through our links.
           </p>
         </div>
       </footer>
@@ -357,7 +357,7 @@ export default function ThriftBrowsePage() {
 
 // ─── Archive Card (Inline) ──────────────────────────
 function ArchiveCard({ listing }: { listing: ThriftListing }) {
-  const whatsappLink = `https://wa.me/${listing.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${listing.title}" listed on DripFeed.`)}`;
+  const whatsappLink = `https://wa.me/${listing.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${listing.title}" listed on TagCheck.`)}`;
 
   return (
     <motion.article

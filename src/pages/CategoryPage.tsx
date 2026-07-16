@@ -22,7 +22,7 @@ const CATEGORY_META: Record<string, {
     emoji: '🪔',
     description: 'Sarees, kurtas, lehengas & more traditional styles',
     subCategories: ['Sarees', 'Kurtas', 'Lehengas', 'Salwar Suits'],
-    intro: 'From everyday cotton kurtas to wedding-season silk sarees, DripFeed compares ethnic wear prices across Myntra, Ajio, Flipkart, Meesho and more so you never pay more than you should. Prices on ethnic wear swing wildly between platforms during festive sales — we track them all in real time.',
+    intro: 'From everyday cotton kurtas to wedding-season silk sarees, TagCheck compares ethnic wear prices across Myntra, Ajio, Flipkart, Meesho and more so you never pay more than you should. Prices on ethnic wear swing wildly between platforms during festive sales — we track them all in real time.',
     buyingTips: [
       'Myntra and Ajio usually run the deepest ethnic wear discounts during Diwali and wedding season (Oct–Feb).',
       'Meesho tends to have the lowest base prices on everyday kurta sets, but check return policies before buying.',
@@ -33,7 +33,7 @@ const CATEGORY_META: Record<string, {
     emoji: '👗',
     description: 'Dresses, tops, jeans & western fashion',
     subCategories: ['Dresses', 'Tops', 'Jeans', 'Skirts'],
-    intro: 'Western wear pricing varies most across Amazon, Flipkart and Myntra depending on brand exclusivity deals. DripFeed pulls live prices so you can spot the platform with the best deal on jeans, dresses and tops before you buy.',
+    intro: 'Western wear pricing varies most across Amazon, Flipkart and Myntra depending on brand exclusivity deals. TagCheck pulls live prices so you can spot the platform with the best deal on jeans, dresses and tops before you buy.',
     buyingTips: [
       'Amazon Fashion often has better prices on international brands like Levis and H&M.',
       'Flipkart\'s Big Billion Days and Myntra\'s End of Reason Sale are the two biggest western wear discount events each year.',
@@ -44,7 +44,7 @@ const CATEGORY_META: Record<string, {
     emoji: '👟',
     description: 'Shoes, sneakers, heels & sandals',
     subCategories: ['Sneakers', 'Heels', 'Flats', 'Sandals'],
-    intro: 'Sneaker and footwear prices differ by hundreds of rupees between platforms for the exact same SKU. DripFeed compares footwear prices across Myntra, Ajio, Amazon and Flipkart so you can catch the lowest price on sneakers, heels, flats and sandals.',
+    intro: 'Sneaker and footwear prices differ by hundreds of rupees between platforms for the exact same SKU. TagCheck compares footwear prices across Myntra, Ajio, Amazon and Flipkart so you can catch the lowest price on sneakers, heels, flats and sandals.',
     buyingTips: [
       'Amazon and Flipkart frequently have exclusive footwear launches with early-bird pricing.',
       'Ajio\'s footwear return window is typically longer, useful if sizing is uncertain.',
@@ -55,7 +55,7 @@ const CATEGORY_META: Record<string, {
     emoji: '💍',
     description: 'Jewellery, bags, watches & more',
     subCategories: ['Jewellery', 'Bags', 'Watches', 'Sunglasses'],
-    intro: 'Accessories — bags, watches, jewellery and sunglasses — often carry the widest price gaps between platforms because of how commission structures work. DripFeed surfaces the actual lowest price across Myntra, Ajio, Amazon, Flipkart and Nykaa Fashion.',
+    intro: 'Accessories — bags, watches, jewellery and sunglasses — often carry the widest price gaps between platforms because of how commission structures work. TagCheck surfaces the actual lowest price across Myntra, Ajio, Amazon, Flipkart and Nykaa Fashion.',
     buyingTips: [
       'Nykaa Fashion tends to have better pricing on curated jewellery and small accessories.',
       'Watches and bags from international brands are usually cheapest on Amazon due to direct brand partnerships.',
@@ -66,7 +66,7 @@ const CATEGORY_META: Record<string, {
     emoji: '✨',
     description: 'Indo-western blends & contemporary styles',
     subCategories: ['Indo-Western', 'Contemporary', 'Boho'],
-    intro: 'Fusion and Indo-western wear is a growing category with prices that shift fast as new collections drop. DripFeed tracks fusion wear pricing across all major Indian fashion platforms so you catch the best deal on contemporary and boho styles.',
+    intro: 'Fusion and Indo-western wear is a growing category with prices that shift fast as new collections drop. TagCheck tracks fusion wear pricing across all major Indian fashion platforms so you catch the best deal on contemporary and boho styles.',
     buyingTips: [
       'Newer fusion wear brands often launch with introductory pricing on Myntra and Ajio — worth checking early.',
       'Compare fabric details closely — fusion wear pricing varies a lot based on embroidery and fabric type.',
@@ -76,7 +76,7 @@ const CATEGORY_META: Record<string, {
     emoji: '🏃',
     description: 'Gym wear, sports shoes & athleisure',
     subCategories: ['Gym Wear', 'Running', 'Yoga', 'Sports Shoes'],
-    intro: 'Activewear and athleisure pricing varies significantly between platforms, especially for brands like Nike, Adidas and Puma. DripFeed compares gym wear, running shoes and yoga apparel prices across Myntra, Amazon, Flipkart and Ajio in real time.',
+    intro: 'Activewear and athleisure pricing varies significantly between platforms, especially for brands like Nike, Adidas and Puma. TagCheck compares gym wear, running shoes and yoga apparel prices across Myntra, Amazon, Flipkart and Ajio in real time.',
     buyingTips: [
       'Amazon typically has the best pricing on international sportswear brands due to direct distribution deals.',
       'Myntra\'s sports section runs frequent flash sales — worth checking multiple times a week during sale season.',
@@ -87,7 +87,7 @@ const CATEGORY_META: Record<string, {
     emoji: '👑',
     description: 'Premium designer fashion & luxury brands',
     subCategories: ['Designer', 'Premium', 'Limited Edition'],
-    intro: 'Luxury and designer fashion pricing rarely drops, but small differences between authorized retailers add up on higher price points. DripFeed compares premium fashion listings across platforms so you can be confident you\'re getting the best available price.',
+    intro: 'Luxury and designer fashion pricing rarely drops, but small differences between authorized retailers add up on higher price points. TagCheck compares premium fashion listings across platforms so you can be confident you\'re getting the best available price.',
     buyingTips: [
       'Always verify seller authenticity badges before buying luxury items on marketplace platforms.',
       'Tata CLiQ Luxury and Ajio Luxe often carry authorized-retailer pricing that beats third-party marketplace listings.',
@@ -159,13 +159,13 @@ export default function CategoryPage() {
       <SEOHead
         title={`${categoryName} — Compare Prices Across 4+ Platforms`}
         description={meta.intro ? meta.intro.slice(0, 155) : meta.description}
-        url={`https://dripfeed-v21.vercel.app/category/${slug}`}
+        url={`https://TagCheck-v21.vercel.app/category/${slug}`}
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://dripfeed-v21.vercel.app/' },
-            { '@type': 'ListItem', position: 2, name: categoryName, item: `https://dripfeed-v21.vercel.app/category/${slug}` },
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://TagCheck-v21.vercel.app/' },
+            { '@type': 'ListItem', position: 2, name: categoryName, item: `https://TagCheck-v21.vercel.app/category/${slug}` },
           ],
         }}
       />

@@ -8,7 +8,7 @@ import { ArrowRight } from 'lucide-react';
 gsap.registerPlugin(ScrollTrigger);
 
 const segments = [
-  { text: 'Meet DripFeed', className: '' },
+  { text: 'Meet TagCheck', className: '' },
   { text: 'your intelligent shopping companion.', className: 'font-serif italic' },
   { text: 'We compare prices, track drops, and find the best deals across India\'s top fashion brands.', className: '' },
 ];
@@ -48,7 +48,7 @@ export default function About() {
           ref={headingRef}
           className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl max-w-5xl mx-auto leading-[0.95] sm:leading-[0.9] text-[#0F0F1A]"
         >
-          <span className="inline">Meet DripFeed</span>
+          <span className="inline">Meet TagCheck</span>
           <br />
           <span className="inline font-serif italic text-lg sm:text-xl md:text-2xl lg:text-3xl">your intelligent shopping companion.</span>
           <br />

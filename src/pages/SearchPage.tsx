@@ -635,7 +635,7 @@ export default function SearchPage() {
         title={
           query
             ? `${query} — Best Prices Across Platforms`
-            : 'Search Fashion Deals — DripFeed India'
+            : 'Search Fashion Deals — TagCheck India'
         }
         description={
           query
@@ -799,7 +799,7 @@ export default function SearchPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {thriftResults.map((t) => {
-                const wa = `https://wa.me/${t.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${t.title}" listed on DripFeed.`)}`;
+                const wa = `https://wa.me/${t.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${t.title}" listed on TagCheck.`)}`;
                 return (
                   <a key={t._id} href={wa} target="_blank" rel="noopener noreferrer"
                     className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:border-emerald-200 hover:shadow-[0_4px_20px_-4px_rgba(16,185,129,0.1)] transition-all duration-300">
@@ -1033,7 +1033,7 @@ export default function SearchPage() {
       <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] text-neutral-600">
-            &copy; 2026 DripFeed India
+            &copy; 2026 TagCheck India
           </p>
           <div className="flex gap-5 text-[13px] text-neutral-600">
             <button
@@ -1056,7 +1056,7 @@ export default function SearchPage() {
             </button>
           </div>
           <p className="text-[11px] text-neutral-500">
-            #Ad: DripFeed earns commission on purchases through our links.
+            #Ad: TagCheck earns commission on purchases through our links.
           </p>
         </div>
       </footer>

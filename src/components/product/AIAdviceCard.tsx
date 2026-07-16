@@ -55,7 +55,7 @@ export function AIAdviceCard({ advice, loading = false, error = false }: AIAdvic
           <p className="text-[10px] text-gray-400">
             {advice?.isAiGenerated === false
               ? 'Quick price-based tips (AI insights unavailable right now)'
-              : 'Powered by DripFeed AI'}
+              : 'Powered by TagCheck AI'}
           </p>
         </div>
       </div>

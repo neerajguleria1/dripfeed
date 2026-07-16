@@ -12,7 +12,7 @@ export interface SEOHeadProps {
   noindex?: boolean;
 }
 
-const SITE_NAME = 'DripFeed India';
+const SITE_NAME = 'TagCheck India';
 const SITE_URL = 'https://dripfeed-v21.vercel.app';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
 const DEFAULT_DESCRIPTION =

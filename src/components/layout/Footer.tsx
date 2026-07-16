@@ -37,7 +37,7 @@ export function Footer({ className = '' }: FooterProps) {
               className="text-2xl font-bold tracking-tight"
               style={{ fontFamily: 'Instrument Serif, serif' }}
             >
-              Drip<span className="text-accent">Feed</span>
+              Tag<span className="text-accent">Check</span>
               <span className="text-accent text-2xl leading-none">.</span>
             </span>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -115,11 +115,11 @@ export function Footer({ className = '' }: FooterProps) {
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-2">
           <p className="text-xs text-gray-500 leading-relaxed">
-            DripFeed earns commission when you buy through our links. This does
+            TagCheck earns commission when you buy through our links. This does
             not affect the price you pay. #Ad
           </p>
           <p className="text-xs text-gray-500">
-            © 2026 DripFeed India. All rights reserved.
+            © 2026 TagCheck India. All rights reserved.
           </p>
         </div>
       </div>

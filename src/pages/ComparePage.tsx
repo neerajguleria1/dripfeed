@@ -235,8 +235,8 @@ export default function ComparePage() {
   return (
     <>
       <SEOHead
-        title={`Compare ${productTitle} Prices — DripFeed India`}
-        description={`Compare ${productTitle} prices across ${platforms.length} platforms. Find the best deal on DripFeed India.`}
+        title={`Compare ${productTitle} Prices — TagCheck India`}
+        description={`Compare ${productTitle} prices across ${platforms.length} platforms. Find the best deal on TagCheck India.`}
         image={productImage}
         jsonLd={
           (lowest
@@ -471,7 +471,7 @@ export default function ComparePage() {
                 <PriceHistory history={priceHistory} />
               </section>
 
-              {/* ─── 4. AI Advice — Gold theme "DripFeed Analysis" ─── */}
+              {/* ─── 4. AI Advice — Gold theme "TagCheck Analysis" ─── */}
               {(aiLoading || aiAdvice) && (
                 <motion.section
                   initial={{ opacity: 0, y: 12 }}
@@ -485,7 +485,7 @@ export default function ComparePage() {
                     </div>
                     <div>
                       <h2 className="text-[14px] font-semibold text-[#0F0F1A] leading-tight">
-                        DripFeed Analysis
+                        TagCheck Analysis
                       </h2>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
                         AI-generated · not financial advice
@@ -516,7 +516,7 @@ export default function ComparePage() {
 
               {/* ─── 6. ASCI Disclosure — single toned-down line ─── */}
               <p className="text-[13px] sm:text-[10px] text-neutral-500 text-center pt-4">
-                #Ad · Prices include affiliate links. DripFeed earns commission at no extra cost to you.
+                #Ad · Prices include affiliate links. TagCheck earns commission at no extra cost to you.
               </p>
             </div>
           )}
@@ -551,7 +551,7 @@ export default function ComparePage() {
         <footer className="px-4 sm:px-8 lg:px-16 py-10 border-t border-neutral-100 bg-white">
           <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-[13px] sm:text-[12px] text-neutral-600">
-              &copy; 2026 DripFeed India
+              &copy; 2026 TagCheck India
             </p>
             <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-600">
               <button
@@ -574,7 +574,7 @@ export default function ComparePage() {
               </button>
             </div>
             <p className="text-[13px] sm:text-[10px] text-neutral-500">
-              #Ad: DripFeed earns commission on purchases through our links.
+              #Ad: TagCheck earns commission on purchases through our links.
             </p>
           </div>
         </footer>

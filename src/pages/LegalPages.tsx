@@ -32,11 +32,11 @@ export function PrivacyPage() {
       <p className="text-[13px] text-[#0F0F1A]/50">Last updated: July 2026</p>
 
       <p>
-        DripFeed India ("DripFeed", "we", "us", "our") is a sole proprietorship operating a fashion price comparison platform at dripfeed.in. We are committed to protecting your personal data in accordance with the Digital Personal Data Protection Act, 2023 (DPDPA) and applicable Indian law.
+        TagCheck India ("TagCheck", "we", "us", "our") is a sole proprietorship operating a fashion price comparison platform. We are committed to protecting your personal data in accordance with the Digital Personal Data Protection Act, 2023 (DPDPA) and applicable Indian law.
       </p>
 
       <H2>1. Data We Collect</H2>
-      <p>We collect the following categories of personal data when you use DripFeed:</p>
+      <p>We collect the following categories of personal data when you use TagCheck:</p>
       <UL>
         <li><strong>Account information:</strong> Name, email address, profile picture (if you sign in via Google)</li>
         <li><strong>Search &amp; browsing data:</strong> Search queries, product views, price comparison history</li>
@@ -90,7 +90,7 @@ export function PrivacyPage() {
       <H3>Preference Cookies</H3>
       <p>Store your style preferences, theme, and cookie consent status.</p>
       <H3>Analytics Cookies</H3>
-      <p>Help us understand how users interact with DripFeed. We use privacy-focused analytics and do not share raw data with advertisers.</p>
+      <p>Help us understand how users interact with TagCheck. We use privacy-focused analytics and do not share raw data with advertisers.</p>
       <H3>Affiliate Tracking</H3>
       <p>When you click an affiliate link, the destination platform (e.g., Amazon, Flipkart) may set its own cookies for purchase tracking. This is governed by that platform's privacy policy.</p>
 
@@ -110,7 +110,7 @@ export function PrivacyPage() {
 
       <H2>9. Children's Privacy</H2>
       <p>
-        DripFeed is not intended for children under 13 years of age. We do not knowingly collect data from children. If you are under 18, you must have parental consent to use the platform.
+        TagCheck is not intended for children under 13 years of age. We do not knowingly collect data from children. If you are under 18, you must have parental consent to use the platform.
       </p>
 
       <H2>10. Grievance Officer</H2>
@@ -127,7 +127,7 @@ export function PrivacyPage() {
 
       <H2>12. Changes to This Policy</H2>
       <p>
-        We may update this Privacy Policy from time to time. We will notify registered users of significant changes via email or in-app notification. Continued use of DripFeed after changes constitutes acceptance of the updated policy.
+        We may update this Privacy Policy from time to time. We will notify registered users of significant changes via email or in-app notification. Continued use of TagCheck after changes constitutes acceptance of the updated policy.
       </p>
     </LegalPage>
   );
@@ -142,16 +142,16 @@ export function TermsPage() {
       <p className="text-[13px] text-[#0F0F1A]/50">Last updated: July 2026</p>
 
       <p>
-        These Terms of Service ("Terms") govern your use of DripFeed India ("DripFeed", "we", "us"), a fashion price comparison platform operated as a sole proprietorship. By accessing or using DripFeed, you agree to be bound by these Terms.
+        These Terms of Service ("Terms") govern your use of TagCheck India ("TagCheck", "we", "us"), a fashion price comparison platform operated as a sole proprietorship. By accessing or using TagCheck, you agree to be bound by these Terms.
       </p>
 
       <H2>1. Acceptance of Terms</H2>
       <p>
-        By creating an account or using any part of the DripFeed platform, you confirm that you have read, understood, and agree to these Terms. If you do not agree, you must stop using the platform immediately.
+        By creating an account or using any part of the TagCheck platform, you confirm that you have read, understood, and agree to these Terms. If you do not agree, you must stop using the platform immediately.
       </p>
 
       <H2>2. Service Description</H2>
-      <p>DripFeed provides a free price comparison service for fashion products across multiple e-commerce platforms in India, including but not limited to:</p>
+      <p>TagCheck provides a free price comparison service for fashion products across multiple e-commerce platforms in India, including but not limited to:</p>
       <UL>
         <li>Comparing prices across Flipkart, Amazon, Myntra, Ajio, Meesho, and others</li>
         <li>Price drop alerts and deal notifications</li>
@@ -160,12 +160,12 @@ export function TermsPage() {
         <li>A peer-to-peer thrift marketplace for pre-owned fashion</li>
       </UL>
       <p>
-        DripFeed does not sell products, process payments, or handle delivery. We redirect you to third-party platforms where you complete your purchase independently.
+        TagCheck does not sell products, process payments, or handle delivery. We redirect you to third-party platforms where you complete your purchase independently.
       </p>
 
       <H2>3. Affiliate Disclosure</H2>
       <p>
-        DripFeed operates on an affiliate commerce model and intends to earn commissions from affiliate programs when you purchase products through our links, once those programs are active. This is how we plan to keep the platform free. Commissions never affect the price you pay. See our full <a href="/affiliate-disclosure" className="underline hover:text-[#0F0F1A]">Affiliate Disclosure</a> for details on which programs are currently active.
+        TagCheck operates on an affiliate commerce model and intends to earn commissions from affiliate programs when you purchase products through our links, once those programs are active. This is how we plan to keep the platform free. Commissions never affect the price you pay. See our full <a href="/affiliate-disclosure" className="underline hover:text-[#0F0F1A]">Affiliate Disclosure</a> for details on which programs are currently active.
       </p>
 
       <H2>4. User Accounts</H2>
@@ -179,21 +179,21 @@ export function TermsPage() {
 
       <H2>5. Price Accuracy Disclaimer</H2>
       <p>
-        Prices displayed on DripFeed are sourced from third-party platforms and cached periodically. While we strive for accuracy, we cannot guarantee that prices shown are current or error-free. <strong>Always verify the final price on the destination platform before making a purchase.</strong> DripFeed is not responsible for price discrepancies, stock availability, or promotional eligibility on third-party sites.
+        Prices displayed on TagCheck are sourced from third-party platforms and cached periodically. While we strive for accuracy, we cannot guarantee that prices shown are current or error-free. <strong>Always verify the final price on the destination platform before making a purchase.</strong> TagCheck is not responsible for price discrepancies, stock availability, or promotional eligibility on third-party sites.
       </p>
 
       <H2>6. Intellectual Property</H2>
       <UL>
-        <li>The DripFeed platform (code, design, branding, logo) is owned by DripFeed India</li>
+        <li>The TagCheck platform (code, design, branding, logo) is owned by TagCheck India</li>
         <li>Product data, images, and prices belong to their respective platforms and brands</li>
-        <li>You may not reproduce, distribute, or create derivative works of the DripFeed platform without permission</li>
+        <li>You may not reproduce, distribute, or create derivative works of the TagCheck platform without permission</li>
       </UL>
 
       <H2>7. User Content (Thrift Listings)</H2>
-      <p>When you list items on the DripFeed Thrift marketplace:</p>
+      <p>When you list items on the TagCheck Thrift marketplace:</p>
       <UL>
         <li>You retain ownership of your content (photos, descriptions)</li>
-        <li>You grant DripFeed a non-exclusive, royalty-free license to display, distribute, and promote your listing on the platform</li>
+        <li>You grant TagCheck a non-exclusive, royalty-free license to display, distribute, and promote your listing on the platform</li>
         <li>You are responsible for the accuracy of your listing and the condition of items sold</li>
         <li>Listings must comply with applicable laws — no counterfeit, stolen, or prohibited items</li>
       </UL>
@@ -201,7 +201,7 @@ export function TermsPage() {
       <H2>8. Prohibited Use</H2>
       <p>You agree not to:</p>
       <UL>
-        <li>Scrape, crawl, or programmatically access DripFeed without written permission</li>
+        <li>Scrape, crawl, or programmatically access TagCheck without written permission</li>
         <li>Create fake or multiple accounts</li>
         <li>Manipulate prices, reviews, or affiliate tracking</li>
         <li>Use the platform for any illegal activity</li>
@@ -212,21 +212,21 @@ export function TermsPage() {
 
       <H2>9. Limitation of Liability</H2>
       <p>
-        DripFeed is a comparison and discovery platform. We are <strong>not liable</strong> for:
+        TagCheck is a comparison and discovery platform. We are <strong>not liable</strong> for:
       </p>
       <UL>
         <li>Purchases made on third-party platforms (returns, refunds, quality issues are governed by those platforms)</li>
         <li>Price changes, out-of-stock items, or coupon validity on third-party sites</li>
-        <li>Losses arising from reliance on information displayed on DripFeed</li>
+        <li>Losses arising from reliance on information displayed on TagCheck</li>
         <li>Thrift marketplace transactions between users</li>
       </UL>
       <p>
-        To the maximum extent permitted by law, DripFeed's total liability for any claim shall not exceed ₹1,000 or the amount you paid to DripFeed (which is ₹0 for free users).
+        To the maximum extent permitted by law, TagCheck's total liability for any claim shall not exceed ₹1,000 or the amount you paid to TagCheck (which is ₹0 for free users).
       </p>
 
       <H2>10. Termination</H2>
       <p>
-        DripFeed may suspend or terminate your account at any time if you violate these Terms, engage in abusive behavior, or for any other reason at our discretion. Upon termination, your right to use the platform ceases immediately. You may delete your own account at any time from the account menu.
+        TagCheck may suspend or terminate your account at any time if you violate these Terms, engage in abusive behavior, or for any other reason at our discretion. Upon termination, your right to use the platform ceases immediately. You may delete your own account at any time from the account menu.
       </p>
 
       <H2>11. Governing Law &amp; Jurisdiction</H2>
@@ -236,7 +236,7 @@ export function TermsPage() {
 
       <H2>12. Compliance with IT Act, 2000</H2>
       <p>
-        DripFeed operates as an intermediary under the Information Technology Act, 2000 and the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021. We:
+        TagCheck operates as an intermediary under the Information Technology Act, 2000 and the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021. We:
       </p>
       <UL>
         <li>Provide a mechanism for users to report violations</li>
@@ -273,13 +273,13 @@ export function AffiliateDisclosurePage() {
 
       <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mb-4">
         <p className="text-[15px] font-medium text-[#0F0F1A]">
-          DripFeed operates on an affiliate commerce model. We are in the process of joining affiliate programs including Amazon Associates India, the Flipkart Affiliate Program, VCommission, and CueLinks. Where an active affiliate relationship is not yet established for a given link, that link takes you directly to the platform with no commission earned.
+          TagCheck operates on an affiliate commerce model. We are in the process of joining affiliate programs including Amazon Associates India, the Flipkart Affiliate Program, VCommission, and CueLinks. Where an active affiliate relationship is not yet established for a given link, that link takes you directly to the platform with no commission earned.
         </p>
       </div>
 
       <H2>What This Means</H2>
       <p>
-        Once fully onboarded to each affiliate program, DripFeed will earn a small commission when you click a link that takes you to an external shopping platform and make a purchase — <strong>at no extra cost to you</strong>. You pay exactly the same price whether you use our link or go directly to the platform. Until an affiliate relationship is active for a given platform, links to that platform are plain (non-commissioned) links.
+        Once fully onboarded to each affiliate program, TagCheck will earn a small commission when you click a link that takes you to an external shopping platform and make a purchase — <strong>at no extra cost to you</strong>. You pay exactly the same price whether you use our link or go directly to the platform. Until an affiliate relationship is active for a given platform, links to that platform are plain (non-commissioned) links.
       </p>
 
       <H2>How to Identify Affiliate Links</H2>
@@ -296,7 +296,7 @@ export function AffiliateDisclosurePage() {
 
       <H2>Affiliate Programs We Work With</H2>
       <p>
-        DripFeed is being onboarded to the following affiliate programs. A program is only active for a platform once approval and tracking IDs are in place — until then, links to that platform are not commissioned.
+        TagCheck is being onboarded to the following affiliate programs. A program is only active for a platform once approval and tracking IDs are in place — until then, links to that platform are not commissioned.
       </p>
       <UL>
         <li><strong>Amazon Associates India</strong> — for amazon.in products</li>
@@ -307,17 +307,17 @@ export function AffiliateDisclosurePage() {
 
       <H2>Why We Use Affiliate Links</H2>
       <p>
-        DripFeed is a free platform. We do not charge users for price comparison, wishlist features, or deal alerts. Affiliate commissions are our primary revenue source and allow us to keep the platform free, ad-light, and focused on helping you find the best prices.
+        TagCheck is a free platform. We do not charge users for price comparison, wishlist features, or deal alerts. Affiliate commissions are our primary revenue source and allow us to keep the platform free, ad-light, and focused on helping you find the best prices.
       </p>
 
       <H2>ASCI Compliance</H2>
       <p>
-        All promotional content on DripFeed is clearly marked as per the Advertising Standards Council of India (ASCI) Guidelines for Influencer Advertising in Digital Media. We believe in full transparency about our business model and commercial relationships.
+        All promotional content on TagCheck is clearly marked as per the Advertising Standards Council of India (ASCI) Guidelines for Influencer Advertising in Digital Media. We believe in full transparency about our business model and commercial relationships.
       </p>
 
       <H2>FTC-Style Transparency Statement</H2>
       <p>
-        In the interest of full disclosure: DripFeed earns money when you buy things through our links. We only recommend or compare products we believe provide genuine value. Our editorial opinions are our own and are not influenced by affiliate partnerships. If a product is bad or overpriced, we will say so regardless of commission potential.
+        In the interest of full disclosure: TagCheck earns money when you buy things through our links. We only recommend or compare products we believe provide genuine value. Our editorial opinions are our own and are not influenced by affiliate partnerships. If a product is bad or overpriced, we will say so regardless of commission potential.
       </p>
 
       <H2>Questions?</H2>

@@ -43,7 +43,7 @@ export function ShareModal({ open, onClose, title, url, savings }: ShareModalPro
 
   const handleWhatsApp = useCallback(() => {
     const savingsText = savings ? ` — save up to ₹${savings}` : '';
-    const message = `Check this out! ${title}${savingsText} on DripFeed: ${shareUrl}`;
+    const message = `Check this out! ${title}${savingsText} on TagCheck: ${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   }, [title, savings, shareUrl]);
 
@@ -52,7 +52,7 @@ export function ShareModal({ open, onClose, title, url, savings }: ShareModalPro
     try {
       await navigator.share({
         title,
-        text: savings ? `${title} — save up to ₹${savings} on DripFeed` : `${title} on DripFeed`,
+        text: savings ? `${title} — save up to ₹${savings} on TagCheck` : `${title} on TagCheck`,
         url: shareUrl,
       });
     } catch { /* User cancelled */ }
@@ -72,7 +72,7 @@ export function ShareModal({ open, onClose, title, url, savings }: ShareModalPro
       try {
         await navigator.share({
           title,
-          text: savings ? `${title} — save up to ₹${savings} on DripFeed` : `${title} on DripFeed`,
+          text: savings ? `${title} — save up to ₹${savings} on TagCheck` : `${title} on TagCheck`,
           url: shareUrl,
         });
       } catch { /* User cancelled */ }

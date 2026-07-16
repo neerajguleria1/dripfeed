@@ -148,7 +148,7 @@ export default function EarlyJoin() {
                   Why Join Early?
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-medium tracking-[-0.03em] leading-[1.1] mb-4 text-[#0F0F1A]">
-                  Be the First to Experience DripFeed
+                  Be the First to Experience TagCheck
                 </h2>
                 <p className="text-[#0F0F1A] text-sm leading-relaxed mb-6">
                   Early joiners get exclusive access, special perks, and a direct line to shape the product.

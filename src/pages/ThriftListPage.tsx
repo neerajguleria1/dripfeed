@@ -90,7 +90,7 @@ export default function ThriftListPage() {
 
   return (
     <>
-      <SEOHead title="List an Item" description="Sell your pre-loved fashion on DripFeed" />
+      <SEOHead title="List an Item" description="Sell your pre-loved fashion on TagCheck" />
       <div className="max-w-lg mx-auto px-4 py-8">
         {/* Header */}
         <button onClick={() => navigate('/thrift')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#0F0F1A] mb-4 transition-colors">

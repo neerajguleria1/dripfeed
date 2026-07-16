@@ -175,7 +175,7 @@ describe('Preservation: untouched-file and unaffected-markup checks (baseline on
     expect(content).toContain('Start Comparing');
 
     // Footer links
-    expect(content).toContain('DripFeed India');
+    expect(content).toContain('TagCheck India');
     expect(content).toContain("navigate('/privacy')");
     expect(content).toContain("navigate('/terms')");
     expect(content).toContain("navigate('/affiliate-disclosure')");

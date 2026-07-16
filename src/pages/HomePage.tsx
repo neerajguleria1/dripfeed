@@ -128,14 +128,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <SEOHead
-        title="DripFeed — Compare Fashion Prices Across 4+ Indian Platforms"
+        title="TagCheck — Compare Fashion Prices Across 4+ Indian Platforms"
         description="Never overpay for fashion. Compare prices across Myntra, Ajio, Amazon & Flipkart in one click."
         url="https://dripfeed-v21.vercel.app/"
         jsonLd={[
           {
             '@context': 'https://schema.org',
             '@type': 'Organization',
-            name: 'DripFeed India',
+            name: 'TagCheck India',
             url: 'https://dripfeed-v21.vercel.app',
             logo: 'https://dripfeed-v21.vercel.app/logo.png',
             description: 'AI-powered fashion price comparison platform for India, comparing prices across 4+ e-commerce platforms.',
@@ -143,7 +143,7 @@ export default function HomePage() {
           {
             '@context': 'https://schema.org',
             '@type': 'WebSite',
-            name: 'DripFeed India',
+            name: 'TagCheck India',
             url: 'https://dripfeed-v21.vercel.app',
             potentialAction: {
               '@type': 'SearchAction',
@@ -454,7 +454,7 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════════════════════ */}
       <footer className="px-5 sm:px-8 py-10 pb-24 sm:pb-10 bg-white border-t border-neutral-100">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[13px] text-neutral-400">© 2026 DripFeed India</p>
+          <p className="text-[13px] text-neutral-400">© 2026 TagCheck India</p>
           <div className="flex gap-6 text-[13px] text-neutral-400">
             <button onClick={() => navigate('/privacy')} className="hover:text-[#171310] transition-colors min-h-[44px] flex items-center">Privacy</button>
             <button onClick={() => navigate('/terms')} className="hover:text-[#171310] transition-colors min-h-[44px] flex items-center">Terms</button>

@@ -138,7 +138,7 @@ export default function HowItWorksPage() {
 
           <div className="relative z-10 w-full h-full flex flex-col items-center">
             <nav className="flex items-center justify-between py-6 px-6 md:px-10 w-full">
-              <span className="tracking-tighter text-xl text-[#0F0F1A]">DripFeed</span>
+              <span className="tracking-tighter text-xl text-[#0F0F1A]">TagCheck</span>
             </nav>
 
             <div ref={textRef} className="w-full flex flex-col items-center pt-12 md:pt-20 px-6 text-center max-w-4xl">

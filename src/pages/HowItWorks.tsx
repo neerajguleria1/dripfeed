@@ -39,7 +39,7 @@ const steps = [
     number: '03',
     icon: Bell,
     title: 'Get Alerts & Never Miss a Drop',
-    desc: 'Set your target price and let DripFeed watch the market. The moment your wishlist item drops, you get an instant notification.',
+    desc: 'Set your target price and let TagCheck watch the market. The moment your wishlist item drops, you get an instant notification.',
     highlights: ['Price Drops', 'Flash Sales', 'Instant Alerts'],
     details: [
       'Custom price thresholds for every wishlist item',
@@ -123,7 +123,7 @@ export default function HowItWorks() {
             ref={sublineRef}
             className="text-[#0F0F1A]/40 text-sm sm:text-base md:text-lg max-w-xl mx-auto mt-6 leading-relaxed"
           >
-            DripFeed scans thousands of products across India's top fashion platforms so you can compare, track, and save — all from one place.
+            TagCheck scans thousands of products across India's top fashion platforms so you can compare, track, and save — all from one place.
           </p>
         </div>
       </section>
@@ -213,7 +213,7 @@ export default function HowItWorks() {
             Ready to shop smarter?
           </h2>
           <p className="text-[#0F0F1A]/40 text-sm sm:text-base max-w-md mx-auto mb-8">
-            Join the waitlist and be the first to experience DripFeed.
+            Join the waitlist and be the first to experience TagCheck.
           </p>
           <button
             onClick={() => document.getElementById('early-join')?.scrollIntoView({ behavior: 'smooth' })}
