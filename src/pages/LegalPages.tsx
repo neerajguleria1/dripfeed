@@ -117,13 +117,13 @@ export function PrivacyPage() {
       <p>In accordance with DPDPA 2023 and the Information Technology Act, 2000, we have appointed a Grievance Officer:</p>
       <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mt-2">
         <p><strong>Name:</strong> Neeraj Guleria</p>
-        <p><strong>Email:</strong> grievance@dripfeed.in</p>
+        <p><strong>Email:</strong> neerajworking51@gmail.com</p>
         <p><strong>Response time:</strong> Within 72 hours of receiving a complaint</p>
       </div>
 
       <H2>11. Contact Us</H2>
       <p>For general privacy inquiries:</p>
-      <p><strong>Email:</strong> support@dripfeed.in</p>
+      <p><strong>Email:</strong> neerajworking51@gmail.com</p>
 
       <H2>12. Changes to This Policy</H2>
       <p>
@@ -165,7 +165,7 @@ export function TermsPage() {
 
       <H2>3. Affiliate Disclosure</H2>
       <p>
-        DripFeed earns commissions from affiliate programs when you purchase products through our links. This is how we keep the platform free. Commissions never affect the price you pay. See our full <a href="/affiliate-disclosure" className="underline hover:text-[#0F0F1A]">Affiliate Disclosure</a> for details.
+        DripFeed operates on an affiliate commerce model and intends to earn commissions from affiliate programs when you purchase products through our links, once those programs are active. This is how we plan to keep the platform free. Commissions never affect the price you pay. See our full <a href="/affiliate-disclosure" className="underline hover:text-[#0F0F1A]">Affiliate Disclosure</a> for details on which programs are currently active.
       </p>
 
       <H2>4. User Accounts</H2>
@@ -248,7 +248,7 @@ export function TermsPage() {
       <H2>13. Grievance Officer</H2>
       <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mt-2">
         <p><strong>Name:</strong> Neeraj Guleria</p>
-        <p><strong>Email:</strong> grievance@dripfeed.in</p>
+        <p><strong>Email:</strong> neerajworking51@gmail.com</p>
         <p><strong>Response time:</strong> Acknowledgment within 24 hours, resolution within 15 days</p>
       </div>
 
@@ -258,7 +258,7 @@ export function TermsPage() {
       </p>
 
       <H2>15. Contact</H2>
-      <p><strong>Email:</strong> support@dripfeed.in</p>
+      <p><strong>Email:</strong> neerajworking51@gmail.com</p>
     </LegalPage>
   );
 }
@@ -273,13 +273,13 @@ export function AffiliateDisclosurePage() {
 
       <div className="bg-[#0F0F1A]/5 rounded-xl p-4 mb-4">
         <p className="text-[15px] font-medium text-[#0F0F1A]">
-          DripFeed is a participant in affiliate programs including Amazon Associates India, Flipkart Affiliate Program, VCommission, CueLinks, and other affiliate networks.
+          DripFeed operates on an affiliate commerce model. We are in the process of joining affiliate programs including Amazon Associates India, the Flipkart Affiliate Program, VCommission, and CueLinks. Where an active affiliate relationship is not yet established for a given link, that link takes you directly to the platform with no commission earned.
         </p>
       </div>
 
       <H2>What This Means</H2>
       <p>
-        As an Amazon Associate, DripFeed earns from qualifying purchases. When you click a link on DripFeed that takes you to an external shopping platform, that link is likely an affiliate link. If you make a purchase, we earn a small commission from the platform — <strong>at no extra cost to you</strong>. You pay exactly the same price whether you use our link or go directly to the platform.
+        Once fully onboarded to each affiliate program, DripFeed will earn a small commission when you click a link that takes you to an external shopping platform and make a purchase — <strong>at no extra cost to you</strong>. You pay exactly the same price whether you use our link or go directly to the platform. Until an affiliate relationship is active for a given platform, links to that platform are plain (non-commissioned) links.
       </p>
 
       <H2>How to Identify Affiliate Links</H2>
@@ -294,12 +294,15 @@ export function AffiliateDisclosurePage() {
         Our recommendations and price comparisons are independent. Commissions do not influence which platform shows as cheapest or which products we recommend. Our comparison algorithm shows the lowest price regardless of which affiliate program pays more. We display prices from all platforms equally.
       </p>
 
-      <H2>Our Affiliate Partners</H2>
+      <H2>Affiliate Programs We Work With</H2>
+      <p>
+        DripFeed is being onboarded to the following affiliate programs. A program is only active for a platform once approval and tracking IDs are in place — until then, links to that platform are not commissioned.
+      </p>
       <UL>
-        <li><strong>Amazon Associates India</strong> — amazon.in products</li>
-        <li><strong>Flipkart Affiliate Program</strong> — flipkart.com products</li>
-        <li><strong>VCommission</strong> — Myntra, Ajio, Nykaa Fashion, Meesho</li>
-        <li><strong>CueLinks</strong> — Additional platform coverage and deep-link support</li>
+        <li><strong>Amazon Associates India</strong> — for amazon.in products</li>
+        <li><strong>Flipkart Affiliate Program</strong> — for flipkart.com products</li>
+        <li><strong>VCommission</strong> — for Myntra, Ajio, Nykaa Fashion, Meesho</li>
+        <li><strong>CueLinks</strong> — for additional platform coverage and deep-link support</li>
       </UL>
 
       <H2>Why We Use Affiliate Links</H2>
@@ -319,7 +322,7 @@ export function AffiliateDisclosurePage() {
 
       <H2>Questions?</H2>
       <p>
-        If you have questions about our affiliate relationships or how we make money, feel free to reach out at <strong>support@dripfeed.in</strong>. We're happy to be transparent about everything.
+        If you have questions about our affiliate relationships or how we make money, feel free to reach out at <strong>neerajworking51@gmail.com</strong>. We're happy to be transparent about everything.
       </p>
     </LegalPage>
   );
