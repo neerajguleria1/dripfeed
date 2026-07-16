@@ -19,7 +19,7 @@ const sizeMap = {
 };
 
 /**
- * DripFeed logo mark: a minimal geometric droplet trail icon paired with a
+ * TagCheck logo mark: a minimal geometric droplet trail icon paired with a
  * clean sans-serif wordmark. Single-weight, single-color wordmark (no split
  * coloring, no serif) for a modern, durable brand feel across both dark
  * hero surfaces and white headers.
@@ -35,7 +35,7 @@ export default function Logo({ variant = 'dark', size = 'md', asLink = true, cla
         className={`font-extrabold tracking-tight leading-none whitespace-nowrap ${text} ${textColor}`}
         style={{ fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 800 }}
       >
-        DripFeed
+        TagCheck
       </span>
     </span>
   );
@@ -43,7 +43,7 @@ export default function Logo({ variant = 'dark', size = 'md', asLink = true, cla
   if (!asLink) return content;
 
   return (
-    <Link to="/" className="flex-shrink-0 inline-flex items-center focus:outline-none" aria-label="DripFeed home">
+    <Link to="/" className="flex-shrink-0 inline-flex items-center focus:outline-none" aria-label="TagCheck home">
       {content}
     </Link>
   );
