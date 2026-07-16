@@ -160,7 +160,22 @@ async function compare(req: VercelRequest, res: VercelResponse) {
         const parts = parsed.pathname.split('/').filter(Boolean);
         let productName = '';
 
-        if (host.includes('amazon')) {
+        // Resolve short URLs (amzn.in, amzn.to, etc.) before parsing
+        let resolvedUrl = url;
+        if (host.includes('amzn.in') || host.includes('amzn.to') || host.includes('amzn.eu')) {
+          try {
+            const r = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+            resolvedUrl = r.url || url;
+            const rParsed = new URL(resolvedUrl);
+            parsed.hostname = rParsed.hostname;
+            parsed.pathname = rParsed.pathname;
+            parsed.search = rParsed.search;
+            parts.length = 0;
+            parts.push(...rParsed.pathname.split('/').filter(Boolean));
+          } catch { /* use original if redirect fails */ }
+        }
+
+        if (host.includes('amazon') || host.includes('amzn')) {
           const kParam = parsed.searchParams.get('k');
           if (kParam) { productName = kParam; }
           else {
