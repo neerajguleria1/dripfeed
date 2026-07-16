@@ -215,7 +215,7 @@ function getNextKey(currentKey: string): string {
 // After N consecutive failures, skip a platform for a cooldown window instead
 // of burning credits retrying a site that is actively blocking every request.
 const FAILURE_THRESHOLD = 3;
-const COOLDOWN_MS = 30 * 60 * 1000; // 30 min
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 min
 const platformFailures = new Map<string, { count: number; openedAt: number }>();
 
 function isCircuitOpen(platform: string): boolean {
