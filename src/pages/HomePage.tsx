@@ -164,11 +164,8 @@ export default function HomePage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#171310] overflow-hidden"
+        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#171310] overflow-hidden border-b-2 border-[#C9A96E]"
       >
-        {/* Radial gradient glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(201,169,110,0.12),transparent)]" />
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/5 to-transparent" />
 
         <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
           {/* Live badge */}
@@ -176,7 +173,7 @@ export default function HomePage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/10 rounded-full px-4 py-2 mb-8"
+            className="inline-flex items-center gap-2 bg-[#221D17] border-2 border-white/15 rounded-full px-4 py-2 mb-8"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -196,7 +193,7 @@ export default function HomePage() {
           >
             Never overpay for
             <br />
-            <span className="bg-gradient-to-r from-[#C9A96E] via-[#E8D5A8] to-[#C9A96E] bg-clip-text text-transparent">
+            <span className="text-[#C9A96E] underline underline-offset-8 decoration-2">
               fashion
             </span>{' '}
             again
@@ -219,7 +216,7 @@ export default function HomePage() {
             transition={{ delay: 0.2, duration: 0.5 }}
           >
             <form onSubmit={handleSearchSubmit} className="relative max-w-xl mx-auto group">
-              <div className="flex items-center bg-white/[0.08] backdrop-blur-md border border-white/[0.15] rounded-2xl h-[56px] sm:h-[60px] px-5 transition-all duration-300 group-focus-within:border-[#C9A96E]/50 group-focus-within:bg-white/[0.12] group-focus-within:shadow-[0_0_40px_rgba(201,169,110,0.1)]">
+              <div className="flex items-center bg-[#221D17] border-2 border-white/20 rounded-2xl h-[56px] sm:h-[60px] px-5 transition-colors duration-200 group-focus-within:border-[#C9A96E]">
                 <Search className="w-5 h-5 text-white/40 shrink-0" />
                 <input
                   type="text"
@@ -250,7 +247,7 @@ export default function HomePage() {
             {PLATFORMS.map(({ name, color }) => (
               <span
                 key={name}
-                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-full text-[11px] text-white/60 font-medium"
+                className="inline-flex items-center gap-1.5 bg-[#221D17] border-2 border-white/15 px-3 py-1.5 rounded-full text-[11px] text-white/60 font-medium"
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
                 {name}
@@ -425,9 +422,7 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════════════════
           CTA — Dark, minimal, single action
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 sm:py-32 bg-[#171310] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_100%,rgba(201,169,110,0.08),transparent)]" />
-
+      <section className="py-24 sm:py-32 bg-[#171310] relative overflow-hidden border-t-2 border-[#C9A96E]">
         <Reveal className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
           <motion.h2 variants={fadeUp} className="text-[28px] sm:text-[40px] font-bold text-white mb-4 tracking-[-0.02em] leading-tight">
             Stop scrolling between apps.
