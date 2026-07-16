@@ -625,8 +625,8 @@ export default function SearchPage() {
         }
         description={
           query
-            ? `Compare prices for "${query}" across Myntra, Ajio, Amazon, Meesho & more.`
-            : 'Search and compare fashion prices across 7+ Indian platforms. Find the best deals instantly.'
+            ? `Compare prices for "${query}" across Myntra, Ajio, Amazon & Flipkart.`
+            : 'Search and compare fashion prices across 4+ Indian platforms. Find the best deals instantly.'
         }
       />
 

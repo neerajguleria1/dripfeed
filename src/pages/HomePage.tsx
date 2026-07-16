@@ -128,8 +128,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <SEOHead
-        title="DripFeed — Compare Fashion Prices Across 7+ Indian Platforms"
-        description="Never overpay for fashion. Compare prices across Myntra, Ajio, Amazon, Flipkart, Meesho & more in one click."
+        title="DripFeed — Compare Fashion Prices Across 4+ Indian Platforms"
+        description="Never overpay for fashion. Compare prices across Myntra, Ajio, Amazon & Flipkart in one click."
         url="https://dripfeed-v21.vercel.app/"
         jsonLd={[
           {
@@ -138,7 +138,7 @@ export default function HomePage() {
             name: 'DripFeed India',
             url: 'https://dripfeed-v21.vercel.app',
             logo: 'https://dripfeed-v21.vercel.app/logo.png',
-            description: 'AI-powered fashion price comparison platform for India, comparing prices across 7+ e-commerce platforms.',
+            description: 'AI-powered fashion price comparison platform for India, comparing prices across 4+ e-commerce platforms.',
           },
           {
             '@context': 'https://schema.org',
@@ -206,7 +206,7 @@ export default function HomePage() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-[15px] sm:text-[17px] text-white/60 mb-9 max-w-md mx-auto leading-relaxed"
           >
-            One search. Seven platforms. The lowest price — instantly.
+            One search. Four platforms. The lowest price — instantly.
           </motion.p>
 
           {/* Search */}
