@@ -160,22 +160,21 @@ async function compare(req: VercelRequest, res: VercelResponse) {
         const parts = parsed.pathname.split('/').filter(Boolean);
         let productName = '';
 
-        // Resolve short URLs (amzn.in, amzn.to, etc.) before parsing
-        let resolvedUrl = url;
-        if (host.includes('amzn.in') || host.includes('amzn.to') || host.includes('amzn.eu')) {
+        // Resolve short URLs before parsing
+        const SHORT_URL_HOSTS = ['amzn.in', 'amzn.to', 'amzn.eu', 'fkrt.it', 'fkrt.cc', 'dl.flipkart.com'];
+        let resolvedHost = host;
+        if (SHORT_URL_HOSTS.some(h => host.includes(h))) {
           try {
             const r = await fetch(url, { method: 'HEAD', redirect: 'follow' });
-            resolvedUrl = r.url || url;
+            const resolvedUrl = r.url || url;
             const rParsed = new URL(resolvedUrl);
-            parsed.hostname = rParsed.hostname;
-            parsed.pathname = rParsed.pathname;
-            parsed.search = rParsed.search;
+            resolvedHost = rParsed.hostname.toLowerCase();
             parts.length = 0;
             parts.push(...rParsed.pathname.split('/').filter(Boolean));
           } catch { /* use original if redirect fails */ }
         }
 
-        if (host.includes('amazon') || host.includes('amzn')) {
+        if (resolvedHost.includes('amazon') || resolvedHost.includes('amzn')) {
           const kParam = parsed.searchParams.get('k');
           if (kParam) { productName = kParam; }
           else {
@@ -194,20 +193,20 @@ async function compare(req: VercelRequest, res: VercelResponse) {
             }
             else productName = parts[0]?.replace(/[-_]/g, ' ').trim() || '';
           }
-        } else if (host.includes('flipkart')) {
+        } else if (resolvedHost.includes('flipkart')) {
           const pIdx = parts.indexOf('p');
           const slug = pIdx > 0 ? parts[pIdx - 1] : parts[0] || '';
           productName = slug.replace(/[-_]/g, ' ').replace(/\b(itm\w+)\b/gi, '').trim();
-        } else if (host.includes('myntra')) {
+        } else if (resolvedHost.includes('myntra')) {
           // Pick longest non-numeric segment
           productName = parts
             .filter(p => !/^\d+$/.test(p) && p !== 'buy' && p.length > 3)
             .sort((a, b) => b.length - a.length)[0]?.replace(/[-_]/g, ' ').trim() || '';
-        } else if (host.includes('ajio')) {
+        } else if (resolvedHost.includes('ajio')) {
           productName = parts
             .filter(p => p !== 'p' && p !== 's' && p.length > 3 && !/^[A-Z0-9]{8,}$/.test(p))
             .sort((a, b) => b.length - a.length)[0]?.replace(/[-_]/g, ' ').replace(/\d{4,}/g, '').trim() || '';
-        } else if (host.includes('meesho') || host.includes('nykaa') || host.includes('tatacliq')) {
+        } else if (resolvedHost.includes('meesho') || resolvedHost.includes('nykaa') || resolvedHost.includes('tatacliq')) {
           const pIdx = parts.indexOf('p');
           const slug = pIdx > 0 ? parts[pIdx - 1] : parts[0] || '';
           productName = slug.replace(/[-_]/g, ' ').trim();
