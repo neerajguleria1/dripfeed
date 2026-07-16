@@ -80,7 +80,7 @@ function App() {
         <Route path="/category/:slug" element={<AppLayout><CategoryPage /></AppLayout>} />
         <Route path="/brand/:slug" element={<AppLayout><BrandPage /></AppLayout>} />
         <Route path="/thrift" element={<AppLayout><ThriftBrowsePage /></AppLayout>} />
-        <Route path="/thrift/list" element={<AppLayout><ProtectedRoute><ThriftListPage /></ProtectedRoute></AppLayout>} />
+        <Route path="/thrift/list" element={<AppLayout><ThriftListPage /></AppLayout>} />
         <Route path="/admin" element={<AppLayout><AdminRoute><AdminPage /></AdminRoute></AppLayout>} />
         <Route path="/stats" element={<AppLayout><ClickStatsPage /></AppLayout>} />
 
