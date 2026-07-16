@@ -1,5 +1,5 @@
 import type { IProduct } from './models/Product.js';
-import type { IUserPreferences, ISearchEntry } from './models/UserPreferences.js';
+import type { IUserPreferences } from './models/UserPreferences.js';
 
 // --- Public Interfaces ---
 
