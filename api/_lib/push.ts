@@ -1,9 +1,15 @@
 import webpush from 'web-push';
 import { PushSubscription } from './models/PushSubscription.js';
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:neerajworking51@gmail.com';
+// Strip BOM / zero-width characters that can sneak into env vars depending
+// on how the value was set (e.g. piping through certain shells).
+function cleanEnvValue(value: string | undefined): string | undefined {
+  return value?.replace(/^\uFEFF/, '').trim() || undefined;
+}
+
+const VAPID_PUBLIC_KEY = cleanEnvValue(process.env.VAPID_PUBLIC_KEY);
+const VAPID_PRIVATE_KEY = cleanEnvValue(process.env.VAPID_PRIVATE_KEY);
+const VAPID_SUBJECT = cleanEnvValue(process.env.VAPID_SUBJECT) || 'mailto:neerajworking51@gmail.com';
 
 let configured = false;
 function ensureConfigured(): boolean {

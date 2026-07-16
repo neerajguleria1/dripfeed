@@ -12,7 +12,10 @@ export async function handlePush(req: VercelRequest, res: VercelResponse, subpat
   const cleaned = subpath.startsWith('/') ? subpath.slice(1) : subpath;
 
   if (cleaned === 'vapid-key' && req.method === 'GET') {
-    const publicKey = process.env.VAPID_PUBLIC_KEY || null;
+    // Strip BOM / whitespace that can sneak into env vars depending on how
+    // they were set, so the frontend always gets a clean key.
+    const raw = process.env.VAPID_PUBLIC_KEY;
+    const publicKey = raw ? raw.replace(/^\uFEFF/, '').trim() : null;
     return res.json({ publicKey });
   }
 
