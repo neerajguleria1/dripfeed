@@ -180,15 +180,16 @@ async function compare(req: VercelRequest, res: VercelResponse) {
           else {
             const dpIdx = parts.indexOf('dp');
             if (dpIdx > 0) productName = parts[dpIdx - 1].replace(/[-_]/g, ' ').trim();
-            else if (dpIdx === 0 && parts[1]) {
-              // /dp/ASIN — look up ASIN directly via structured API
+            else if (dpIdx >= 0 && parts[dpIdx + 1]) {
+              // Only ASIN available (e.g. /dp/B0GW3H8KXY) — search by ASIN directly
+              const asin = parts[dpIdx + 1];
               const { searchProducts: sp } = await import('../search.js');
-              const asin = parts[1];
               const r = await sp(asin);
               if (r.length > 0) {
                 const sorted = r.sort((a, b) => a.price - b.price);
                 return res.json({ platforms: sorted, products: sorted, query: sorted[0].title, sourceUrl: url });
               }
+              // ASIN search returned nothing — use ASIN as fallback query
               productName = asin;
             }
             else productName = parts[0]?.replace(/[-_]/g, ' ').trim() || '';
