@@ -68,15 +68,7 @@ export default function HomePage() {
   const [deals, setDeals] = useState<DealData[]>([]);
   const [dealsSectionState, setDealsSectionState] = useState<'loading' | 'deals' | 'trending' | 'empty'>('loading');
   const [searchQuery, setSearchQuery] = useState('');
-  const [comparisonCount, setComparisonCount] = useState(12847);
   const heroRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setComparisonCount((p) => p + Math.floor(Math.random() * 3) + 1);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,7 +183,7 @@ export default function HomePage() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
             </span>
             <span className="text-[13px] text-white/70 font-medium">
-              <span className="text-white font-semibold">{comparisonCount.toLocaleString('en-IN')}</span> comparisons today
+              Live now — free to use, no signup required
             </span>
           </motion.div>
 
@@ -417,9 +409,9 @@ export default function HomePage() {
 
           <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-16">
             {[
-              { value: '7+', label: 'Platforms compared' },
-              { value: '₹2.4Cr', label: 'Saved by users' },
-              { value: '50K+', label: 'Monthly users' },
+              { value: '4+', label: 'Platforms compared' },
+              { value: '100%', label: 'Free, no signup' },
+              { value: '<5s', label: 'Avg. search time' },
             ].map(({ value, label }) => (
               <div key={label}>
                 <p className="text-[28px] sm:text-[44px] font-extrabold text-[#171310] tracking-tight">{value}</p>
