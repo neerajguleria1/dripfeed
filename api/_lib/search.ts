@@ -657,12 +657,10 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     affiliateUrl: buildAffiliateUrl(p.platform, p.url),
   }));
 
-  if (!withAffiliate.length) return withAffiliate;
-  const hasMyntra = withAffiliate.some(p => p.platform === 'Myntra');
-  if (!hasMyntra) return withAffiliate; // don't cache without Myntra
-
-  setMemCache(cacheKey, withAffiliate);
-  setDbCache(cacheKey, withAffiliate);
+  if (withAffiliate.length) {
+    setMemCache(cacheKey, withAffiliate);
+    setDbCache(cacheKey, withAffiliate);
+  }
 
   return withAffiliate;
 }
@@ -723,10 +721,7 @@ export async function searchProductsStreaming(
 
   const sorted = collected.sort((a, b) => a.price - b.price);
 
-  // Only cache if Myntra returned results — if it's missing the cache would
-  // permanently serve incomplete results on every future hit.
-  const hasMyntra = sorted.some(p => p.platform === 'Myntra');
-  if (sorted.length && hasMyntra) {
+  if (sorted.length) {
     setMemCache(cacheKey, sorted);
     setDbCache(cacheKey, sorted);
   }
