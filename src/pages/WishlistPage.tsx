@@ -37,7 +37,10 @@ export default function WishlistPage() {
 
   useEffect(() => {
     api.get('/wishlist')
-      .then((r) => setItems(r.data.items || []))
+      .then((r) => {
+        const raw = r.data.items || [];
+        setItems(raw.map((i: any) => ({ ...i, id: i._id || i.id })));
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -153,9 +156,7 @@ export default function WishlistPage() {
                     <p className="font-semibold text-[#0F0F1A] text-sm line-clamp-2 mb-1">{item.productTitle}</p>
 
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      {item.lowestPrice && (
-                        <span className="font-bold text-[#0F0F1A]">{formatINR(item.lowestPrice)}</span>
-                      )}
+                      <span className="font-bold text-[#0F0F1A]">{formatINR(item.lowestPrice || item.savedPrice)}</span>
                       {dropped && (
                         <span className="flex items-center gap-0.5 text-xs text-green-600 font-semibold">
                           <TrendingDown className="w-3 h-3" /> {formatINR(Math.abs(priceDiff!))} cheaper
@@ -179,17 +180,17 @@ export default function WishlistPage() {
                       />
                     </div>
 
-                    {item.lowestPlatform && (
+                    {(item.lowestPlatform || item.platform) && (
                       <div className="mb-2">
-                        <Badge size="sm">Best on {item.lowestPlatform}</Badge>
+                        <Badge size="sm">Best on {item.lowestPlatform || item.platform}</Badge>
                       </div>
                     )}
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-wrap">
-                      {item.sourceUrl && item.lowestPlatform && (
+                      {item.sourceUrl && (
                         <AffiliateButton
-                          platform={item.lowestPlatform}
+                          platform={item.lowestPlatform || item.platform}
                           url={item.sourceUrl}
                           productTitle={item.productTitle}
                         />

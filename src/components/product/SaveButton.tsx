@@ -51,8 +51,8 @@ export function SaveButton({
         productTitle,
         imageUrl: productData?.imageUrl,
         brand: productData?.brand,
-        lowestPrice: productData?.price,
-        lowestPlatform: productData?.platform,
+        savedPrice: productData?.price,
+        platform: productData?.platform,
         sourceUrl: productData?.url,
       });
       setState('saved');
