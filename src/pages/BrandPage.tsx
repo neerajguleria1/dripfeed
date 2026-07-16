@@ -62,7 +62,7 @@ export default function BrandPage() {
         {/* Brand header */}
         <div className="bg-gradient-to-br from-[#F8F5F2] to-white rounded-2xl p-8 mb-8">
           <h1 className="text-3xl font-bold text-[#0F0F1A]">{brandName}</h1>
-          <p className="text-sm text-gray-500 mt-2">Compare prices across 7+ platforms</p>
+          <p className="text-sm text-gray-500 mt-2">Compare prices across 4+ platforms</p>
           <div className="flex gap-4 mt-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-[#0F0F1A]">{products.length}</p>

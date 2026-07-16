@@ -127,7 +127,7 @@ export function SearchBar({
             onFocus={handleFocus}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            placeholder="Search fashion across 7+ platforms..."
+            placeholder="Search fashion across 4+ platforms..."
             aria-label="Search products"
             className={[
               'flex-1 bg-transparent outline-none placeholder:text-gray-400 text-[var(--df-accent-navy)]',

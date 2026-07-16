@@ -33,7 +33,7 @@ export function FontPairing({ className = '' }: FontPairingProps) {
   const isInView = useInView(ref, { once: true, margin: '-60px' });
 
   const displayText = 'DripFeed';
-  const bodySnippet = 'Compare prices across 7+ platforms.';
+  const bodySnippet = 'Compare prices across 4+ platforms.';
 
   return (
     <div ref={ref} className={`space-y-8 ${className}`}>

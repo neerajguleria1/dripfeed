@@ -16,13 +16,13 @@ import {
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const PLATFORMS = [
-  { name: 'Myntra', color: '#FF3F6C' },
-  { name: 'Ajio', color: '#000000' },
-  { name: 'Amazon', color: '#FF9900' },
-  { name: 'Flipkart', color: '#2874F0' },
-  { name: 'Meesho', color: '#570741' },
-  { name: 'Nykaa', color: '#FC2779' },
-  { name: 'Tata CLiQ', color: '#6C3D9E' },
+  { name: 'Myntra', color: '#FF3F6C', live: true },
+  { name: 'Ajio', color: '#000000', live: true },
+  { name: 'Amazon', color: '#FF9900', live: true },
+  { name: 'Flipkart', color: '#2874F0', live: true },
+  { name: 'Meesho', color: '#570741', live: false },
+  { name: 'Nykaa', color: '#FC2779', live: false },
+  { name: 'Tata CLiQ', color: '#6C3D9E', live: false },
 ];
 
 const TRENDING_TERMS = ['kurta set', 'sneakers', 'silk saree', 'lehenga', 'jeans', 'hoodie', 'palazzo', 'crop top'];
@@ -244,7 +244,7 @@ export default function HomePage() {
             className="mt-8 flex items-center justify-center gap-2 flex-wrap"
           >
             <span className="text-[12px] text-white/30 mr-1">Comparing:</span>
-            {PLATFORMS.map(({ name, color }) => (
+            {PLATFORMS.filter((p) => p.live).map(({ name, color }) => (
               <span
                 key={name}
                 className="inline-flex items-center gap-1.5 bg-[#221D17] border-2 border-white/15 px-3 py-1.5 rounded-full text-[11px] text-white/60 font-medium"
@@ -253,6 +253,11 @@ export default function HomePage() {
                 {name}
               </span>
             ))}
+            {PLATFORMS.some((p) => !p.live) && (
+              <span className="inline-flex items-center gap-1.5 bg-transparent border-2 border-dashed border-white/15 px-3 py-1.5 rounded-full text-[11px] text-white/35 font-medium italic">
+                {PLATFORMS.filter((p) => !p.live).map((p) => p.name).join(', ')} — coming soon
+              </span>
+            )}
           </motion.div>
         </div>
       </motion.section>
@@ -272,7 +277,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10">
             {[
               { num: '01', title: 'Search or paste', desc: 'Type a product name or paste any URL from Myntra, Flipkart, Amazon, or more.' },
-              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 7+ platforms ranked by value. No signup needed.' },
+              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 4+ platforms ranked by value. No signup needed.' },
               { num: '03', title: 'Save money', desc: 'Click through to the cheapest platform and buy. We handle the rest.' },
             ].map(({ num, title, desc }) => (
               <motion.div key={num} variants={fadeUp} className="relative">

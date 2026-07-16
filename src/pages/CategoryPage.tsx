@@ -157,7 +157,7 @@ export default function CategoryPage() {
   return (
     <>
       <SEOHead
-        title={`${categoryName} — Compare Prices Across 7+ Platforms`}
+        title={`${categoryName} — Compare Prices Across 4+ Platforms`}
         description={meta.intro ? meta.intro.slice(0, 155) : meta.description}
         url={`https://dripfeed-v21.vercel.app/category/${slug}`}
         jsonLd={{

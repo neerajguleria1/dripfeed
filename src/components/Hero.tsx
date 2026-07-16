@@ -92,7 +92,7 @@ export default function Hero() {
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-[#0F0F1A]/5">
             <p className="text-2xl mb-1">🔍</p>
             <p className="font-semibold text-sm text-[#0F0F1A]">Compare Prices</p>
-            <p className="text-xs text-[#0F0F1A]/50 mt-0.5">Across 7+ platforms instantly</p>
+            <p className="text-xs text-[#0F0F1A]/50 mt-0.5">Across 4+ platforms instantly</p>
           </div>
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-[#0F0F1A]/5">
             <p className="text-2xl mb-1">🤖</p>
