@@ -78,13 +78,13 @@ export function Header({ className = '' }: HeaderProps) {
         <div className="flex items-center gap-2 ml-auto">
           {/* Search icon (mobile) / Search bar (desktop) */}
           {isDesktop ? (
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <form onSubmit={handleSearch} className="relative group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-[#C9A96E] transition-colors" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search kurtas, sneakers…"
-                className="pl-9 pr-4 py-2 w-52 rounded-full border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400"
+                className="pl-9 pr-4 py-2 w-52 rounded-full border border-neutral-200 bg-white text-sm text-[#0F0F1A] focus:outline-none focus:border-[#C9A96E] focus:ring-2 focus:ring-[#C9A96E]/15 placeholder:text-neutral-400 transition-all"
               />
             </form>
           ) : (
@@ -171,7 +171,7 @@ export function Header({ className = '' }: HeaderProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search products…"
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-sm text-[#0F0F1A] focus:outline-none focus:border-[#C9A96E] focus:ring-2 focus:ring-[#C9A96E]/15 placeholder:text-neutral-400 transition-all"
               />
             </div>
           </form>
