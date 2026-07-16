@@ -165,7 +165,7 @@ async function compare(req: VercelRequest, res: VercelResponse) {
         let resolvedHost = host;
         if (SHORT_URL_HOSTS.some(h => host.includes(h))) {
           try {
-            const r = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+            const r = await fetch(url, { method: 'GET', redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
             const resolvedUrl = r.url || url;
             const rParsed = new URL(resolvedUrl);
             resolvedHost = rParsed.hostname.toLowerCase();
