@@ -52,7 +52,7 @@ export default function Hero() {
         </h1>
 
         <p className="text-[#0F0F1A]/70 text-base sm:text-lg mb-8 max-w-lg mx-auto">
-          Search any product. Compare prices across Myntra, Ajio, Amazon, Flipkart & more. Get AI recommendations on whether to buy now or wait.
+          Search any product. Compare prices across Ajio, Amazon, Flipkart & more. Get AI recommendations on whether to buy now or wait.
         </p>
 
         {/* Main Search Bar */}
@@ -92,7 +92,7 @@ export default function Hero() {
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-[#0F0F1A]/5">
             <p className="text-2xl mb-1">🔍</p>
             <p className="font-semibold text-sm text-[#0F0F1A]">Compare Prices</p>
-            <p className="text-xs text-[#0F0F1A]/50 mt-0.5">Across 4+ platforms instantly</p>
+            <p className="text-xs text-[#0F0F1A]/50 mt-0.5">Across 3+ platforms instantly</p>
           </div>
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-[#0F0F1A]/5">
             <p className="text-2xl mb-1">🤖</p>

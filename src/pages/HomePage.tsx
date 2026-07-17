@@ -16,10 +16,10 @@ import {
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const PLATFORMS = [
-  { name: 'Myntra', color: '#FF3F6C', live: true },
   { name: 'Ajio', color: '#000000', live: true },
   { name: 'Amazon', color: '#FF9900', live: true },
   { name: 'Flipkart', color: '#2874F0', live: true },
+  { name: 'Myntra', color: '#FF3F6C', live: false },
   { name: 'Meesho', color: '#570741', live: false },
   { name: 'Nykaa', color: '#FC2779', live: false },
   { name: 'Tata CLiQ', color: '#6C3D9E', live: false },
@@ -128,8 +128,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <SEOHead
-        title="TagCheck — Compare Fashion Prices Across 4+ Indian Platforms"
-        description="Never overpay for fashion. Compare prices across Myntra, Ajio, Amazon & Flipkart in one click."
+        title="TagCheck — Compare Fashion Prices Across 3+ Indian Platforms"
+        description="Never overpay for fashion. Compare prices across Ajio, Amazon & Flipkart in one click."
         url="https://dripfeed-v21.vercel.app/"
         jsonLd={[
           {
@@ -138,7 +138,7 @@ export default function HomePage() {
             name: 'TagCheck India',
             url: 'https://dripfeed-v21.vercel.app',
             logo: 'https://dripfeed-v21.vercel.app/logo.png',
-            description: 'AI-powered fashion price comparison platform for India, comparing prices across 4+ e-commerce platforms.',
+            description: 'AI-powered fashion price comparison platform for India, comparing prices across 3+ e-commerce platforms.',
           },
           {
             '@context': 'https://schema.org',
@@ -276,8 +276,8 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10">
             {[
-              { num: '01', title: 'Search or paste', desc: 'Type a product name or paste any URL from Myntra, Flipkart, Amazon, or more.' },
-              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 4+ platforms ranked by value. No signup needed.' },
+              { num: '01', title: 'Search or paste', desc: 'Type a product name or paste any URL from Ajio, Flipkart, Amazon, or more.' },
+              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 3+ platforms ranked by value. No signup needed.' },
               { num: '03', title: 'Save money', desc: 'Click through to the cheapest platform and buy. We handle the rest.' },
             ].map(({ num, title, desc }) => (
               <motion.div key={num} variants={fadeUp} className="relative">
@@ -411,7 +411,7 @@ export default function HomePage() {
 
           <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-16">
             {[
-              { value: '4+', label: 'Platforms compared' },
+              { value: '3+', label: 'Platforms compared' },
               { value: '100%', label: 'Free, no signup' },
               { value: '<5s', label: 'Avg. search time' },
             ].map(({ value, label }) => (

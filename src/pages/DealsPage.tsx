@@ -248,7 +248,7 @@ export default function DealsPage() {
     <div className="min-h-screen bg-[#FAFAFA]">
       <SEOHead
         title="Price Drops — Real-Time Tracking"
-        description="Real-time price tracking across Myntra, Ajio, Amazon, Flipkart and more. Data-driven deals, no noise."
+        description="Real-time price tracking across Ajio, Amazon, Flipkart and more. Data-driven deals, no noise."
       />
 
       {/* ── Page Header ──────────────────────────────────────────────────────── */}
@@ -344,7 +344,7 @@ export default function DealsPage() {
                 No matching price drops
               </h2>
               <p className="text-[14px] text-neutral-500 leading-relaxed mb-8">
-                Watching prices across 4+ platforms. New drops are detected every few minutes.
+                Watching prices across 3+ platforms. New drops are detected every few minutes.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button

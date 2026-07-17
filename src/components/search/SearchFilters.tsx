@@ -15,11 +15,9 @@ export interface SearchFiltersProps {
 }
 
 const PLATFORMS = [
-  { name: 'Myntra', color: '#FF3F6C' },
   { name: 'Ajio', color: '#000000' },
   { name: 'Amazon India', color: '#FF9900' },
   { name: 'Flipkart', color: '#2874F0' },
-  { name: 'Nykaa Fashion', color: '#FC2779' },
   { name: 'Meesho', color: '#570A57' },
 ];
 

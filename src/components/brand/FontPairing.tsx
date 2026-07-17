@@ -32,7 +32,7 @@ export function FontPairing({ className = '' }: FontPairingProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-60px' });
 
-  const displayText = 'DripFeed';
+  const displayText = 'TagCheck';
   const bodySnippet = 'Compare prices across 4+ platforms.';
 
   return (

@@ -749,10 +749,14 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  const [az1, fk, mn, aj, ms] = await Promise.all([
+  // Myntra dropped from the active pipeline: requires a residential/Indian
+  // IP to work for free, and the ScraperAPI fallback (premium tier, 25
+  // credits) consistently times out from Vercel's cloud IPs — see
+  // fetchMyntra() above for the full explanation. Revisit if/when a
+  // residential proxy is in place.
+  const [az1, fk, aj, ms] = await Promise.all([
     withRetry(() => fetchAmazonPage(searchTerm, 1), 'Amazon'),
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
-    withRetry(() => fetchMyntra(searchTerm), 'Myntra'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
     withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
   ]);
@@ -766,7 +770,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk, ...mn, ...aj, ...ms]
+  const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms]
     .filter(p => isValidProduct(p))
     .filter(p => isRelevantToQuery(p, searchTerm))
     .sort((a, b) => a.price - b.price);
@@ -834,7 +838,6 @@ export async function searchProductsStreaming(
   await Promise.all([
     fetchAmazonPage(searchTerm, 1).catch(() => []).then(r => processed('amazon', r)),
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
-    fetchMyntra(searchTerm).catch(() => []).then(r => processed('myntra', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
   ]);

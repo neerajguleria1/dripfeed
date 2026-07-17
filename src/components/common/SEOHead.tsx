@@ -16,7 +16,7 @@ const SITE_NAME = 'TagCheck India';
 const SITE_URL = 'https://dripfeed-v21.vercel.app';
 const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
 const DEFAULT_DESCRIPTION =
-  'Compare fashion prices across Myntra, Ajio, Amazon & Flipkart. Find the lowest price instantly — free, no signup.';
+  'Compare fashion prices across Ajio, Amazon & Flipkart. Find the lowest price instantly — free, no signup.';
 
 export function SEOHead({
   title,

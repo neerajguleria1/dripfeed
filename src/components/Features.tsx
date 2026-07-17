@@ -169,7 +169,7 @@ export default function Features() {
               number="01"
               iconUrl="https://images.pexels.com/photos/12911845/pexels-photo-12911845.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop"
               items={[
-                'Compare across Myntra, Ajio & Flipkart',
+                'Compare across Ajio, Amazon & Flipkart',
                 'View interactive price history charts',
                 'Find the best deal with one tap',
                 'Save up to 40% on every purchase',
