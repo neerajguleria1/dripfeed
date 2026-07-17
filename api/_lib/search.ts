@@ -120,6 +120,65 @@ function cleanText(t: string): string {
   return t.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
 }
 
+function toAbsoluteUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('http://')) return url.replace(/^http:\/\//, 'https://');
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('//')) return `https:${url}`;
+  return url;
+}
+
+export function parseMeeshoProducts(html: string, query: string): SearchProduct[] {
+  const root = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  const cardRe = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const products: SearchProduct[] = [];
+  const seen = new Set<string>();
+
+  let match: RegExpExecArray | null;
+  while ((match = cardRe.exec(root))) {
+    const href = match[1] || '';
+    const inner = match[2] || '';
+    if (!href || !href.includes('/p/')) continue;
+
+    const priceMatch = inner.match(/₹\s?([0-9,]+(?:\.\d{1,2})?)/i) || inner.match(/\b([0-9,]+(?:\.\d{1,2})?)\b/);
+    const price = priceMatch ? parsePrice(priceMatch[1]) : 0;
+    const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
+    const imageUrl = toAbsoluteUrl(imgMatch?.[1] || '');
+
+    // Extract only the title text, stopping before price/rating text so
+    // "Adrika Refined Kurtis ₹313 4.1 Star 105 Reviews" doesn't get treated
+    // as one long title — split on price marker and rating pattern first.
+    const withoutImg = inner.replace(/<img[^>]*>/gi, '');
+    const beforePrice = withoutImg.split(/₹\s?[0-9,]/)[0];
+    const rawTitle = cleanText(beforePrice);
+    const normalizedTitle = rawTitle
+      .replace(/\s+/g, ' ')
+      .replace(/\d+(\.\d+)?\s*star.*$/i, '')
+      .replace(/^\+\d+\s*More/i, '') // strip Meesho's "+N More" color-variant badge text
+      .trim();
+
+    if (!normalizedTitle || price <= 0 || !imageUrl) continue;
+    const key = `${normalizedTitle.toLowerCase()}::${price}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    products.push({
+      id: `ms_${href}`,
+      title: normalizedTitle,
+      price,
+      imageUrl,
+      platform: 'Meesho',
+      url: href.startsWith('http') ? href : `https://www.meesho.com${href.startsWith('/') ? href : `/${href}`}`,
+      brand: undefined,
+    });
+  }
+
+  return products
+    .filter(p => isValidProduct(p))
+    .filter(p => isRelevantToQuery(p, query))
+    .slice(0, 20);
+}
+
 // ─── Product quality validator ────────────────────────────────────────────────
 const CATEGORY_SLUGS = new Set([
   'women', 'men', 'kids', 'ethnic', 'western', 'fashion', 'clothing',
@@ -155,7 +214,15 @@ function isRelevantToQuery(product: { title: string; brand?: string }, query: st
   if (queryTerms.length === 0) return true; // nothing meaningful to check against
 
   const haystack = `${product.title} ${product.brand || ''}`.toLowerCase();
-  const matchCount = queryTerms.filter(t => new RegExp(`\\b${t}`, 'i').test(haystack)).length;
+  // Match on a shared word-prefix rather than the exact term, so spelling/
+  // pluralization variants still count as relevant (e.g. query "kurta" vs.
+  // title word "kurtis" — common on Meesho listings — both share "kurt").
+  const words = haystack.split(/[^a-z0-9]+/).filter(Boolean);
+  const matchCount = queryTerms.filter(t => {
+    const prefixLen = Math.min(4, t.length);
+    const prefix = t.slice(0, prefixLen);
+    return words.some(w => w.startsWith(prefix));
+  }).length;
   const requiredMatches = Math.max(1, Math.ceil(queryTerms.length / 2));
   return matchCount >= requiredMatches;
 }
@@ -560,14 +627,13 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
   return fetchMyntraViaScraperApi(query);
 }
 
-// Meesho was evaluated and removed from the active pipeline: its search
-// results only render via a client-side XHR behind Akamai bot protection,
-// requiring the render=true tier on every call (10 credits, no cheaper
-// fallback), and it was unreliable in testing — sometimes only 5 products,
-// sometimes a 40s timeout with 0 results and wasted latency for the whole
-// search response. Not worth the credit cost until a more reliable path
-// (e.g. a dedicated Meesho scraper API) is adopted.
-
+async function fetchMeesho(query: string): Promise<SearchProduct[]> {
+  const targetUrl = `https://www.meesho.com/search?q=${encodeURIComponent(query)}`;
+  const { html, tier, credits } = await fetchWithEscalation(targetUrl, 'meesho', 'render', true, 'render');
+  console.log(`[Meesho] ScraperAPI tier=${tier} credits=${credits}`);
+  if (!html) return [];
+  return parseMeeshoProducts(html, query);
+}
 
 // ─── Ajio ─────────────────────────────────────────────────────────────────────
 // Verified against a live ScraperAPI response: Ajio exposes its internal
@@ -668,7 +734,7 @@ async function withRetry<T>(
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 // Exported for diagnostic/testing purposes only (per-platform isolation).
-export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio };
+export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio, fetchMeesho };
 
 export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const cacheKey = normalizeQuery(query);
@@ -683,11 +749,12 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  const [az1, fk, mn, aj] = await Promise.all([
+  const [az1, fk, mn, aj, ms] = await Promise.all([
     withRetry(() => fetchAmazonPage(searchTerm, 1), 'Amazon'),
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
     withRetry(() => fetchMyntra(searchTerm), 'Myntra'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
+    withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -699,7 +766,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk, ...mn, ...aj]
+  const allResults = [...dedupedAmazon, ...fk, ...mn, ...aj, ...ms]
     .filter(p => isValidProduct(p))
     .filter(p => isRelevantToQuery(p, searchTerm))
     .sort((a, b) => a.price - b.price);
@@ -769,6 +836,7 @@ export async function searchProductsStreaming(
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchMyntra(searchTerm).catch(() => []).then(r => processed('myntra', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
+    fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
   ]);
 
   const sorted = collected.sort((a, b) => a.price - b.price);
