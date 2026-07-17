@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IPushSubscription extends Document {
   userId: string;
@@ -20,6 +20,6 @@ const PushSubscriptionSchema = new Schema<IPushSubscription>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const PushSubscription =
-  mongoose.models.PushSubscription ||
+export const PushSubscription: Model<IPushSubscription> =
+  (mongoose.models.PushSubscription as Model<IPushSubscription>) ||
   mongoose.model<IPushSubscription>('PushSubscription', PushSubscriptionSchema);
