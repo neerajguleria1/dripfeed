@@ -20,7 +20,7 @@ const PLATFORMS = [
   { name: 'Amazon', color: '#FF9900', live: true },
   { name: 'Flipkart', color: '#2874F0', live: true },
   { name: 'Myntra', color: '#FF3F6C', live: false },
-  { name: 'Meesho', color: '#570741', live: true },
+  { name: 'Meesho', color: '#570741', live: false },
   { name: 'Nykaa', color: '#FC2779', live: false },
   { name: 'Tata CLiQ', color: '#6C3D9E', live: false },
 ];
