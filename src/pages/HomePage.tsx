@@ -174,7 +174,7 @@ export default function HomePage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#171310] overflow-hidden border-b-2 border-[#C9A96E] pt-20 sm:pt-24"
+        className="relative min-h-[75vh] sm:min-h-[80vh] flex items-center justify-center bg-[#171310] overflow-hidden border-b-2 border-[#C9A96E] pt-20 sm:pt-24 pb-10 sm:pb-14"
       >
 
         <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 text-center">
