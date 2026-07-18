@@ -102,28 +102,26 @@ export default function SiteNav() {
 
         {/* Right side: Search + Auth */}
         <div className="flex items-center gap-2">
-          {/* Search bar - desktop. Hidden until scrolled past the hero, which already has its own primary search field. */}
-          {scrolled && (
-            <form onSubmit={handleSearch} className="relative hidden sm:block">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" />
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="pl-8 pr-3 rounded-full border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/50 focus:border-[#C9A96E] placeholder:text-white/50 transition-all py-1.5 text-xs w-36"
-              />
-            </form>
-          )}
+          {/* Search bar - desktop. Always visible so users don't have to scroll past the hero to find it. */}
+          <form onSubmit={handleSearch} className="relative hidden sm:block">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              aria-label="Search products"
+              className="pl-8 pr-3 rounded-full border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/50 focus:border-[#C9A96E] placeholder:text-white/50 transition-all py-1.5 text-xs w-36"
+            />
+          </form>
 
-          {/* Mobile search icon - same rule, hidden until scrolled */}
-          {scrolled && (
-            <button
-              onClick={() => navigate('/search')}
-              className="sm:hidden p-2 rounded-full bg-white/10 border border-white/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
-              <Search className="w-4 h-4 text-white" />
-            </button>
-          )}
+          {/* Mobile search icon - always visible */}
+          <button
+            onClick={() => navigate('/search')}
+            aria-label="Search products"
+            className="sm:hidden p-2 rounded-full bg-white/10 border border-white/20 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            <Search className="w-4 h-4 text-white" />
+          </button>
 
           {/* Auth section */}
           {user ? (
