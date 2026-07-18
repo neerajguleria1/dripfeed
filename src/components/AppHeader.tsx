@@ -24,6 +24,7 @@ export default function AppHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
         <Logo variant="dark" size="md" />
 
+        {/* Search — always visible on desktop, right in the header row */}
         {!hideSearch && (
           <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden sm:flex">
             <div className="relative w-full">
@@ -32,6 +33,7 @@ export default function AppHeader() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search kurtas, sneakers, sarees…"
+                aria-label="Search products"
                 className="w-full pl-9 pr-4 py-2 rounded-full border border-neutral-200 bg-neutral-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 focus:border-[#C9A96E] placeholder:text-neutral-400 transition-all"
               />
             </div>
@@ -65,21 +67,26 @@ export default function AppHeader() {
         </button>
       </div>
 
+      {/* Search — always visible on mobile, its own row right under the header. Not tucked behind the hamburger menu. */}
+      {!hideSearch && (
+        <div className="sm:hidden border-t border-neutral-100 px-4 py-2.5 bg-white/95 backdrop-blur-sm">
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search products…"
+                aria-label="Search products"
+                className="w-full pl-9 pr-4 py-2.5 rounded-full border border-neutral-200 bg-neutral-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 min-h-[44px]"
+              />
+            </div>
+          </form>
+        </div>
+      )}
+
       {menuOpen && (
         <div className="sm:hidden border-t border-neutral-100 px-4 py-3 flex flex-col gap-3 bg-white/95 backdrop-blur-sm">
-          {!hideSearch && (
-            <form onSubmit={handleSearch}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Search products…"
-                  className="w-full pl-9 pr-4 py-2.5 rounded-full border border-neutral-200 bg-neutral-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 min-h-[44px]"
-                />
-              </div>
-            </form>
-          )}
           {user ? (
             <div className="flex gap-4 text-sm text-[#0F0F1A]">
               <Link to="/wishlist" onClick={() => setMenuOpen(false)} className="min-h-[44px] flex items-center">Saved</Link>
