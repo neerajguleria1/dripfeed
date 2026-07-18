@@ -309,7 +309,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10">
             {[
               { num: '01', title: 'Search or paste', desc: 'Type a product name or paste any URL from Ajio, Flipkart, Amazon, or more.' },
-              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 3+ platforms ranked by value. No signup needed.' },
+              { num: '02', title: 'Compare instantly', desc: 'See real-time prices from 3+ platforms ranked purely by price — no ads, no sponsored placements.' },
               { num: '03', title: 'Save money', desc: 'Click through to the cheapest platform and buy. We handle the rest.' },
             ].map(({ num, title, desc }) => (
               <motion.div key={num} variants={fadeUp} className="relative">
@@ -444,7 +444,7 @@ export default function HomePage() {
           <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-16">
             {[
               { value: '3+', label: 'Platforms compared' },
-              { value: '100%', label: 'Free, no signup' },
+              { value: '0', label: 'Sponsored results' },
               { value: '<5s', label: 'Avg. search time' },
             ].map(({ value, label }) => (
               <div key={label}>
@@ -467,7 +467,7 @@ export default function HomePage() {
             <span className="text-white/50">Start saving.</span>
           </motion.h2>
           <motion.p variants={fadeUp} className="text-[15px] text-white/40 mb-10">
-            Free forever. No signup. No ads.
+            Free forever. No signup. Ranked by price, not who pays us.
           </motion.p>
           <motion.div variants={fadeUp}>
             <button
