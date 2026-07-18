@@ -118,11 +118,21 @@ export default function HomePage() {
     e.preventDefault();
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
+    if (typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'search', { search_term: trimmed, source: 'homepage_hero' });
+    }
     if (trimmed.startsWith('http')) {
       navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
     } else {
       navigate(`/search?q=${encodeURIComponent(trimmed)}`);
     }
+  };
+
+  const handleHeroTrendingClick = (term: string) => {
+    if (typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'search', { search_term: term, source: 'homepage_hero_chip' });
+    }
+    navigate(`/search?q=${encodeURIComponent(term)}`);
   };
 
   return (
@@ -238,6 +248,26 @@ export default function HomePage() {
             </form>
           </motion.div>
 
+          {/* One-tap trending searches — zero typing needed for visitors who don't know what to type */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35, duration: 0.5 }}
+            className="mt-5 flex flex-wrap items-center justify-center gap-2"
+          >
+            <span className="text-[12px] text-white/30 mr-1">Try:</span>
+            {TRENDING_TERMS.slice(0, 5).map((term) => (
+              <button
+                key={term}
+                type="button"
+                onClick={() => handleHeroTrendingClick(term)}
+                className="px-3.5 py-1.5 bg-white/10 hover:bg-[#C9A96E] hover:text-[#171310] border border-white/15 hover:border-[#C9A96E] text-white/70 text-[12px] font-medium rounded-full transition-all duration-200 capitalize min-h-[36px]"
+              >
+                {term}
+              </button>
+            ))}
+          </motion.div>
+
           {/* Platform pills */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -311,7 +341,7 @@ export default function HomePage() {
             {TRENDING_TERMS.map((term) => (
               <button
                 key={term}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(term)}`)}
+                onClick={() => handleHeroTrendingClick(term)}
                 className="shrink-0 px-5 py-2.5 bg-white hover:bg-[#171310] hover:text-white text-[#171310] text-[14px] font-medium rounded-full border border-neutral-200 hover:border-[#171310] transition-all duration-200 min-h-[44px] capitalize"
               >
                 {term}
