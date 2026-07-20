@@ -185,14 +185,25 @@ function FeaturedCard({ product }: { product: ProductData }) {
 
       {/* Details */}
       <div className="flex flex-col justify-center p-5 md:p-8 md:py-10">
-        {/* Platform badge pill */}
-        <div className="flex items-center gap-2 mb-3">
+        {/* Platform badge pill + variant info (size/color) — only shown when the
+            source platform's search API actually exposed it; not every listing has it. */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span
             className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold text-white capitalize"
             style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || PLATFORM_COLORS[product.platform.toLowerCase().split(' ')[0]] || '#6b7280' }}
           >
             {product.platform}
           </span>
+          {product.size && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
+              Size: {product.size}
+            </span>
+          )}
+          {product.color && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
+              {product.color}
+            </span>
+          )}
         </div>
 
         <span className="text-[12px] tracking-[0.04em] text-neutral-400 font-medium">
@@ -274,14 +285,25 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
         )}
       </div>
       <div className="p-4 flex flex-col flex-1">
-        {/* Platform badge pill */}
-        <div className="flex items-center gap-1.5 mb-2">
+        {/* Platform badge pill + variant info (size/color) — only shown when the
+            source platform's search API actually exposed it; not every listing has it. */}
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           <span
             className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize"
             style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || PLATFORM_COLORS[product.platform.toLowerCase().split(' ')[0]] || '#6b7280' }}
           >
             {product.platform}
           </span>
+          {product.size && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600">
+              Size: {product.size}
+            </span>
+          )}
+          {product.color && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600">
+              {product.color}
+            </span>
+          )}
         </div>
 
         <span className="text-[11px] tracking-[0.04em] text-neutral-400 font-medium">

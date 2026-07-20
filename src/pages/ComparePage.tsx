@@ -350,6 +350,13 @@ export default function ComparePage() {
                         <PlatformBadge key={i} platform={p.platform} size="sm" />
                       ))}
                     </div>
+
+                    {/* Honest disclaimer: results are matched by product name, not
+                        guaranteed to be the identical size/color/SKU across every
+                        platform — check each listing's details before buying. */}
+                    <p className="text-[12px] text-neutral-400 mt-3 leading-relaxed">
+                      Matched by product name across platforms — size, color, and exact variant may differ. Check listing details before buying.
+                    </p>
                   </div>
 
                   {/* Share + Save — vertically stacked */}
@@ -443,6 +450,24 @@ export default function ComparePage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Variant info — only shown when the platform's search API exposed
+                            it. Since size/color aren't captured on every platform, this
+                            is a signal to check details before assuming it's the identical item. */}
+                        {(p.size || p.color) && (
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            {p.size && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
+                                Size: {p.size}
+                              </span>
+                            )}
+                            {p.color && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
+                                {p.color}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Editorial verdict — italic reviewer's note */}
                         <p className="text-[13px] italic text-neutral-400 mt-1.5 leading-snug">

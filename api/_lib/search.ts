@@ -15,6 +15,16 @@ export interface SearchProduct {
   brand?: string;
   rating?: number;
   affiliateUrl?: string;
+  // Variant info — NOT available uniformly across platforms. Populated only
+  // when the platform's search API exposes it in structured form (verified
+  // against live responses, not guessed):
+  //   - Ajio: color reliable, size never present in search results
+  //   - Flipkart: size reliable ("Size: S/M/L/XL" in titles.coSubtitle), color not structured
+  //   - Amazon / Meesho: neither field available in search results
+  // Leave undefined rather than guess — the UI must treat these as
+  // "known for this platform" info, not a promise that applies everywhere.
+  color?: string;
+  size?: string;
 }
 
 // ─── ScraperAPI concurrency limiter ──────────────────────────────────────────
@@ -505,6 +515,11 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         .replace('{@height}', '400')
         .replace('{@quality}', '70')
         .replace(/^http:\/\//, 'https://');
+      // coSubtitle is formatted "Size: S" / "Size: XL" etc. on apparel listings —
+      // only present for sized products, so guard with the "Size:" prefix check.
+      const coSubtitle: string = info.titles?.coSubtitle || '';
+      const sizeMatch = coSubtitle.match(/^Size:\s*(.+)$/i);
+      const size = sizeMatch ? sizeMatch[1].trim() : undefined;
       return {
         id: `fk_${info.id || i}`,
         title: cleanText(info.titles?.title || info.titles?.newTitle || ''),
@@ -517,6 +532,7 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         url: info.baseUrl
           ? `https://www.flipkart.com${info.baseUrl}`
           : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
+        size,
       };
     }).filter(p => isValidProduct(p));
   } catch(e: any) { console.error('[Flipkart] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
@@ -661,6 +677,11 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
       const mrp = parsePrice(p.wasPriceData?.value ?? 0);
       const imageUrl = (p.images?.[0]?.url || p.fnlColorVariantData?.outfitPictureURL || '').replace(/^http:\/\//, 'https://');
       const title = cleanText(`${p.fnlColorVariantData?.brandName || ''} ${p.name || ''}`.trim());
+      // colorGroup is formatted "{productCode}_{colorName}" (e.g. "469486197_navy").
+      // Strip the leading code + underscore and title-case the remainder.
+      const colorGroup: string = p.fnlColorVariantData?.colorGroup || '';
+      const colorRaw = colorGroup.replace(/^\d+_/, '');
+      const color = colorRaw ? colorRaw.replace(/\b\w/g, (c) => c.toUpperCase()) : undefined;
       return {
         id: `aj_${p.code || i}`,
         title,
@@ -671,6 +692,7 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
         imageUrl,
         platform: 'Ajio',
         url: p.url ? `https://www.ajio.com${p.url}` : `https://www.ajio.com/search/?text=${encodeURIComponent(query)}`,
+        color,
       };
     }).filter(p => isValidProduct(p));
   } catch (e: any) {
