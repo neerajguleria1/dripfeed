@@ -798,17 +798,12 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
   if (db) { setMemCache(cacheKey, db); return db; }
 
-  // Myntra dropped from the active pipeline: requires a residential/Indian
-  // IP to work for free, and the ScraperAPI fallback (premium tier, 25
-  // credits) consistently times out from Vercel's cloud IPs — see
-  // fetchMyntra() above for the full explanation. Revisit if/when a
-  // residential proxy is in place.
   const [az1, fk, aj, ms, mn] = await Promise.all([
     withRetry(() => fetchAmazonPage(searchTerm, 1), 'Amazon'),
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
     withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
-    withRetry(() => fetchMyntra(searchTerm), 'Myntra'),
+    withTimeout(fetchMyntra(searchTerm), 20000).catch(() => []),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -890,7 +885,7 @@ export async function searchProductsStreaming(
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
-    fetchMyntra(searchTerm).catch(() => []).then(r => processed('myntra', r)),
+    withTimeout(fetchMyntra(searchTerm), 20000).catch(() => []).then(r => processed('myntra', r)),
   ]);
 
   const sorted = collected.sort((a, b) => a.price - b.price);
