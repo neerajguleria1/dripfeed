@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink, Check } from 'lucide-react';
 import SEOHead from '../components/common/SEOHead';
 import PlatformBadge from '../components/ui/PlatformBadge';
 // CompareCard replaced by inline editorial blocks for magazine-review layout
@@ -258,6 +258,7 @@ export default function ComparePage() {
     }
   }
 
+  async function handleShare() {
     const url = window.location.href;
     if (navigator.share) {
       try {
