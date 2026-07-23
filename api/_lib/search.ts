@@ -283,10 +283,6 @@ function getNextRoundRobinKey(): string {
   rrIndex = (rrIndex + 1) % SCRAPER_KEYS.length;
   return key;
 }
-function getNextKey(currentKey: string): string {
-  const idx = SCRAPER_KEYS.indexOf(currentKey);
-  return SCRAPER_KEYS[(idx + 1) % SCRAPER_KEYS.length] || currentKey;
-}
 
 // ─── Per-platform circuit breaker ────────────────────────────────────────────
 // After N consecutive failures, skip a platform for a cooldown window instead
