@@ -182,8 +182,7 @@ async function productSearchStream(req: VercelRequest, res: VercelResponse) {
       return res.end();
     }
 
-    // Cache-first flush: if this query was already fetched, send cached results
-    // immediately (~0ms) so the UI shows results before the live scrape even starts.
+    // Cache-first flush
     const cacheKey = normalizeQuery(searchTerm);
     const cached = getMemCached(cacheKey) || await getDbCached(cacheKey);
     if (cached && cached.length > 0) {
@@ -197,7 +196,7 @@ async function productSearchStream(req: VercelRequest, res: VercelResponse) {
     await searchProductsStreaming(searchTerm, (platform, products) => {
       const cleaned = products.map((p) => ({ ...p, title: cleanProductTitle(p.title) }));
       send({ type: 'platform', platform, products: cleaned });
-    });
+    }, true); // skipCacheCheck — already checked above
     send({ type: 'done', query: searchTerm });
   } catch (e: any) {
     send({ type: 'error', message: e?.message || 'Search failed' });

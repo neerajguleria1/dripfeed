@@ -624,9 +624,9 @@ async function fetchMeesho(query: string): Promise<SearchProduct[]> {
         url: target,
         render: true,
         country_code: 'in',
-        wait: 8000,
+        wait: 4000,
       },
-      timeout: 90000,
+      timeout: 60000,
       transformResponse: [(d) => d],
     });
 
@@ -861,15 +861,17 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
 export async function searchProductsStreaming(
   query: string,
   onPlatform: (platform: string, products: SearchProduct[]) => void,
+  skipCacheCheck = false, // set true when caller already checked cache
 ): Promise<SearchProduct[]> {
   const cacheKey = normalizeQuery(query);
   const searchTerm = query.toLowerCase().trim();
 
-  const mem = getMemCached(cacheKey, EXPENSIVE_TTL_MS);
-  if (mem) { if (mem.length) onPlatform('cache', mem); return mem; }
-
-  const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
-  if (db) { setMemCache(cacheKey, db); if (db.length) onPlatform('cache', db); return db; }
+  if (!skipCacheCheck) {
+    const mem = getMemCached(cacheKey, EXPENSIVE_TTL_MS);
+    if (mem) { if (mem.length) onPlatform('cache', mem); return mem; }
+    const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
+    if (db) { setMemCache(cacheKey, db); if (db.length) onPlatform('cache', db); return db; }
+  }
 
   const seenAsins = new Set<string>();
   const collected: SearchProduct[] = [];

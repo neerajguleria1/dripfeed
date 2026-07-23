@@ -383,6 +383,7 @@ export default function SearchPage() {
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [platformStatus, setPlatformStatus] = useState<Record<string, 'loading' | 'done' | 'empty'>>({});
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [hasMore, setHasMore] = useState(false);
   const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
@@ -412,14 +413,22 @@ export default function SearchPage() {
         if (payload.type === 'platform' && Array.isArray(payload.products) && payload.products.length) {
           settled = true;
           setLoading(false);
+          setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'done' }));
           setProducts((prev) => {
             const existingIds = new Set(prev.map((p) => p.id));
             const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
             return [...prev, ...newOnes].sort((a, b) => a.price - b.price);
           });
+        } else if (payload.type === 'platform' && Array.isArray(payload.products) && !payload.products.length) {
+          setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'empty' }));
         } else if (payload.type === 'done') {
           setLoading(false);
           setHasMore(false);
+          setPlatformStatus(prev => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach(k => { if (updated[k] === 'loading') updated[k] = 'empty'; });
+            return updated;
+          });
           es.close();
         } else if (payload.type === 'error') {
           setLoading(false);
@@ -473,15 +482,20 @@ export default function SearchPage() {
     setLoading(true);
     setProducts([]);
     setSearchError('');
+    setPlatformStatus({ amazon: 'loading', flipkart: 'loading', ajio: 'loading', myntra: 'loading', meesho: 'loading' });
     setRelatedSections(null);
 
     const streamed = fetchResultsStreaming(searchQuery);
     if (!streamed) fetchResultsBlocking(searchQuery);
 
-    fetchThrift(searchQuery);
-    api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
-      .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
-      .catch(() => {});
+    // Defer secondary calls by 2s so they don't compete with the main search
+    // for network/DB resources during the critical first-results window.
+    setTimeout(() => {
+      fetchThrift(searchQuery);
+      api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
+        .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
+        .catch(() => {});
+    }, 2000);
   }, [fetchResultsStreaming, fetchResultsBlocking, fetchThrift]);
 
   // Fetch real trending products for landing page
@@ -615,6 +629,29 @@ export default function SearchPage() {
 
           {/* Search bar */}
           <SearchBar size="lg" initialQuery={query} onSearch={handleSearch} />
+
+          {/* Live platform status — shows while streaming */}
+          {query && loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-wrap items-center justify-center gap-2 mt-4"
+            >
+              {Object.entries(platformStatus).map(([platform, status]) => (
+                <span key={platform} className={[
+                  'inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all duration-300',
+                  status === 'done' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                  status === 'empty' ? 'bg-neutral-50 border-neutral-200 text-neutral-400' :
+                  'bg-white border-neutral-200 text-neutral-500'
+                ].join(' ')}>
+                  {status === 'loading' && <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] animate-pulse" />}
+                  {status === 'done' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                  {status === 'empty' && <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />}
+                  <span className="capitalize">{platform}</span>
+                </span>
+              ))}
+            </motion.div>
+          )}
 
           {/* Results summary with platform badges */}
           {query && !loading && products.length > 0 && (
