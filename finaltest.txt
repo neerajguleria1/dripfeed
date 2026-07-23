@@ -1,0 +1,9 @@
+﻿
+ RUN  v4.1.9 D:/All work/php/gymSite/DripFeed-Package-master/Website
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  20:05:26
+   Duration  1.37s (transform 137ms, setup 0ms, import 999ms, tests 8ms, environment 0ms)
+

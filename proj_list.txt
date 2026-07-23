@@ -1,0 +1,19 @@
+﻿node.exe : Vercel CLI 54.20.0 (Node.js 24.12.0)
+At line:1 char:1
++ & "D:\/node.exe" "C:\Users\Neeraj Guleria\AppData\Roaming\npm/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Vercel CLI 54.20.0 (Node.js 24.12.0):String) [], Rem 
+   oteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Fetching projects in neerajguleria1s-projects
+> Projects found under neerajguleria1s-projects  [3s]
+
+  Project Name     Latest Production URL                    Updated   Node Version   
+  dripfeed-v2.1    https://dripfeed-v21.vercel.app          5m        24.x           
+  zero-to-launch   --                                       2d        24.x           
+  dripfeed         https://dripfeed-snowy.vercel.app        4d        24.x           
+  grind            https://zymeriq.vercel.app               16d       24.x           
+  frontend         https://frontend-nu-cyan-96.vercel.app   53d       24.x           
+  prescripto       https://prescripto-mu-cyan.vercel.app    54d       24.x           
+

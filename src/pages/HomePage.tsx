@@ -19,8 +19,8 @@ const PLATFORMS = [
   { name: 'Ajio', color: '#000000', live: true },
   { name: 'Amazon', color: '#FF9900', live: true },
   { name: 'Flipkart', color: '#2874F0', live: true },
-  { name: 'Myntra', color: '#FF3F6C', live: false },
-  { name: 'Meesho', color: '#570741', live: false },
+  { name: 'Myntra', color: '#FF3F6C', live: true },
+  { name: 'Meesho', color: '#570741', live: true },
   { name: 'Nykaa', color: '#FC2779', live: false },
   { name: 'Tata CLiQ', color: '#6C3D9E', live: false },
 ];
@@ -138,8 +138,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <SEOHead
-        title="TagCheck — Compare Fashion Prices Across 3+ Indian Platforms"
-        description="Never overpay for fashion. Compare prices across Ajio, Amazon & Flipkart in one click."
+        title="TagCheck — Compare Fashion Prices Across 5 Indian Platforms"
+        description="Never overpay for fashion. Compare prices across Ajio, Amazon, Flipkart, Myntra & Meesho in one click."
         url="https://dripfeed-v21.vercel.app/"
         jsonLd={[
           {
@@ -216,7 +216,7 @@ export default function HomePage() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-[15px] sm:text-[17px] text-white/60 mb-9 max-w-md mx-auto leading-relaxed"
           >
-            One search. Four platforms. The lowest price — instantly.
+            One search. Five platforms. The lowest price — instantly.
           </motion.p>
 
           {/* Search */}
@@ -443,7 +443,7 @@ export default function HomePage() {
 
           <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6 sm:gap-16">
             {[
-              { value: '3+', label: 'Platforms compared' },
+              { value: '5', label: 'Platforms compared' },
               { value: '0', label: 'Sponsored results' },
               { value: '<5s', label: 'Avg. search time' },
             ].map(({ value, label }) => (

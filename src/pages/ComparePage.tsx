@@ -180,24 +180,59 @@ export default function ComparePage() {
     setAiAdvice(null);
     setAiError(false);
 
+    const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+    const url = `${base}/search/product/stream?q=${encodeURIComponent(searchQ)}`;
+    let settled = false;
+
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'platform' && Array.isArray(payload.products) && payload.products.length) {
+          settled = true;
+          setLoading(false);
+          setPlatforms((prev) => {
+            const existingIds = new Set(prev.map((p: ProductData) => p.id));
+            const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
+            const merged = [...prev, ...newOnes].sort((a, b) => a.price - b.price);
+            // Trigger AI advice once we have first results
+            if (prev.length === 0 && merged.length > 0) {
+              fetchAiAdvice(merged[0]?.title || searchQ, merged);
+            }
+            return merged;
+          });
+        } else if (payload.type === 'done') {
+          setLoading(false);
+          es.close();
+          api.post('/analytics/track', { event: 'compare_view', productTitle: searchQ }).catch(() => {});
+        } else if (payload.type === 'error') {
+          es.close();
+          if (!settled) fallbackFetch(searchQ);
+          else setLoading(false);
+        }
+      } catch { /* ignore malformed frames */ }
+    };
+
+    es.onerror = () => {
+      es.close();
+      if (!settled) fallbackFetch(searchQ);
+      else setLoading(false);
+    };
+  }
+
+  async function fallbackFetch(searchQ: string) {
     try {
       const { data } = await api.post('/search/product', { query: searchQ });
       const results: ProductData[] = data?.products || data?.results || data?.platforms || [];
       const final = results.length > 0 ? results : searchSeedProducts(searchQ);
       final.sort((a, b) => a.price - b.price);
-      setPlatforms(final);
-      if (final.length > 0) {
-        fetchAiAdvice(final[0]?.title || searchQ, final);
-      }
-      api.post('/analytics/track', {
-        event: 'compare_view',
-        productTitle: searchQ,
-        platformCount: final.length,
-      }).catch(() => {});
+      setProducts(final);
+      if (final.length > 0) fetchAiAdvice(final[0]?.title || searchQ, final);
     } catch {
       const fallback = searchSeedProducts(searchQ);
       fallback.sort((a, b) => a.price - b.price);
-      setPlatforms(fallback);
+      setProducts(fallback);
       if (fallback.length === 0) setError('Could not fetch comparison. Please try again.');
     } finally {
       setLoading(false);
