@@ -203,7 +203,6 @@ export default function ComparePage() {
             const existingIds = new Set(prev.map((p: ProductData) => p.id));
             const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
             const merged = [...prev, ...newOnes].sort((a, b) => a.price - b.price);
-            // Trigger AI advice once we have first results
             if (prev.length === 0 && merged.length > 0) {
               fetchAiAdvice(merged[0]?.title || searchQ, merged);
             }
