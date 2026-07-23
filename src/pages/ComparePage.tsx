@@ -253,7 +253,7 @@ export default function ComparePage() {
       try { await navigator.share({ title: product.title, text, url: product.url }); } catch { /* cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
-      setCopiedId(product.id);
+      setCopiedId(product.id ?? null);
       setTimeout(() => setCopiedId(null), 2000);
     }
   }
