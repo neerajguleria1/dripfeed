@@ -9,7 +9,6 @@ import { PriceHistory } from '../components/product/PriceHistory';
 import { AIAdviceCard } from '../components/product/AIAdviceCard';
 import { SocialProof } from '../components/product/SocialProof';
 import { SaveButton } from '../components/product/SaveButton';
-import { ProductCard } from '../components/product/ProductCard';
 import { PriceCounter } from '../components/common/PriceCounter';
 import AffiliateButton from '../components/ui/AffiliateButton';
 import { staggerChildren, staggerItem } from '../design-system/animations';
@@ -267,10 +266,6 @@ export default function ComparePage() {
   const productTitle = lowest?.title || q;
   const productImage = lowest?.imageUrl;
   const productBrand = lowest?.brand;
-
-  // Related products — show max 4 as horizontal cards
-  const relatedProducts = useMemo(() => platforms.slice(0, 4), [platforms]);
-
   // Social proof — organic numbers
   const socialCompareCount = useMemo(() => Math.floor(Math.random() * 40) + 18, []);
   const socialSaveCount = useMemo(() => Math.floor(Math.random() * 15) + 5, []);
@@ -443,88 +438,64 @@ export default function ComparePage() {
                     key={i}
                     variants={staggerItem}
                     className={[
-                      'relative bg-white rounded-2xl p-6 transition-all duration-300',
+                      'relative bg-white rounded-2xl p-5 transition-all duration-300',
                       'border border-neutral-100 hover:border-[#C9A96E]/30',
                       i === 0
                         ? 'shadow-[0_2px_10px_rgba(0,0,0,0.06)]'
                         : 'hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)]',
                     ].join(' ')}
                   >
-                    {/* Best Value tag — gold accent */}
                     {i === 0 && (
                       <span className="absolute -top-2.5 left-4 sm:left-6 inline-flex items-center bg-[#C9A96E] text-white text-[13px] sm:text-[10px] font-semibold uppercase tracking-[0.08em] px-3 py-1 rounded-full shadow-sm">
                         Best Value
                       </span>
                     )}
 
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                      {/* Platform — 13px uppercase, tracking-wide */}
-                      <div className="flex items-center gap-3 sm:w-32 flex-shrink-0">
-                        <PlatformBadge platform={p.platform} size="md" />
-                        <span className="text-[13px] uppercase tracking-wide text-neutral-500 font-medium sm:hidden">
-                          {p.platform}
-                        </span>
-                        <span className="text-[13px] uppercase tracking-wide text-neutral-500 font-medium hidden sm:block">
-                          {p.platform}
-                        </span>
+                    <div className="flex items-center gap-4">
+                      {/* Product thumbnail */}
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-neutral-50 flex-shrink-0 ring-1 ring-neutral-100">
+                        <img
+                          src={p.imageUrl}
+                          alt={p.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=200&fit=crop'; }}
+                        />
                       </div>
 
-                      {/* Price — serif font for winning price; standard for others */}
+                      {/* Platform + price */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-3">
-                          <span
-                            className={[
-                              'tabular-nums tracking-tight',
-                              i === 0
-                                ? 'text-[28px] font-serif font-bold text-[#0F0F1A]'
-                                : 'text-[20px] font-semibold text-[#1A1A2E]',
-                            ].join(' ')}
-                          >
-                            {i === 0 ? <PriceCounter value={p.price} className="text-[28px] font-serif font-bold text-[#0F0F1A]" /> : formatPrice(p.price)}
+                        <div className="flex items-center gap-2 mb-1">
+                          <PlatformBadge platform={p.platform} size="sm" />
+                          <span className="text-[12px] uppercase tracking-wide text-neutral-400 font-medium">
+                            {p.platform}
+                          </span>
+                        </div>
+
+                        <p className="text-[12px] text-neutral-500 line-clamp-1 mb-1.5">{p.title}</p>
+
+                        <div className="flex items-baseline gap-2">
+                          <span className={[
+                            'tabular-nums tracking-tight',
+                            i === 0 ? 'text-[22px] font-serif font-bold text-[#0F0F1A]' : 'text-[18px] font-semibold text-[#1A1A2E]',
+                          ].join(' ')}>
+                            {i === 0 ? <PriceCounter value={p.price} className="text-[22px] font-serif font-bold text-[#0F0F1A]" /> : formatPrice(p.price)}
                           </span>
                           {p.originalPrice && p.originalPrice > p.price && (
-                            <span className="text-[14px] text-neutral-400 line-through tabular-nums">
-                              {formatPrice(p.originalPrice)}
-                            </span>
+                            <span className="text-[12px] text-neutral-400 line-through tabular-nums">{formatPrice(p.originalPrice)}</span>
                           )}
                           {p.discount && p.discount > 0 && (
-                            <span className="inline-flex items-center bg-emerald-50 text-emerald-700 text-[12px] font-medium px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center bg-emerald-50 text-emerald-700 text-[11px] font-medium px-2 py-0.5 rounded-full">
                               {p.discount}% off
                             </span>
                           )}
                         </div>
 
-                        {/* Variant info — only shown when the platform's search API exposed
-                            it. Since size/color aren't captured on every platform, this
-                            is a signal to check details before assuming it's the identical item. */}
-                        {(p.size || p.color) && (
-                          <div className="flex items-center gap-1.5 mt-1.5">
-                            {p.size && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
-                                Size: {p.size}
-                              </span>
-                            )}
-                            {p.color && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
-                                {p.color}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Editorial verdict — italic reviewer's note */}
-                        <p className="text-[13px] italic text-neutral-400 mt-1.5 leading-snug">
-                          &ldquo;{getVerdict(p.platform)}&rdquo;
-                        </p>
+                        <p className="text-[11px] italic text-neutral-400 mt-0.5">&ldquo;{getVerdict(p.platform)}&rdquo;</p>
                       </div>
 
                       {/* CTA */}
-                      <div className="flex-shrink-0 w-full sm:w-auto">
-                        <AffiliateButton
-                          platform={p.platform}
-                          url={p.url}
-                          productTitle={p.title}
-                        />
+                      <div className="flex-shrink-0">
+                        <AffiliateButton platform={p.platform} url={p.url} productTitle={p.title} />
                       </div>
                     </div>
                   </motion.div>
@@ -568,21 +539,7 @@ export default function ComparePage() {
                 </motion.section>
               )}
 
-              {/* ─── 5. Related Products — compact horizontal cards ─── */}
-              {relatedProducts.length > 1 && (
-                <section>
-                  <h2 className="text-[13px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.1em] mb-4">
-                    People Also Compared
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    {relatedProducts.slice(0, 4).map((product, i) => (
-                      <ProductCard key={i} product={product} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* ─── 6. ASCI Disclosure — single toned-down line ─── */}
+              {/* ─── 5. ASCI Disclosure ─── */}
               <p className="text-[13px] sm:text-[10px] text-neutral-500 text-center pt-4">
                 #Ad · Prices include affiliate links. TagCheck earns commission at no extra cost to you.
               </p>
