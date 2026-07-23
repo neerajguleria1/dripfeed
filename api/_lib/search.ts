@@ -638,17 +638,143 @@ async function fetchMyntraViaScraperApi(query: string): Promise<SearchProduct[]>
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
-  const direct = await fetchMyntraDirect(query);
-  if (direct && direct.length) return direct; // succeeded for free — skip ScraperAPI entirely
-  return fetchMyntraViaScraperApi(query);
+  try {
+    const encoded = encodeURIComponent(query);
+    const { data: html } = await axios.get(`https://www.myntra.com/${encoded}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-IN,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+      },
+      timeout: 15000,
+      transformResponse: [(d) => d],
+    });
+
+    if (typeof html !== 'string') return [];
+
+    // Extract window.__myx JSON using brace-counting parser
+    const scriptStart = html.indexOf('window.__myx =');
+    if (scriptStart === -1) { console.warn('[Myntra] window.__myx not found'); return []; }
+    const objStart = html.indexOf('{', scriptStart);
+    if (objStart === -1) return [];
+
+    let depth = 0, end = 0;
+    for (let i = objStart; i < html.length; i++) {
+      if (html[i] === '{') depth++;
+      else if (html[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+    }
+    if (!end) return [];
+
+    const json = JSON.parse(html.slice(objStart, end));
+    const products: any[] = json?.searchData?.results?.products || [];
+    console.log(`[Myntra] ${products.length} products from window.__myx`);
+
+    return products.slice(0, 20).map((p: any) => {
+      const price = p.price || 0;
+      const mrp = p.mrp || 0;
+      const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://');
+      const url = p.landingPageUrl
+        ? `https://www.myntra.com/${p.landingPageUrl}`
+        : `https://www.myntra.com/${encoded}`;
+      return {
+        id: `mn_${p.productId}`,
+        title: cleanText(`${p.brand || ''} ${p.productName || ''}`.trim()),
+        brand: p.brand || undefined,
+        price,
+        originalPrice: mrp > price ? mrp : undefined,
+        discount: mrp > price ? Math.round(((mrp - price) / mrp) * 100) : undefined,
+        imageUrl,
+        platform: 'Myntra',
+        url,
+        rating: p.rating || undefined,
+      };
+    }).filter((p: any) => isValidProduct(p));
+  } catch (e: any) {
+    console.error('[Myntra] error:', e?.message?.slice(0, 100));
+    return [];
+  }
 }
 
 async function fetchMeesho(query: string): Promise<SearchProduct[]> {
-  const targetUrl = `https://www.meesho.com/search?q=${encodeURIComponent(query)}`;
-  const { html, tier, credits } = await fetchWithEscalation(targetUrl, 'meesho', 'render', true, 'render');
-  console.log(`[Meesho] ScraperAPI tier=${tier} credits=${credits}`);
-  if (!html) return [];
-  return parseMeeshoProducts(html, query);
+  if (!SCRAPER_KEYS.length) return [];
+  try {
+    const encoded = encodeURIComponent(query);
+    const target = `https://www.meesho.com/search?q=${encoded}`;
+    const key = getNextRoundRobinKey();
+
+    const { data: html } = await axios.get('https://api.scraperapi.com/', {
+      params: {
+        api_key: key,
+        url: target,
+        render: true,
+        country_code: 'in',
+        wait: 8000,
+      },
+      timeout: 90000,
+      transformResponse: [(d) => d],
+    });
+
+    if (typeof html !== 'string' || html.length < 500) {
+      console.warn('[Meesho] Empty response from ScraperAPI');
+      return [];
+    }
+
+    console.log(`[Meesho] ScraperAPI rendered page, length=${html.length}`);
+
+    // Extract products from rendered <a> card elements
+    // Each product is an <a> tag wrapping a CardStyled div with image + price
+    const products: SearchProduct[] = [];
+    const seen = new Set<string>();
+
+    // Match anchor tags that contain a Meesho image and a rupee price
+    const anchorRe = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\/\s\S]*?)<\/a>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = anchorRe.exec(html)) !== null) {
+      const href = match[1] || '';
+      const inner = match[2] || '';
+      if (!href.includes('/p/')) continue;
+      if (!inner.includes('images.meesho.com')) continue;
+
+      const priceMatch = inner.match(/₹\s?([0-9,]+)/);
+      if (!priceMatch) continue;
+      const price = parsePrice(priceMatch[1]);
+      if (price <= 0) continue;
+
+      const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const imageUrl = imgMatch?.[1] || '';
+      if (!imageUrl.includes('images.meesho.com')) continue;
+
+      const altMatch = inner.match(/<img[^>]+alt=["']([^"']+)["']/i);
+      const pMatch = inner.match(/<p[^>]*>([^<]{5,})<\/p>/i);
+      const title = cleanText(altMatch?.[1] || pMatch?.[1] || '');
+      if (!title || title.length < 3) continue;
+
+      const url = href.startsWith('http') ? href : `https://www.meesho.com${href}`;
+      const key2 = `${title.toLowerCase()}::${price}`;
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+
+      products.push({
+        id: `ms_${href}`,
+        title,
+        price,
+        imageUrl,
+        platform: 'Meesho',
+        url,
+      });
+
+      if (products.length >= 20) break;
+    }
+
+    console.log(`[Meesho] ${products.length} products extracted`);
+    return products
+      .filter(p => isValidProduct(p))
+      .filter(p => isRelevantToQuery(p, query));
+  } catch (e: any) {
+    console.error('[Meesho] error:', e?.message?.slice(0, 100));
+    return [];
+  }
 }
 
 // ─── Ajio ─────────────────────────────────────────────────────────────────────
@@ -776,11 +902,12 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   // credits) consistently times out from Vercel's cloud IPs — see
   // fetchMyntra() above for the full explanation. Revisit if/when a
   // residential proxy is in place.
-  const [az1, fk, aj, ms] = await Promise.all([
+  const [az1, fk, aj, ms, mn] = await Promise.all([
     withRetry(() => fetchAmazonPage(searchTerm, 1), 'Amazon'),
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
     withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
+    withRetry(() => fetchMyntra(searchTerm), 'Myntra'),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -792,7 +919,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     return true;
   });
 
-  const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms]
+  const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms, ...mn]
     .filter(p => isValidProduct(p))
     .filter(p => isRelevantToQuery(p, searchTerm))
     .sort((a, b) => a.price - b.price);
@@ -862,6 +989,7 @@ export async function searchProductsStreaming(
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
+    fetchMyntra(searchTerm).catch(() => []).then(r => processed('myntra', r)),
   ]);
 
   const sorted = collected.sort((a, b) => a.price - b.price);

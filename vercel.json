@@ -5,6 +5,9 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 60
+    },
+    "api/[[...route]].ts": {
+      "maxDuration": 120
     }
   },
   "headers": [
