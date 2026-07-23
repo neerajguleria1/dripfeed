@@ -406,60 +406,70 @@ async function fetchWithEscalation(
 }
 
 // ─── Amazon ───────────────────────────────────────────────────────────────────
-// Research findings:
-//   - price: number (always, no parsing needed)
-//   - original_price: { price, price_string, price_symbol } — NOT a number/string
-//   - image: https:// URL (always valid)
-//   - asin: always present
-//   - brand: sometimes missing
-
-function mapAmazonProduct(p: any, page: number, i: number, query: string): SearchProduct {
-  const price = typeof p.price === 'number' ? p.price : parsePrice(p.price || '0');
-  // original_price is an object: { price: number, price_string: "₹3,999", price_symbol: "₹" }
-  const orig = typeof p.original_price === 'object' && p.original_price !== null
-    ? (p.original_price.price || 0)
-    : typeof p.original_price === 'number'
-    ? p.original_price
-    : parsePrice(p.original_price || '0');
-  const imageUrl = (p.image || p.thumbnail || '') as string;
-  return {
-    id: `az_p${page}_${p.asin || i}`,
-    title: cleanText(p.name || p.title || ''),
-    price,
-    originalPrice: orig > price ? orig : undefined,
-    discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
-    imageUrl: imageUrl.startsWith('https://') ? imageUrl : '',
-    platform: 'Amazon India',
-    url: p.asin ? `https://www.amazon.in/dp/${p.asin}` : `https://www.amazon.in/s?k=${encodeURIComponent(query)}`,
-    brand: p.brand || undefined,
-    rating: p.stars ? parseFloat(p.stars) : undefined,
-  };
-}
+// Scrapes amazon.in search HTML via ScraperAPI plain tier (1 credit).
+// Extracts product cards using data-component-type="s-search-result" blocks.
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) { console.error('[Amazon] No API keys'); return []; }
-  const key = getNextRoundRobinKey();
-  const params = { api_key: key, query, country_code: 'in', tld: 'in', page };
   try {
-    const { data } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/structured/amazon/search', {
-      params, timeout: 20000,
+    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
+      params: {
+        api_key: getNextRoundRobinKey(),
+        url: `https://www.amazon.in/s?k=${encodeURIComponent(query)}&page=${page}`,
+        country_code: 'in',
+      },
+      timeout: 25000,
+      transformResponse: [(d) => d],
     }));
-    const products: any[] = data?.results || data?.organic_results || [];
+    if (typeof html !== 'string' || html.length < 1000) return [];
+
+    const products: SearchProduct[] = [];
+    const seen = new Set<string>();
+
+    // Split on search result card boundaries
+    const cardSplits = html.split('data-component-type="s-search-result"');
+    for (const card of cardSplits.slice(1, 21)) {
+      const asinM = card.match(/data-asin="([A-Z0-9]{10})"/);
+      if (!asinM) continue;
+      const asin = asinM[1];
+      if (seen.has(asin)) continue;
+      seen.add(asin);
+
+      const priceWholeM = card.match(/class="a-price-whole">([\d,]+)/);
+      const priceFracM = card.match(/class="a-price-fraction">([\d]+)/);
+      if (!priceWholeM) continue;
+      const priceStr = priceWholeM[1].replace(/,/g, '') + (priceFracM ? `.${priceFracM[1]}` : '');
+      const price = Math.round(parseFloat(priceStr));
+      if (price <= 0) continue;
+
+      const imgM = card.match(/<img[^>]+src="(https:\/\/m\.media-amazon\.com[^"]+)"/);
+      const imageUrl = imgM?.[1] || '';
+      if (!imageUrl) continue;
+
+      const titleM = card.match(/<span[^>]*class="[^"]*a-size-medium[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
+                     card.match(/<span[^>]*class="[^"]*a-size-base-plus[^"]*"[^>]*>([^<]{10,})<\/span>/);
+      const title = cleanText(titleM?.[1] || '');
+      if (!title) continue;
+
+      const origM = card.match(/class="a-offscreen">\u20b9([\d,]+)</);
+      const orig = origM ? parsePrice(origM[1]) : 0;
+
+      products.push({
+        id: `az_p${page}_${asin}`,
+        title,
+        price,
+        originalPrice: orig > price ? orig : undefined,
+        discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
+        imageUrl,
+        platform: 'Amazon India',
+        url: `https://www.amazon.in/dp/${asin}`,
+      });
+    }
+
     console.log(`[Amazon] ${products.length} raw results`);
-    return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter(p => isValidProduct(p));
+    return products.filter(p => isValidProduct(p));
   } catch (e: any) {
     console.error('[Amazon] error:', e?.response?.status, e?.message?.slice(0, 100));
-    if (e?.response?.status === 429) {
-      const fallbackKey = getNextKey(key);
-      if (fallbackKey === key) return [];
-      try {
-        const { data } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/structured/amazon/search', {
-          params: { ...params, api_key: fallbackKey }, timeout: 20000,
-        }));
-        const products: any[] = data?.results || data?.organic_results || [];
-        return products.map((p, i) => mapAmazonProduct(p, page, i, query)).filter((p: any) => isValidProduct(p));
-      } catch { return []; }
-    }
     return [];
   }
 }
@@ -487,10 +497,20 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
     }));
     if (typeof html !== 'string') return [];
 
-    const jsonMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});\s*<\/script>/i);
-    if (!jsonMatch) return [];
+    // Brace-counting parser — the lazy regex *? cuts JSON short at the first
+    // "};" it finds, which is often inside a nested object, not the real end.
+    const stateMarker = html.indexOf('window.__INITIAL_STATE__');
+    if (stateMarker === -1) return [];
+    const braceOpen = html.indexOf('{', stateMarker);
+    if (braceOpen === -1) return [];
+    let depth2 = 0, stateEnd = 0;
+    for (let ci = braceOpen; ci < html.length; ci++) {
+      if (html[ci] === '{') depth2++;
+      else if (html[ci] === '}') { depth2--; if (depth2 === 0) { stateEnd = ci + 1; break; } }
+    }
+    if (!stateEnd) return [];
 
-    const state = JSON.parse(jsonMatch[1]);
+    const state = JSON.parse(html.slice(braceOpen, stateEnd));
     const pageData = state?.pageDataV4?.page?.data || {};
     const slots: any[] = Object.values(pageData).flat() as any[];
     const products: any[] = [];
@@ -743,7 +763,7 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
 // a row on retry anyway. We also cap the total time any single platform gets
 // so one slow/hanging platform can never block the whole search response.
 const FAST_FAIL_MS = 4000;
-const PLATFORM_BUDGET_MS = 12000;
+const PLATFORM_BUDGET_MS = 25000;
 
 function withTimeout<T>(promise: Promise<T[]>, ms: number): Promise<T[]> {
   return Promise.race([
