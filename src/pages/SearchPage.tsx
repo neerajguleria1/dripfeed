@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle } from 'lucide-react';
+import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Share2, Check } from 'lucide-react';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
@@ -249,9 +249,23 @@ function FeaturedCard({ product }: { product: ProductData }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ResultCard({ product, index }: { product: ProductData; index: number }) {
+  const [copied, setCopied] = useState(false);
   const savings = product.originalPrice && product.originalPrice > product.price
     ? product.originalPrice - product.price
     : 0;
+
+  async function handleShare(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const text = `${product.title} — ${formatPrice(product.price)} on ${product.platform}\n${product.url}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: product.title, text, url: product.url }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   return (
     <motion.a
@@ -328,11 +342,18 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
             {Math.round(Number(product.discount))}% off
           </span>
         )}
-        <div className="mt-3">
+        <div className="mt-3 flex items-center gap-2">
           <SaveButton
             productTitle={product.title}
             productData={{ imageUrl: product.imageUrl, brand: product.brand, price: product.price, platform: product.platform, url: product.url }}
           />
+          <button
+            onClick={handleShare}
+            aria-label="Share product"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 hover:border-[#C9A96E]/40 transition-all min-h-[44px] min-w-[44px]"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5 text-neutral-400" />}
+          </button>
         </div>
       </div>
     </motion.a>
