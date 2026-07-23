@@ -151,96 +151,76 @@ function FeaturedCard({ product }: { product: ProductData }) {
     : 0;
 
   return (
-    <motion.a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="group col-span-full flex flex-col md:flex-row gap-5 md:gap-8
-        bg-white rounded-2xl border border-neutral-100 overflow-hidden
-        hover:border-[#C9A96E]/30 hover:shadow-[0_8px_32px_-8px_rgba(201,169,110,0.12)]
-        transition-all duration-300 mb-8 md:mb-12 relative"
+      className="col-span-full flex gap-3 bg-white rounded-2xl border border-neutral-100 overflow-hidden mb-4 relative active:scale-[0.99] transition-transform"
     >
       {/* Best Match badge */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5
-        bg-[#C9A96E] text-white text-[11px] font-semibold uppercase tracking-[0.06em]
-        px-3 py-1.5 rounded-full shadow-sm">
-        <Sparkles className="w-3 h-3" />
-        Best Match
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-1
+        bg-[#C9A96E] text-white text-[10px] font-semibold uppercase tracking-[0.06em]
+        px-2.5 py-1 rounded-full shadow-sm">
+        <Sparkles className="w-2.5 h-2.5" />
+        Best
       </div>
 
-      {/* Image */}
-      <div className="w-full md:w-[320px] lg:w-[360px] flex-shrink-0 overflow-hidden bg-neutral-50">
+      {/* Image — fixed width on mobile */}
+      <a
+        href={product.url} target="_blank" rel="noopener noreferrer"
+        onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+        className="w-[140px] sm:w-[200px] flex-shrink-0 overflow-hidden bg-neutral-50"
+      >
         <img
           src={product.imageUrl}
           alt={product.title}
-          className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className="w-full h-full object-cover"
           loading="eager"
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
         />
-      </div>
+      </a>
 
       {/* Details */}
-      <div className="flex flex-col justify-center p-5 md:p-8 md:py-10">
-        {/* Platform badge pill + variant info (size/color) — only shown when the
-            source platform's search API actually exposed it; not every listing has it. */}
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <div className="flex flex-col justify-between py-4 pr-4 flex-1 min-w-0">
+        <div>
           <span
-            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold text-white capitalize"
-            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || PLATFORM_COLORS[product.platform.toLowerCase().split(' ')[0]] || '#6b7280' }}
+            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize mb-2"
+            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || '#6b7280' }}
           >
             {product.platform}
           </span>
-          {product.size && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
-              Size: {product.size}
-            </span>
-          )}
-          {product.color && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600">
-              {product.color}
-            </span>
-          )}
+          <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
+          <h2 className="text-[14px] sm:text-[16px] font-bold text-[#0F0F1A] leading-snug mt-1 line-clamp-3">
+            {product.title}
+          </h2>
         </div>
 
-        <span className="text-[12px] tracking-[0.04em] text-neutral-400 font-medium">
-          {product.brand}
-        </span>
-        <h2 className="text-[20px] md:text-[26px] font-bold text-[#0F0F1A] leading-snug mt-2 mb-3 tracking-[-0.01em]">
-          {product.title}
-        </h2>
-
-        <div className="w-10 h-px bg-[#C9A96E]/40 my-3" />
-
-        <div className="flex items-baseline gap-3 mt-2">
-          <span className="text-[20px] md:text-[24px] font-bold text-[#0F0F1A] font-serif tabular-nums">
-            {formatPrice(product.price)}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[14px] text-neutral-400 line-through tabular-nums">
-              {formatPrice(product.originalPrice)}
+        <div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-[18px] font-bold text-[#0F0F1A] tabular-nums">
+              {formatPrice(product.price)}
+            </span>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="text-[12px] text-neutral-400 line-through tabular-nums">
+                {formatPrice(product.originalPrice)}
+              </span>
+            )}
+          </div>
+          {savings > 0 && (
+            <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+              Save {formatPrice(savings)}
             </span>
           )}
-        </div>
-
-        {savings > 0 && (
-          <span className="inline-flex items-center gap-1 mt-3 text-[12px] font-semibold
-            text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full w-fit">
-            Save {formatPrice(savings)}
-          </span>
-        )}
-
-        <div className="mt-4">
-          <SaveButton
-            productTitle={product.title}
-            productData={{ imageUrl: product.imageUrl, brand: product.brand, price: product.price, platform: product.platform, url: product.url }}
-          />
+          <a
+            href={product.url} target="_blank" rel="noopener noreferrer"
+            onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+            className="mt-3 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
+          >
+            Buy now <ArrowRight className="w-3 h-3" />
+          </a>
         </div>
       </div>
-    </motion.a>
+    </motion.div>
   );
 }
 
@@ -268,95 +248,89 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
   }
 
   return (
-    <motion.a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+    <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
-      className="group flex flex-col bg-white rounded-2xl overflow-hidden
-        border border-neutral-100 hover:border-[#C9A96E]/30
-        hover:shadow-[0_4px_20px_-4px_rgba(201,169,110,0.1)]
-        transition-all duration-300 min-h-[44px]"
+      className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-neutral-100 active:scale-[0.98] transition-all duration-200"
     >
-      <div className="overflow-hidden bg-neutral-50 relative">
+      {/* Image — tappable area opens product */}
+      <a
+        href={product.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+        className="block overflow-hidden bg-neutral-50 relative"
+      >
         <img
           src={product.imageUrl}
           alt={product.title}
-          className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className="w-full aspect-[3/4] object-cover"
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
         />
-        {/* Savings badge */}
-        {savings > 0 && (
-          <span className="absolute top-3 right-3 text-[11px] font-semibold
-            text-emerald-700 bg-emerald-50 border border-emerald-100
-            px-2.5 py-1 rounded-full">
-            Save {formatPrice(savings)}
-          </span>
-        )}
-      </div>
-      <div className="p-4 flex flex-col flex-1">
-        {/* Platform badge pill + variant info (size/color) — only shown when the
-            source platform's search API actually exposed it; not every listing has it. */}
-        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-          <span
-            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize"
-            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || PLATFORM_COLORS[product.platform.toLowerCase().split(' ')[0]] || '#6b7280' }}
-          >
-            {product.platform}
-          </span>
-          {product.size && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600">
-              Size: {product.size}
-            </span>
-          )}
-          {product.color && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600">
-              {product.color}
-            </span>
-          )}
-        </div>
-
-        <span className="text-[11px] tracking-[0.04em] text-neutral-400 font-medium">
-          {product.brand}
+        {/* Platform badge — top left */}
+        <span
+          className="absolute top-2 left-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize shadow-sm"
+          style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || '#6b7280' }}
+        >
+          {product.platform}
         </span>
-        <h3 className="text-[14px] font-medium text-[#0F0F1A] leading-snug mt-1.5 line-clamp-2 min-h-[40px]">
-          {product.title}
-        </h3>
-
-        <div className="mt-auto pt-3 flex items-baseline gap-2">
-          <span className="text-[15px] font-bold text-[#0F0F1A] font-serif tabular-nums">
-            {formatPrice(product.price)}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[12px] text-neutral-400 line-through tabular-nums">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
-        </div>
+        {/* Discount badge — top right */}
         {product.discount && product.discount > 0 && (
-          <span className="text-[11px] font-semibold text-[#C9A96E] mt-1">
-            {Math.round(Number(product.discount))}% off
+          <span className="absolute top-2 right-2 bg-[#171310] text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+            -{Math.round(Number(product.discount))}%
           </span>
         )}
-        <div className="mt-3 flex items-center gap-2">
-          <SaveButton
-            productTitle={product.title}
-            productData={{ imageUrl: product.imageUrl, brand: product.brand, price: product.price, platform: product.platform, url: product.url }}
-          />
+      </a>
+
+      {/* Info */}
+      <div className="p-3 flex flex-col flex-1">
+        <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+          className="text-[13px] font-medium text-[#0F0F1A] leading-snug mt-0.5 line-clamp-2 min-h-[36px]"
+        >
+          {product.title}
+        </a>
+
+        <div className="mt-auto pt-2 flex items-center justify-between gap-1">
+          <div>
+            <span className="text-[15px] font-bold text-[#0F0F1A] tabular-nums">
+              {formatPrice(product.price)}
+            </span>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="block text-[11px] text-neutral-400 line-through tabular-nums">
+                {formatPrice(product.originalPrice)}
+              </span>
+            )}
+          </div>
+          {/* Share button */}
           <button
             onClick={handleShare}
             aria-label="Share product"
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 hover:border-[#C9A96E]/40 transition-all min-h-[44px] min-w-[44px]"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors flex-shrink-0"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5 text-neutral-400" />}
           </button>
         </div>
+
+        {/* Buy button — full width, prominent on mobile */}
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+          className="mt-2.5 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
+        >
+          Buy on {product.platform.split(' ')[0]}
+          <ArrowRight className="w-3 h-3" />
+        </a>
       </div>
-    </motion.a>
+    </motion.div>
   );
 }
 
@@ -997,7 +971,20 @@ export default function SearchPage() {
       )}
 
       {/* ── Affiliate Disclosure Footer ──────────────────────────────────────── */}
-      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
+      {/* Mobile sticky compare bar */}
+      {showResults && query && (
+        <div className="fixed bottom-[64px] left-0 right-0 sm:hidden z-30 px-4 pb-2">
+          <button
+            onClick={() => navigate(`/compare?q=${encodeURIComponent(query)}`)}
+            className="w-full flex items-center justify-center gap-2 bg-[#C9A96E] text-[#171310] font-bold text-[14px] py-3.5 rounded-2xl shadow-[0_4px_20px_rgba(201,169,110,0.4)] active:scale-[0.98] transition-transform"
+          >
+            <Sparkles className="w-4 h-4" />
+            Compare all prices
+          </button>
+        </div>
+      )}
+
+      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-36 sm:pb-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] text-neutral-600">
             &copy; 2026 TagCheck India

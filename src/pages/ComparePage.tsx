@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink, Check } from 'lucide-react';
@@ -7,7 +7,6 @@ import PlatformBadge from '../components/ui/PlatformBadge';
 // CompareCard replaced by inline editorial blocks for magazine-review layout
 import { PriceHistory } from '../components/product/PriceHistory';
 import { AIAdviceCard } from '../components/product/AIAdviceCard';
-import { SocialProof } from '../components/product/SocialProof';
 import { SaveButton } from '../components/product/SaveButton';
 import { PriceCounter } from '../components/common/PriceCounter';
 import AffiliateButton from '../components/ui/AffiliateButton';
@@ -278,9 +277,6 @@ export default function ComparePage() {
   const productTitle = lowest?.title || q;
   const productImage = lowest?.imageUrl;
   const productBrand = lowest?.brand;
-  // Social proof — organic numbers
-  const socialCompareCount = useMemo(() => Math.floor(Math.random() * 40) + 18, []);
-  const socialSaveCount = useMemo(() => Math.floor(Math.random() * 15) + 5, []);
 
   return (
     <>
@@ -310,12 +306,12 @@ export default function ComparePage() {
       />
 
       <div className="min-h-screen bg-[#FAFAFA]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-40 sm:pb-16">
+        <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-4 sm:pt-10 pb-40 sm:pb-16">
 
           {/* ─── Breadcrumb — restrained, editorial ─── */}
           <button
             onClick={() => navigate('/')}
-            className="inline-flex items-center gap-1.5 text-[13px] sm:text-[11px] text-neutral-400 hover:text-[#C9A96E] transition-colors mb-8 sm:mb-10 group uppercase tracking-[0.08em] font-medium min-h-[44px]"
+            className="inline-flex items-center gap-1.5 text-[12px] text-neutral-400 hover:text-[#C9A96E] transition-colors mb-4 sm:mb-10 group uppercase tracking-[0.08em] font-medium min-h-[44px]"
           >
             <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
             Back to search
@@ -349,12 +345,11 @@ export default function ComparePage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                className="bg-white rounded-2xl border border-neutral-100 hover:border-[#C9A96E]/30 transition-all p-6 sm:p-8"
+                className="bg-white rounded-2xl border border-neutral-100 p-4 sm:p-8"
               >
-                <div className="flex flex-col sm:flex-row gap-7">
-                  {/* Product image — 160px, magazine scale */}
+                <div className="flex gap-4 sm:gap-7">
                   {productImage && (
-                    <div className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl overflow-hidden bg-neutral-50 flex-shrink-0 ring-1 ring-neutral-100">
+                    <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-xl overflow-hidden bg-neutral-50 flex-shrink-0 ring-1 ring-neutral-100">
                       <img
                         src={productImage}
                         alt={productTitle}
@@ -363,74 +358,33 @@ export default function ComparePage() {
                       />
                     </div>
                   )}
-
                   <div className="flex-1 min-w-0">
-                    {/* Brand — 11px uppercase small caps */}
                     {productBrand && (
-                      <p className="text-[13px] sm:text-[11px] text-neutral-400 font-semibold uppercase tracking-[0.12em] mb-2">
-                        {productBrand}
-                      </p>
+                      <p className="text-[11px] text-neutral-400 font-semibold uppercase tracking-[0.12em] mb-1">{productBrand}</p>
                     )}
-
-                    {/* Title — 24px semibold, editorial weight */}
-                    <h1 className="text-[20px] sm:text-[24px] font-semibold text-[#0F0F1A] leading-[1.2] line-clamp-2 mb-4 tracking-[-0.01em]">
+                    <h1 className="text-[16px] sm:text-[24px] font-semibold text-[#0F0F1A] leading-[1.2] line-clamp-2 mb-2 tracking-[-0.01em]">
                       {productTitle}
                     </h1>
-
-                    {/* Gold accent divider */}
-                    <div className="w-10 h-px bg-[#C9A96E] mb-4" />
-
-                    {/* Platform count + savings pill */}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <span className="text-[13px] text-neutral-500">
-                        Compared across <strong className="text-[#0F0F1A] font-semibold">{platforms.length}</strong> platform{platforms.length > 1 ? 's' : ''}
-                      </span>
-
+                    <div className="flex flex-wrap items-center gap-2">
                       {savings > 0 && (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[13px] sm:text-[12px] font-semibold px-3 py-1 rounded-full border border-emerald-100">
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[12px] font-semibold px-2.5 py-0.5 rounded-full border border-emerald-100">
                           <TrendingDown className="w-3 h-3" />
                           Save {formatPrice(savings)}
                         </span>
                       )}
+                      <span className="text-[12px] text-neutral-400">{platforms.length} platforms</span>
                     </div>
-
-                    {/* Platform badges — spaced for air */}
-                    <div className="flex flex-wrap gap-2 mt-5">
-                      {platforms.map((p, i) => (
-                        <PlatformBadge key={i} platform={p.platform} size="sm" />
-                      ))}
-                    </div>
-
-                    {/* Honest disclaimer: results are matched by product name, not
-                        guaranteed to be the identical size/color/SKU across every
-                        platform — check each listing's details before buying. */}
-                    <p className="text-[12px] text-neutral-400 mt-3 leading-relaxed">
-                      Matched by product name across platforms — size, color, and exact variant may differ. Check listing details before buying.
+                    <p className="text-[11px] text-neutral-400 mt-2 leading-relaxed hidden sm:block">
+                      Matched by product name — variant may differ. Check before buying.
                     </p>
                   </div>
-
-                  {/* Share + Save — vertically stacked */}
-                  <div className="flex sm:flex-col gap-2 flex-shrink-0">
-                    <SaveButton
-                      productTitle={productTitle}
-                      productData={lowest || undefined}
-                    />
-                    <button
-                      onClick={handleShare}
-                      aria-label="Share comparison"
-                      className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-neutral-50 border border-neutral-100 hover:bg-white hover:border-[#C9A96E]/30 hover:shadow-sm transition-all min-h-[44px] min-w-[44px]"
-                    >
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <SaveButton productTitle={productTitle} productData={lowest || undefined} />
+                    <button onClick={handleShare} aria-label="Share" className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-neutral-50 border border-neutral-100 min-h-[44px] min-w-[44px]">
                       <Share2 className="w-4 h-4 text-neutral-500" />
                     </button>
                   </div>
                 </div>
-
-                {/* Social Proof — subtle, below hero content */}
-                <SocialProof
-                  compareCount={socialCompareCount}
-                  saveCount={socialSaveCount}
-                  className="mt-6 pt-5 border-t border-neutral-100/80"
-                />
               </motion.section>
 
               {/* ─── 2. Price Comparison — Editorial Blocks ─── */}
@@ -450,74 +404,41 @@ export default function ComparePage() {
                     key={i}
                     variants={staggerItem}
                     className={[
-                      'relative bg-white rounded-2xl p-5 transition-all duration-300',
-                      'border border-neutral-100 hover:border-[#C9A96E]/30',
-                      i === 0
-                        ? 'shadow-[0_2px_10px_rgba(0,0,0,0.06)]'
-                        : 'hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)]',
+                      'relative bg-white rounded-2xl p-3 sm:p-5 transition-all duration-300',
+                      'border border-neutral-100',
+                      i === 0 ? 'shadow-[0_2px_10px_rgba(0,0,0,0.06)]' : '',
                     ].join(' ')}
                   >
                     {i === 0 && (
-                      <span className="absolute -top-2.5 left-4 sm:left-6 inline-flex items-center bg-[#C9A96E] text-white text-[13px] sm:text-[10px] font-semibold uppercase tracking-[0.08em] px-3 py-1 rounded-full shadow-sm">
+                      <span className="absolute -top-2.5 left-3 inline-flex items-center bg-[#C9A96E] text-white text-[10px] font-semibold uppercase tracking-[0.08em] px-2.5 py-0.5 rounded-full shadow-sm">
                         Best Value
                       </span>
                     )}
-
-                    <div className="flex items-center gap-4">
-                      {/* Product thumbnail */}
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-neutral-50 flex-shrink-0 ring-1 ring-neutral-100">
-                        <img
-                          src={p.imageUrl}
-                          alt={p.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=200&fit=crop'; }}
-                        />
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-neutral-50 flex-shrink-0 ring-1 ring-neutral-100">
+                        <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=200&fit=crop'; }} />
                       </div>
-
-                      {/* Platform + price */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-0.5">
                           <PlatformBadge platform={p.platform} size="sm" />
-                          <span className="text-[12px] uppercase tracking-wide text-neutral-400 font-medium">
-                            {p.platform}
-                          </span>
+                          <span className="text-[11px] uppercase tracking-wide text-neutral-400 font-medium truncate">{p.platform}</span>
                         </div>
-
-                        <p className="text-[12px] text-neutral-500 line-clamp-1 mb-1.5">{p.title}</p>
-
-                        <div className="flex items-baseline gap-2">
-                          <span className={[
-                            'tabular-nums tracking-tight',
-                            i === 0 ? 'text-[22px] font-serif font-bold text-[#0F0F1A]' : 'text-[18px] font-semibold text-[#1A1A2E]',
-                          ].join(' ')}>
-                            {i === 0 ? <PriceCounter value={p.price} className="text-[22px] font-serif font-bold text-[#0F0F1A]" /> : formatPrice(p.price)}
+                        <p className="text-[11px] text-neutral-500 line-clamp-1">{p.title}</p>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                          <span className={i === 0 ? 'text-[20px] font-bold text-[#0F0F1A] tabular-nums' : 'text-[16px] font-semibold text-[#1A1A2E] tabular-nums'}>
+                            {i === 0 ? <PriceCounter value={p.price} className="text-[20px] font-bold text-[#0F0F1A]" /> : formatPrice(p.price)}
                           </span>
-                          {p.originalPrice && p.originalPrice > p.price && (
-                            <span className="text-[12px] text-neutral-400 line-through tabular-nums">{formatPrice(p.originalPrice)}</span>
-                          )}
                           {p.discount && p.discount > 0 && (
-                            <span className="inline-flex items-center bg-emerald-50 text-emerald-700 text-[11px] font-medium px-2 py-0.5 rounded-full">
-                              {p.discount}% off
-                            </span>
+                            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{p.discount}% off</span>
                           )}
                         </div>
-
-                        <p className="text-[11px] italic text-neutral-400 mt-0.5">&ldquo;{getVerdict(p.platform)}&rdquo;</p>
                       </div>
-
-                      {/* Share/Copy button */}
-                      <button
-                        onClick={() => handleProductShare(p)}
-                        aria-label="Share or copy product link"
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 hover:bg-white hover:border-[#C9A96E]/40 transition-all flex-shrink-0 min-h-[44px] min-w-[44px]"
-                      >
-                        {copiedId === p.id
-                          ? <Check className="w-3.5 h-3.5 text-emerald-500" />
-                          : <Share2 className="w-3.5 h-3.5 text-neutral-400" />}
-                      </button>
-
-                      {/* CTA */}
-                      <div className="flex-shrink-0">
+                      <div className="flex flex-col gap-1.5 flex-shrink-0">
+                        <button onClick={() => handleProductShare(p)} aria-label="Share"
+                          className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 min-h-[44px] min-w-[44px]">
+                          {copiedId === p.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5 text-neutral-400" />}
+                        </button>
                         <AffiliateButton platform={p.platform} url={p.url} productTitle={p.title} />
                       </div>
                     </div>
