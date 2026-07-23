@@ -407,19 +407,20 @@ async function fetchWithEscalation(
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) { console.error('[Amazon] No API keys'); return []; }
-  const { html, tier, credits } = await fetchWithEscalation(
-    `https://www.amazon.in/s?k=${encodeURIComponent(query)}&page=${page}`,
-    'amazon', 'premium', true, 'plain',
-    (data) => data.includes('data-component-type="s-search-result"') && data.length > 5000
-  );
-  console.log(`[Amazon] ScraperAPI tier=${tier} credits=${credits}`);
+  if (isCircuitOpen('amazon')) return [];
   try {
-    if (typeof html !== 'string' || html.length < 1000) return [];
+    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
+      params: { api_key: getNextRoundRobinKey(), url: `https://www.amazon.in/s?k=${encodeURIComponent(query)}&page=${page}`, country_code: 'in' },
+      timeout: 20000,
+      transformResponse: [(d) => d],
+    }));
+    if (typeof html !== 'string' || html.length < 1000) { recordFailure('amazon'); return []; }
+    if (/captcha|robot|are you a human/i.test(html.slice(0, 2000))) { recordFailure('amazon'); return []; }
+    recordSuccess('amazon');
+    console.log(`[Amazon] plain tier, length=${html.length}`);
 
     const products: SearchProduct[] = [];
     const seen = new Set<string>();
-
-    // Split on search result card boundaries
     const cardSplits = html.split('data-component-type="s-search-result"');
     for (const card of cardSplits.slice(1, 21)) {
       const asinM = card.match(/data-asin="([A-Z0-9]{10})"/);
@@ -431,25 +432,27 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       const priceWholeM = card.match(/class="a-price-whole">([\d,]+)/);
       const priceFracM = card.match(/class="a-price-fraction">([\d]+)/);
       if (!priceWholeM) continue;
-      const priceStr = priceWholeM[1].replace(/,/g, '') + (priceFracM ? `.${priceFracM[1]}` : '');
-      const price = Math.round(parseFloat(priceStr));
+      const price = Math.round(parseFloat(priceWholeM[1].replace(/,/g, '') + (priceFracM ? `.${priceFracM[1]}` : '')));
       if (price <= 0) continue;
 
       const imgM = card.match(/<img[^>]+src="(https?:\/\/(?:m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|images-eu\.ssl-images-amazon\.com)[^"]+)"/);
       const imageUrl = toAbsoluteUrl(imgM?.[1] || '');
       if (!imageUrl) continue;
 
-      const titleM = card.match(/<span[^>]*class="[^"]*a-size-medium[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
-                     card.match(/<span[^>]*class="[^"]*a-size-base-plus[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
-                     card.match(/<span[^>]*class="[^"]*a-size-small[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
-                     card.match(/<span[^>]*class="[^"]*a-text-normal[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
-                     card.match(/aria-label="([^"]{10,})"/);
-      const title = cleanText(titleM?.[1] || '');
-      if (!title) continue;
+      // Amazon removed stable class names from title spans — extract from img alt
+      // (most reliable), then aria-label, then longest plain span text.
+      const imgAlt = imgM?.[0].match(/alt="([^"]{15,})"/)?.[1];
+      const ariaMatches = [...card.matchAll(/aria-label="([^"]{15,})"/g)].map(m => m[1]);
+      const ariaTitle = ariaMatches.find(t => !/sponsored|colours available|amazon.s choice|leave ad|rating|stars|out of 5/i.test(t));
+      const spanTexts = [...card.matchAll(/<span[^>]*>([^<]{15,})<\/span>/g)]
+        .map(m => m[1].trim())
+        .filter(t => !/^[₹\d,\.%\s]+$/.test(t) && !/sponsored|mrp|off|back with|delivery|sun|mon|tue|wed|thu|fri|sat/i.test(t));
+      const spanTitle = spanTexts.sort((a, b) => b.length - a.length)[0];
+      const title = cleanText(imgAlt || ariaTitle || spanTitle || '');
+      if (!title || title.length < 10) continue;
 
       const origM = card.match(/class="a-offscreen">\u20b9([\d,]+)</);
       const orig = origM ? parsePrice(origM[1]) : 0;
-
       products.push({
         id: `az_p${page}_${asin}`,
         title,
@@ -461,11 +464,10 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
         url: `https://www.amazon.in/dp/${asin}`,
       });
     }
-
     console.log(`[Amazon] ${products.length} raw results`);
     return products.filter(p => isValidProduct(p));
   } catch (e: any) {
-    console.error('[Amazon] parse error:', e?.message?.slice(0, 100));
+    console.error('[Amazon] error:', e?.message?.slice(0, 100));
     return [];
   }
 }
