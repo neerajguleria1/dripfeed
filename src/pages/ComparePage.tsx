@@ -227,12 +227,12 @@ export default function ComparePage() {
       const results: ProductData[] = data?.products || data?.results || data?.platforms || [];
       const final = results.length > 0 ? results : searchSeedProducts(searchQ);
       final.sort((a, b) => a.price - b.price);
-      setProducts(final);
+      setPlatforms(final);
       if (final.length > 0) fetchAiAdvice(final[0]?.title || searchQ, final);
     } catch {
       const fallback = searchSeedProducts(searchQ);
       fallback.sort((a, b) => a.price - b.price);
-      setProducts(fallback);
+      setPlatforms(fallback);
       if (fallback.length === 0) setError('Could not fetch comparison. Please try again.');
     } finally {
       setLoading(false);
