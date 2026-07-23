@@ -539,23 +539,27 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
+  if (!SCRAPER_KEYS.length) return [];
   try {
     const encoded = encodeURIComponent(query);
-    const { data: html } = await axios.get(`https://www.myntra.com/${encoded}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-IN,en;q=0.9',
+    // Myntra blocks Vercel datacenter IPs — route through ScraperAPI with Indian IP
+    // Uses plain tier (1 credit) since window.__myx is server-rendered, no JS needed
+    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
+      params: {
+        api_key: getNextRoundRobinKey(),
+        url: `https://www.myntra.com/${encoded}`,
+        country_code: 'in',
       },
       responseType: 'text',
-      timeout: 20000,
-    });
+      timeout: 25000,
+    }));
 
-    if (typeof html !== 'string') return [];
+    if (typeof html !== 'string' || !html.includes('window.__myx =')) {
+      console.warn('[Myntra] window.__myx not found in ScraperAPI response, length:', typeof html === 'string' ? html.length : 0);
+      return [];
+    }
 
-    // Extract window.__myx JSON using brace-counting parser
     const scriptStart = html.indexOf('window.__myx =');
-    if (scriptStart === -1) { console.warn('[Myntra] window.__myx not found'); return []; }
     const objStart = html.indexOf('{', scriptStart);
     if (objStart === -1) return [];
 
@@ -568,7 +572,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
 
     const json = JSON.parse(html.slice(objStart, end));
     const products: any[] = json?.searchData?.results?.products || [];
-    console.log(`[Myntra] ${products.length} products from window.__myx`);
+    console.log(`[Myntra] ${products.length} products via ScraperAPI`);
 
     return products.slice(0, 20).map((p: any) => {
       const price = p.price || 0;
@@ -802,7 +806,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
     withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
-    withTimeout(fetchMyntra(searchTerm), 20000).catch(() => []),
+    withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []),
   ]);
 
   // Deduplicate Amazon by ASIN
@@ -884,7 +888,7 @@ export async function searchProductsStreaming(
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
-    withTimeout(fetchMyntra(searchTerm), 20000).catch(() => []).then(r => processed('myntra', r)),
+    withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []).then(r => processed('myntra', r)),
   ]);
 
   const sorted = collected.sort((a, b) => a.price - b.price);
