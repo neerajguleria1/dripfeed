@@ -47,10 +47,17 @@ export default function ComparePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const q = searchParams.get('q') || '';
-  const productUrl = searchParams.get('url') || '';
+  // Web Share Target sends ?url=, ?text= (may contain URL), ?title=
+  const sharedText = searchParams.get('text') || '';
+  const sharedTitle = searchParams.get('title') || '';
+  const rawUrl = searchParams.get('url') || sharedText || '';
+  // If sharedText looks like a URL use it as productUrl, otherwise use as query
+  const isUrl = (s: string) => /^https?:\/\//.test(s.trim());
+  const productUrl = isUrl(rawUrl) ? rawUrl.trim() : '';
+  const shareQuery = !isUrl(rawUrl) && rawUrl ? rawUrl.trim() : sharedTitle.trim();
 
   const [platforms, setPlatforms] = useState<ProductData[]>([]);
-  const [loading, setLoading] = useState(!!(searchParams.get('q') || searchParams.get('url')));
+  const [loading, setLoading] = useState(!!(q || searchParams.get('url') || sharedText || sharedTitle));
   const [error, setError] = useState('');
 
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
@@ -62,11 +69,12 @@ export default function ComparePage() {
   useEffect(() => {
     if (q) {
       fetchComparison(q);
+    } else if (shareQuery) {
+      fetchComparison(shareQuery);
     } else if (productUrl) {
-      // User pasted a product URL — extract title and compare
       fetchFromUrl(productUrl);
     }
-  }, [q, productUrl]);
+  }, [q, productUrl, shareQuery]);
 
   async function fetchFromUrl(url: string) {
     setLoading(true);

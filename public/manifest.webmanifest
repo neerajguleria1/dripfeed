@@ -10,6 +10,15 @@
   "theme_color": "#0F0F1A",
   "id": "/",
   "categories": ["shopping", "lifestyle"],
+  "share_target": {
+    "action": "/compare",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "/logo.png",
