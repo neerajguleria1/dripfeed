@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { searchProducts, searchProductsStreaming, getRelatedProducts } from '../search.js';
+import { searchProducts, searchProductsStreaming, getRelatedProducts, getMemCached, getDbCached, normalizeQuery } from '../search.js';
 import { connectDB } from '../db.js';
 import Product from '../models/Product.js';
 
@@ -162,21 +162,38 @@ async function productSearchStream(req: VercelRequest, res: VercelResponse) {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no', // disable proxy buffering so events flush immediately
+    'X-Accel-Buffering': 'no',
   });
 
   const send = (payload: Record<string, unknown>) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    // @ts-ignore — flush exists on Node's http response when compression isn't applied
+    // @ts-ignore
     if (typeof res.flush === 'function') res.flush();
   };
 
-  // Keep the connection alive across long-running platform escalations
-  // (Myntra/Ajio can take up to ~90s) — some proxies/load balancers close
-  // idle SSE connections after ~30s of silence otherwise.
   const heartbeat = setInterval(() => res.write(':\n\n'), 15000);
 
   try {
+    // No ScraperAPI keys configured — fail fast with a clear error instead of
+    // silently returning empty results that look like "no products found".
+    if (!process.env.SCRAPER_API_KEY) {
+      send({ type: 'error', message: 'no_keys' });
+      clearInterval(heartbeat);
+      return res.end();
+    }
+
+    // Cache-first flush: if this query was already fetched, send cached results
+    // immediately (~0ms) so the UI shows results before the live scrape even starts.
+    const cacheKey = normalizeQuery(searchTerm);
+    const cached = getMemCached(cacheKey) || await getDbCached(cacheKey);
+    if (cached && cached.length > 0) {
+      const cleaned = cached.map((p) => ({ ...p, title: cleanProductTitle(p.title) }));
+      send({ type: 'platform', platform: 'cache', products: cleaned });
+      send({ type: 'done', query: searchTerm });
+      clearInterval(heartbeat);
+      return res.end();
+    }
+
     await searchProductsStreaming(searchTerm, (platform, products) => {
       const cleaned = products.map((p) => ({ ...p, title: cleanProductTitle(p.title) }));
       send({ type: 'platform', platform, products: cleaned });

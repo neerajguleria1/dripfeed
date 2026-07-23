@@ -382,6 +382,7 @@ export default function SearchPage() {
 
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [hasMore, setHasMore] = useState(false);
   const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
@@ -423,6 +424,11 @@ export default function SearchPage() {
         } else if (payload.type === 'error') {
           setLoading(false);
           es.close();
+          if (payload.message === 'no_keys') {
+            setSearchError('Live prices are temporarily unavailable. Please try again in a few minutes.');
+          } else if (!settled) {
+            fetchResultsBlocking(searchQuery);
+          }
         }
       } catch {
         // ignore malformed SSE frames
@@ -466,6 +472,7 @@ export default function SearchPage() {
     if (!searchQuery.trim()) { setProducts([]); return; }
     setLoading(true);
     setProducts([]);
+    setSearchError('');
     setRelatedSections(null);
 
     const streamed = fetchResultsStreaming(searchQuery);
@@ -793,6 +800,16 @@ export default function SearchPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Error State ──────────────────────────────────────────────────────── */}
+      {searchError && (
+        <section className="bg-[#FAFAFA]">
+          <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+            <p className="text-4xl mb-4">⚠️</p>
+            <p className="text-[15px] text-neutral-600 font-medium">{searchError}</p>
           </div>
         </section>
       )}

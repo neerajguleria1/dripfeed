@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink, Check } from 'lucide-react';
@@ -47,10 +47,12 @@ export default function ComparePage() {
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(false);
+  const aiRequestedRef = useRef(false);
 
   const [priceHistory] = useState<PriceHistoryPoint[]>([]);
 
   useEffect(() => {
+    aiRequestedRef.current = false;
     if (q) {
       fetchComparison(q);
     } else if (shareQuery) {
@@ -107,6 +109,8 @@ export default function ComparePage() {
 
   const fetchAiAdvice = useCallback(async (productTitle: string, platformData: ProductData[]) => {
     if (!productTitle || platformData.length === 0) return;
+    if (aiRequestedRef.current) return;
+    aiRequestedRef.current = true;
     setAiLoading(true);
     setAiError(false);
     try {
@@ -187,20 +191,28 @@ export default function ComparePage() {
           setPlatforms((prev) => {
             const existingIds = new Set(prev.map((p: ProductData) => p.id));
             const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
-            const merged = [...prev, ...newOnes].sort((a, b) => a.price - b.price);
-            if (prev.length === 0 && merged.length > 0) {
-              fetchAiAdvice(merged[0]?.title || searchQ, merged);
-            }
-            return merged;
+            return [...prev, ...newOnes].sort((a, b) => a.price - b.price);
           });
         } else if (payload.type === 'done') {
           setLoading(false);
           es.close();
+          // Fire AI advice only after all platforms are in — avoids a mid-stream
+          // call with incomplete data that then gets re-called with full data.
+          setPlatforms((prev) => {
+            if (prev.length > 0) fetchAiAdvice(prev[0]?.title || searchQ, prev);
+            return prev;
+          });
           api.post('/analytics/track', { event: 'compare_view', productTitle: searchQ }).catch(() => {});
         } else if (payload.type === 'error') {
           es.close();
-          if (!settled) fallbackFetch(searchQ);
-          else setLoading(false);
+          if (payload.message === 'no_keys') {
+            setError('Live prices are temporarily unavailable. Please try again in a few minutes.');
+            setLoading(false);
+          } else if (!settled) {
+            fallbackFetch(searchQ);
+          } else {
+            setLoading(false);
+          }
         }
       } catch { /* ignore malformed frames */ }
     };

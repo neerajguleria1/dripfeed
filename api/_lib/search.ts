@@ -407,16 +407,13 @@ async function fetchWithEscalation(
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) { console.error('[Amazon] No API keys'); return []; }
+  const { html, tier, credits } = await fetchWithEscalation(
+    `https://www.amazon.in/s?k=${encodeURIComponent(query)}&page=${page}`,
+    'amazon', 'premium', true, 'plain',
+    (data) => data.includes('data-component-type="s-search-result"') && data.length > 5000
+  );
+  console.log(`[Amazon] ScraperAPI tier=${tier} credits=${credits}`);
   try {
-    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: getNextRoundRobinKey(),
-        url: `https://www.amazon.in/s?k=${encodeURIComponent(query)}&page=${page}`,
-        country_code: 'in',
-      },
-      timeout: 25000,
-      transformResponse: [(d) => d],
-    }));
     if (typeof html !== 'string' || html.length < 1000) return [];
 
     const products: SearchProduct[] = [];
@@ -438,12 +435,15 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       const price = Math.round(parseFloat(priceStr));
       if (price <= 0) continue;
 
-      const imgM = card.match(/<img[^>]+src="(https:\/\/m\.media-amazon\.com[^"]+)"/);
-      const imageUrl = imgM?.[1] || '';
+      const imgM = card.match(/<img[^>]+src="(https?:\/\/(?:m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|images-eu\.ssl-images-amazon\.com)[^"]+)"/);
+      const imageUrl = toAbsoluteUrl(imgM?.[1] || '');
       if (!imageUrl) continue;
 
       const titleM = card.match(/<span[^>]*class="[^"]*a-size-medium[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
-                     card.match(/<span[^>]*class="[^"]*a-size-base-plus[^"]*"[^>]*>([^<]{10,})<\/span>/);
+                     card.match(/<span[^>]*class="[^"]*a-size-base-plus[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
+                     card.match(/<span[^>]*class="[^"]*a-size-small[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
+                     card.match(/<span[^>]*class="[^"]*a-text-normal[^"]*"[^>]*>([^<]{10,})<\/span>/) ||
+                     card.match(/aria-label="([^"]{10,})"/);
       const title = cleanText(titleM?.[1] || '');
       if (!title) continue;
 
@@ -465,7 +465,7 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
     console.log(`[Amazon] ${products.length} raw results`);
     return products.filter(p => isValidProduct(p));
   } catch (e: any) {
-    console.error('[Amazon] error:', e?.response?.status, e?.message?.slice(0, 100));
+    console.error('[Amazon] parse error:', e?.message?.slice(0, 100));
     return [];
   }
 }
@@ -481,16 +481,13 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
 
 async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
+  const { html, tier, credits } = await fetchWithEscalation(
+    `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
+    'flipkart', 'premium', false, 'plain',
+    (data) => data.includes('window.__INITIAL_STATE__') && data.length > 5000
+  );
+  console.log(`[Flipkart] ScraperAPI tier=${tier} credits=${credits}`);
   try {
-    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: getNextRoundRobinKey(),
-        url: `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
-        render: false,
-        country_code: 'in',
-      },
-      timeout: 15000,
-    }));
     if (typeof html !== 'string') return [];
 
     // Brace-counting parser — the lazy regex *? cuts JSON short at the first
@@ -551,7 +548,7 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         size,
       };
     }).filter(p => isValidProduct(p));
-  } catch(e: any) { console.error('[Flipkart] error:', e?.response?.status, e?.message?.slice(0,100)); return []; }
+  } catch(e: any) { console.error('[Flipkart] parse error:', e?.message?.slice(0,100)); return []; }
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
@@ -916,6 +913,8 @@ export async function searchProductsStreaming(
 
   return sorted;
 }
+
+export { getMemCached, getDbCached, normalizeQuery };
 
 // ─── Related queries map ──────────────────────────────────────────────────────
 // Maps a search intent to related product queries for "Complete the Look"

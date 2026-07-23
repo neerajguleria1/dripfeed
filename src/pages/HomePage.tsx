@@ -445,7 +445,7 @@ export default function HomePage() {
             {[
               { value: '5', label: 'Platforms compared' },
               { value: '0', label: 'Sponsored results' },
-              { value: '<5s', label: 'Avg. search time' },
+              { value: '100%', label: 'Free, no signup' },
             ].map(({ value, label }) => (
               <div key={label}>
                 <p className="text-[28px] sm:text-[44px] font-extrabold text-[#171310] tracking-tight">{value}</p>
