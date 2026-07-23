@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink, Copy, Check } from 'lucide-react';
 import SEOHead from '../components/common/SEOHead';
 import PlatformBadge from '../components/ui/PlatformBadge';
 // CompareCard replaced by inline editorial blocks for magazine-review layout
@@ -245,7 +245,19 @@ export default function ComparePage() {
     }
   }
 
-  async function handleShare() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function handleProductShare(product: ProductData) {
+    const text = `${product.title} — ${formatPrice(product.price)} on ${product.platform}\n${product.url}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: product.title, text, url: product.url }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(product.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  }
+
     const url = window.location.href;
     if (navigator.share) {
       try {
@@ -491,6 +503,17 @@ export default function ComparePage() {
 
                         <p className="text-[11px] italic text-neutral-400 mt-0.5">&ldquo;{getVerdict(p.platform)}&rdquo;</p>
                       </div>
+
+                      {/* Share/Copy button */}
+                      <button
+                        onClick={() => handleProductShare(p)}
+                        aria-label="Share or copy product link"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 hover:bg-white hover:border-[#C9A96E]/40 transition-all flex-shrink-0 min-h-[44px] min-w-[44px]"
+                      >
+                        {copiedId === p.id
+                          ? <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          : <Share2 className="w-3.5 h-3.5 text-neutral-400" />}
+                      </button>
 
                       {/* CTA */}
                       <div className="flex-shrink-0">
