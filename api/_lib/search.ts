@@ -439,16 +439,12 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       const imageUrl = toAbsoluteUrl(imgM?.[1] || '');
       if (!imageUrl) continue;
 
-      // Amazon removed stable class names from title spans — extract from img alt
-      // (most reliable), then aria-label, then longest plain span text.
-      const imgAlt = imgM?.[0].match(/alt="([^"]{15,})"/)?.[1];
-      const ariaMatches = [...card.matchAll(/aria-label="([^"]{15,})"/g)].map(m => m[1]);
-      const ariaTitle = ariaMatches.find(t => !/sponsored|colours available|amazon.s choice|leave ad|rating|stars|out of 5/i.test(t));
-      const spanTexts = [...card.matchAll(/<span[^>]*>([^<]{15,})<\/span>/g)]
-        .map(m => m[1].trim())
-        .filter(t => !/^[₹\d,\.%\s]+$/.test(t) && !/sponsored|mrp|off|back with|delivery|sun|mon|tue|wed|thu|fri|sat/i.test(t));
-      const spanTitle = spanTexts.sort((a, b) => b.length - a.length)[0];
-      const title = cleanText(imgAlt || ariaTitle || spanTitle || '');
+      // Amazon title lives in aria-label on the <h2> inside the product link.
+      // Pattern: <a class="...s-line-clamp-2..."><h2 aria-label="TITLE"
+      // Fallback: img alt attribute on the product image.
+      const h2AriaM = card.match(/s-line-clamp-[23][^>]*>[\s\S]{0,200}?<h2[^>]*aria-label="([^"]{10,})"/);
+      const imgAlt = imgM?.[0].match(/alt="([^"]{10,})"/)?.[1];
+      const title = cleanText(h2AriaM?.[1] || imgAlt || '');
       if (!title || title.length < 10) continue;
 
       const origM = card.match(/class="a-offscreen">\u20b9([\d,]+)</);
