@@ -22,20 +22,6 @@ import type { PriceHistoryPoint } from '../components/product/PriceHistory';
 // Editorial Verdict — one-line reviewer's notes per platform
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PLATFORM_VERDICTS: Record<string, string> = {
-  myntra: 'Reliable, if slow',
-  ajio: 'Best for AJIO exclusives',
-  amazon: 'Fast delivery, premium pricing',
-  flipkart: 'Value king, inconsistent stock',
-  meesho: 'Unbeatable price, patience required',
-  nykaa: 'Curated, beauty-first',
-  tatacliq: 'Trusted originals only',
-};
-
-function getVerdict(platform: string): string {
-  const key = platform.toLowerCase().replace(/\s+/g, '');
-  return PLATFORM_VERDICTS[key] || 'Solid option';
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Component

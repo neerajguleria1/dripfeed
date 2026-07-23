@@ -2,11 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Share2, Check } from 'lucide-react';
-import { SearchBar } from '../components/search/SearchBar';
-import { SearchFilters } from '../components/search/SearchFilters';
-import { InfiniteScroll } from '../components/common/InfiniteScroll';
-import { SEOHead } from '../components/common/SEOHead';
-import { SaveButton } from '../components/product/SaveButton';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import type { ProductData } from '../types/product';
@@ -230,9 +225,6 @@ function FeaturedCard({ product }: { product: ProductData }) {
 
 function ResultCard({ product, index }: { product: ProductData; index: number }) {
   const [copied, setCopied] = useState(false);
-  const savings = product.originalPrice && product.originalPrice > product.price
-    ? product.originalPrice - product.price
-    : 0;
 
   async function handleShare(e: React.MouseEvent) {
     e.preventDefault();
