@@ -402,7 +402,7 @@ async function fetchWithEscalation(
 }
 
 // ─── Amazon ───────────────────────────────────────────────────────────────────
-// Scrapes amazon.in search HTML via ScraperAPI plain tier (1 credit).
+// Plain ScraperAPI HTML scrape — 1 credit, ~5-8s.
 // Extracts product cards using data-component-type="s-search-result" blocks.
 
 async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]> {
@@ -428,42 +428,37 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       const asin = asinM[1];
       if (seen.has(asin)) continue;
       seen.add(asin);
-
       const priceWholeM = card.match(/class="a-price-whole">([\d,]+)/);
       const priceFracM = card.match(/class="a-price-fraction">([\d]+)/);
       if (!priceWholeM) continue;
       const price = Math.round(parseFloat(priceWholeM[1].replace(/,/g, '') + (priceFracM ? `.${priceFracM[1]}` : '')));
       if (price <= 0) continue;
-
       const imgM = card.match(/<img[^>]+src="(https?:\/\/(?:m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|images-eu\.ssl-images-amazon\.com)[^"]+)"/);
       const imageUrl = toAbsoluteUrl(imgM?.[1] || '');
       if (!imageUrl) continue;
-
-      // Amazon title lives in aria-label on the <h2> inside the product link.
-      // Pattern: <a class="...s-line-clamp-2..."><h2 aria-label="TITLE"
-      // Fallback: img alt attribute on the product image.
-      const h2AriaM = card.match(/s-line-clamp-[23][^>]*>[\s\S]{0,200}?<h2[^>]*aria-label="([^"]{10,})"/);
-      const imgAlt = imgM?.[0].match(/alt="([^"]{10,})"/)?.[1];
-      const title = cleanText(h2AriaM?.[1] || imgAlt || '');
+      const imgAlt = imgM?.[0].match(/alt="([^"]{15,})"/)?.[1];
+      const ariaMatches = [...card.matchAll(/aria-label="([^"]{15,})"/g)].map(m => m[1]);
+      const ariaTitle = ariaMatches.find(t => !/sponsored|colours available|amazon.s choice|leave ad|rating|stars|out of 5/i.test(t));
+      const spanTexts = [...card.matchAll(/<span[^>]*>([^<]{15,})<\/span>/g)]
+        .map(m => m[1].trim())
+        .filter(t => !/^[₹\d,\.%\s]+$/.test(t) && !/sponsored|mrp|off|back with|delivery|sun|mon|tue|wed|thu|fri|sat/i.test(t));
+      const spanTitle = spanTexts.sort((a, b) => b.length - a.length)[0];
+      const title = cleanText(imgAlt || ariaTitle || spanTitle || '');
       if (!title || title.length < 10) continue;
-
       const origM = card.match(/class="a-offscreen">\u20b9([\d,]+)</);
       const orig = origM ? parsePrice(origM[1]) : 0;
       products.push({
-        id: `az_p${page}_${asin}`,
-        title,
-        price,
+        id: `az_p${page}_${asin}`, title, price,
         originalPrice: orig > price ? orig : undefined,
         discount: orig > price ? Math.round(((orig - price) / orig) * 100) : undefined,
-        imageUrl,
-        platform: 'Amazon India',
-        url: `https://www.amazon.in/dp/${asin}`,
+        imageUrl, platform: 'Amazon India', url: `https://www.amazon.in/dp/${asin}`,
       });
     }
-    console.log(`[Amazon] ${products.length} raw results`);
+    console.log(`[Amazon] ${products.length} results`);
     return products.filter(p => isValidProduct(p));
   } catch (e: any) {
     console.error('[Amazon] error:', e?.message?.slice(0, 100));
+    recordFailure('amazon');
     return [];
   }
 }
@@ -479,14 +474,26 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
 
 async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
-  const { html, tier, credits } = await fetchWithEscalation(
-    `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
-    'flipkart', 'premium', false, 'plain',
-    (data) => data.includes('window.__INITIAL_STATE__') && data.length > 5000
-  );
-  console.log(`[Flipkart] ScraperAPI tier=${tier} credits=${credits}`);
+  if (isCircuitOpen('flipkart')) return [];
+  // Plain tier only (render:false) — 1 credit. __INITIAL_STATE__ is server-rendered
+  // so JS execution is not needed. Never escalate to render/premium.
   try {
-    if (typeof html !== 'string') return [];
+    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
+      params: {
+        api_key: getNextRoundRobinKey(),
+        url: `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
+        render: false,
+        country_code: 'in',
+      },
+      timeout: 15000,
+      transformResponse: [(d) => d],
+    }));
+    if (typeof html !== 'string' || !html.includes('window.__INITIAL_STATE__')) {
+      recordFailure('flipkart');
+      return [];
+    }
+    recordSuccess('flipkart');
+    console.log(`[Flipkart] plain tier, length=${html.length}`);
 
     // Brace-counting parser — the lazy regex *? cuts JSON short at the first
     // "};" it finds, which is often inside a nested object, not the real end.
@@ -546,7 +553,7 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
         size,
       };
     }).filter(p => isValidProduct(p));
-  } catch(e: any) { console.error('[Flipkart] parse error:', e?.message?.slice(0,100)); return []; }
+  } catch(e: any) { console.error('[Flipkart] parse error:', e?.message?.slice(0,100)); recordFailure('flipkart'); return []; }
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
@@ -754,7 +761,7 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
 // a row on retry anyway. We also cap the total time any single platform gets
 // so one slow/hanging platform can never block the whole search response.
 const FAST_FAIL_MS = 4000;
-const PLATFORM_BUDGET_MS = 25000;
+const PLATFORM_BUDGET_MS = 12000; // 12s max per platform — structured/plain APIs resolve in <5s
 
 function withTimeout<T>(promise: Promise<T[]>, ms: number): Promise<T[]> {
   return Promise.race([
