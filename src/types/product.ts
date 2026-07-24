@@ -1,5 +1,5 @@
 export interface ProductData {
-  id?: string;
+  id: string;
   title: string;
   brand?: string;
   imageUrl?: string;
@@ -17,7 +17,7 @@ export interface ProductData {
 }
 
 export interface DealData {
-  id?: string;
+  id: string;
   title: string;
   brand?: string;
   imageUrl?: string;
