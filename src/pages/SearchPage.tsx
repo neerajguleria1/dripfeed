@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Share2, Check } from 'lucide-react';
+import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck } from 'lucide-react';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
@@ -144,7 +144,16 @@ async function trackAndOpen(product: ProductData) {
   }
 }
 
-function FeaturedCard({ product }: { product: ProductData }) {
+function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave?: (p: ProductData) => void; saved?: boolean }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    await navigator.clipboard.writeText(product.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   const savings = product.originalPrice && product.originalPrice > product.price
     ? product.originalPrice - product.price
     : 0;
@@ -210,13 +219,23 @@ function FeaturedCard({ product }: { product: ProductData }) {
               Save {formatPrice(savings)}
             </span>
           )}
-          <a
-            href={product.url} target="_blank" rel="noopener noreferrer"
-            onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
-            className="mt-3 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
-          >
-            Buy now <ArrowRight className="w-3 h-3" />
-          </a>
+          <div className="mt-3 flex items-center gap-2">
+            <a
+              href={product.url} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
+            >
+              Buy now <ArrowRight className="w-3 h-3" />
+            </a>
+            <button onClick={handleCopy} aria-label="Copy link"
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors flex-shrink-0">
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Link2 className="w-3.5 h-3.5 text-neutral-400" />}
+            </button>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSave?.(product); }} aria-label="Save product"
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors flex-shrink-0">
+              {saved ? <BookmarkCheck className="w-3.5 h-3.5 text-[#C9A96E]" /> : <Bookmark className="w-3.5 h-3.5 text-neutral-400" />}
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -227,20 +246,14 @@ function FeaturedCard({ product }: { product: ProductData }) {
 // Standard Result Card — White card with subtle border, premium styling
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ResultCard({ product, index }: { product: ProductData; index: number }) {
+function ResultCard({ product, index, onSave, saved }: { product: ProductData; index: number; onSave?: (p: ProductData) => void; saved?: boolean }) {
   const [copied, setCopied] = useState(false);
 
-  async function handleShare(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const text = `${product.title} — ${formatPrice(product.price)} on ${product.platform}\n${product.url}`;
-    if (navigator.share) {
-      try { await navigator.share({ title: product.title, text, url: product.url }); } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  async function handleCopy(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    await navigator.clipboard.writeText(product.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -304,14 +317,16 @@ function ResultCard({ product, index }: { product: ProductData; index: number })
               </span>
             )}
           </div>
-          {/* Share button */}
-          <button
-            onClick={handleShare}
-            aria-label="Share product"
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors flex-shrink-0"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5 text-neutral-400" />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={handleCopy} aria-label="Copy link"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors">
+              {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Link2 className="w-3 h-3 text-neutral-400" />}
+            </button>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSave?.(product); }} aria-label="Save product"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors">
+              {saved ? <BookmarkCheck className="w-3 h-3 text-[#C9A96E]" /> : <Bookmark className="w-3 h-3 text-neutral-400" />}
+            </button>
+          </div>
         </div>
 
         {/* Buy button — full width, prominent on mobile */}
@@ -390,6 +405,18 @@ export default function SearchPage() {
   const [relatedSections, setRelatedSections] = useState<{ label: string; sections: { query: string; products: ProductData[] }[] } | null>(null);
 
   const [thriftResults, setThriftResults] = useState<ThriftResult[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('df_saved') || '[]')); } catch { return new Set(); }
+  });
+
+  function handleSave(product: ProductData) {
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+      localStorage.setItem('df_saved', JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
@@ -752,10 +779,10 @@ export default function SearchPage() {
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} />}
+              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} onSave={handleSave} saved={savedIds.has(filteredProducts[0].id)} />}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {gridProducts.map((product, i) => (
-                  <ResultCard key={product.id || i} product={product} index={i} />
+                  <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)}
                 ))}
               </div>
             </InfiniteScroll>
@@ -831,7 +858,7 @@ export default function SearchPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {section.products.map((product, i) => (
-                      <ResultCard key={product.id || i} product={product} index={i} />
+                      <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)}
                     ))}
                   </div>
                 </div>
@@ -1005,13 +1032,13 @@ export default function SearchPage() {
 
               {/* Featured first product */}
               {trendingProducts[0] && (
-                <FeaturedCard product={trendingProducts[0]} />
+                <FeaturedCard product={trendingProducts[0]} onSave={handleSave} saved={savedIds.has(trendingProducts[0].id)} />
               )}
 
               {/* Remaining products grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {trendingProducts.slice(1).map((product, i) => (
-                  <ResultCard key={product.id} product={product} index={i} />
+                  <ResultCard key={product.id} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)}
                 ))}
               </div>
             </motion.div>
