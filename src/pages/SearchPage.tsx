@@ -207,12 +207,12 @@ function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave
             <div className="flex flex-wrap gap-1 mt-2">
               {product.color && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
-                  🎨 <span className="capitalize">{product.color}</span>
+                  <span>&#127912;</span> <span className="capitalize">{product.color}</span>
                 </span>
               )}
               {product.size && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
-                  📏 {product.size}
+                  <span>&#128207;</span> {product.size}
                 </span>
               )}
             </div>
@@ -327,12 +327,12 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
           <div className="flex flex-wrap gap-1 mt-1.5">
             {product.color && (
               <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
-                🎨 <span className="capitalize">{product.color}</span>
+                <span>&#127912;</span> <span className="capitalize">{product.color}</span>
               </span>
             )}
             {product.size && (
               <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
-                📏 {product.size}
+                <span>&#128207;</span> {product.size}
               </span>
             )}
           </div>

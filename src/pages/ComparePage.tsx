@@ -428,12 +428,12 @@ export default function ComparePage() {
                           <div className="flex flex-wrap gap-1 mt-1">
                             {p.color && (
                               <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
-                                🎨 <span className="capitalize">{p.color}</span>
+                                <span>&#127912;</span> <span className="capitalize">{p.color}</span>
                               </span>
                             )}
                             {p.size && (
                               <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
-                                📏 {p.size}
+                                <span>&#128207;</span> {p.size}
                               </span>
                             )}
                           </div>
