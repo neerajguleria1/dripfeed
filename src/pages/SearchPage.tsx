@@ -410,9 +410,11 @@ export default function SearchPage() {
   });
 
   function handleSave(product: ProductData) {
+    const id = product.id || '';
+    if (!id) return;
     setSavedIds(prev => {
       const next = new Set(prev);
-      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       localStorage.setItem('df_saved', JSON.stringify([...next]));
       return next;
     });
@@ -779,10 +781,10 @@ export default function SearchPage() {
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} onSave={handleSave} saved={savedIds.has(filteredProducts[0].id)} />}
+              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} onSave={handleSave} saved={savedIds.has(filteredProducts[0].id ?? '')} />}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {gridProducts.map((product, i) => (
-                  <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
+                  <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id ?? '')} />
                 ))}
               </div>
             </InfiniteScroll>
@@ -858,7 +860,7 @@ export default function SearchPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {section.products.map((product, i) => (
-                      <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
+                      <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id ?? '')} />
                     ))}
                   </div>
                 </div>
@@ -1032,13 +1034,13 @@ export default function SearchPage() {
 
               {/* Featured first product */}
               {trendingProducts[0] && (
-                <FeaturedCard product={trendingProducts[0]} onSave={handleSave} saved={savedIds.has(trendingProducts[0].id)} />
+                <FeaturedCard product={trendingProducts[0]} onSave={handleSave} saved={savedIds.has(trendingProducts[0].id ?? '')} />
               )}
 
               {/* Remaining products grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {trendingProducts.slice(1).map((product, i) => (
-                  <ResultCard key={product.id} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
+                  <ResultCard key={product.id} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id ?? '')} />
                 ))}
               </div>
             </motion.div>
