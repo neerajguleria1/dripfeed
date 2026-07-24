@@ -641,78 +641,63 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
 async function fetchMeesho(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
   try {
-    const encoded = encodeURIComponent(query);
-    const target = `https://www.meesho.com/search?q=${encoded}`;
-    const key = getNextRoundRobinKey();
+    // Meesho internal catalog API — plain tier (1 credit, ~3-5s), no render needed
+    const target = `https://www.meesho.com/api/v1/products/search?q=${encodeURIComponent(query)}&page=1&limit=20`;
+    const { html, tier, credits } = await fetchWithEscalation(
+      target, 'meesho', 'premium', false, 'plain',
+      (data) => {
+        try { const j = JSON.parse(data); return Array.isArray(j?.data) && j.data.length > 0; } catch { return false; }
+      }
+    );
+    console.log(`[Meesho] tier=${tier} credits=${credits}`);
 
-    const { data: html } = await axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: key,
-        url: target,
-        render: true,
-        country_code: 'in',
-        wait: 4000,
-      },
-      timeout: 60000,
+    if (html) {
+      try {
+        const json = JSON.parse(html);
+        const items: any[] = json?.data || [];
+        if (items.length > 0) {
+          const products = items.slice(0, 20).map((p: any, i: number) => {
+            const price = parsePrice(p.price?.discounted_price ?? p.price?.mrp ?? 0);
+            const mrp = parsePrice(p.price?.mrp ?? 0);
+            const imageUrl = toAbsoluteUrl(p.images?.[0]?.url || p.cover_image || '');
+            const title = cleanText(p.name || p.product_name || '');
+            const slug = p.product_slug || p.slug || '';
+            const url = slug ? `https://www.meesho.com/${slug}/p/${p.id || i}` : `https://www.meesho.com/search?q=${encodeURIComponent(query)}`;
+            return { id: `ms_${p.id || i}`, title, price, originalPrice: mrp > price ? mrp : undefined, discount: mrp > price ? Math.round(((mrp - price) / mrp) * 100) : undefined, imageUrl, platform: 'Meesho', url };
+          }).filter(p => isValidProduct(p)).filter(p => isRelevantToQuery(p, query));
+          if (products.length > 0) { console.log(`[Meesho] catalog API: ${products.length} results`); return products; }
+        }
+      } catch { /* fall through to GraphQL */ }
+    }
+
+    // Fallback: Meesho GraphQL API — plain tier, structured JSON
+    const gqlTarget = 'https://www.meesho.com/api/v1/products/search/feed';
+    const gqlBody = JSON.stringify({ query, page: 1, filters: {} });
+    const gqlUrl = `https://api.scraperapi.com/?api_key=${getNextRoundRobinKey()}&url=${encodeURIComponent(gqlTarget)}&country_code=in`;
+    const { data: gqlRaw } = await withScraperSlot(() => axios.post(gqlUrl, gqlBody, {
+      headers: { 'Content-Type': 'application/json', 'x-meesho-client': 'web' },
+      timeout: 20000,
       transformResponse: [(d) => d],
-    });
-
-    if (typeof html !== 'string' || html.length < 500) {
-      console.warn('[Meesho] Empty response from ScraperAPI');
-      return [];
+    }));
+    const gqlText = typeof gqlRaw === 'string' ? gqlRaw : String(gqlRaw);
+    const gqlJson = JSON.parse(gqlText);
+    const gqlItems: any[] = gqlJson?.data?.products || gqlJson?.products || [];
+    if (gqlItems.length > 0) {
+      const products = gqlItems.slice(0, 20).map((p: any, i: number) => {
+        const price = parsePrice(p.price?.discounted_price ?? p.price?.mrp ?? p.mrp ?? 0);
+        const mrp = parsePrice(p.price?.mrp ?? p.mrp ?? 0);
+        const imageUrl = toAbsoluteUrl(p.images?.[0]?.url || p.cover_image || '');
+        const title = cleanText(p.name || p.product_name || '');
+        const slug = p.product_slug || p.slug || '';
+        const url = slug ? `https://www.meesho.com/${slug}/p/${p.id || i}` : `https://www.meesho.com/search?q=${encodeURIComponent(query)}`;
+        return { id: `ms_gql_${p.id || i}`, title, price, originalPrice: mrp > price ? mrp : undefined, discount: mrp > price ? Math.round(((mrp - price) / mrp) * 100) : undefined, imageUrl, platform: 'Meesho', url };
+      }).filter(p => isValidProduct(p)).filter(p => isRelevantToQuery(p, query));
+      console.log(`[Meesho] GraphQL fallback: ${products.length} results`);
+      return products;
     }
 
-    console.log(`[Meesho] ScraperAPI rendered page, length=${html.length}`);
-
-    // Extract products from rendered <a> card elements
-    // Each product is an <a> tag wrapping a CardStyled div with image + price
-    const products: SearchProduct[] = [];
-    const seen = new Set<string>();
-
-    // Match anchor tags that contain a Meesho image and a rupee price
-    const anchorRe = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\/\s\S]*?)<\/a>/gi;
-    let match: RegExpExecArray | null;
-    while ((match = anchorRe.exec(html)) !== null) {
-      const href = match[1] || '';
-      const inner = match[2] || '';
-      if (!href.includes('/p/')) continue;
-      if (!inner.includes('images.meesho.com')) continue;
-
-      const priceMatch = inner.match(/₹\s?([0-9,]+)/);
-      if (!priceMatch) continue;
-      const price = parsePrice(priceMatch[1]);
-      if (price <= 0) continue;
-
-      const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
-      const imageUrl = imgMatch?.[1] || '';
-      if (!imageUrl.includes('images.meesho.com')) continue;
-
-      const altMatch = inner.match(/<img[^>]+alt=["']([^"']+)["']/i);
-      const pMatch = inner.match(/<p[^>]*>([^<]{5,})<\/p>/i);
-      const title = cleanText(altMatch?.[1] || pMatch?.[1] || '');
-      if (!title || title.length < 3) continue;
-
-      const url = href.startsWith('http') ? href : `https://www.meesho.com${href}`;
-      const key2 = `${title.toLowerCase()}::${price}`;
-      if (seen.has(key2)) continue;
-      seen.add(key2);
-
-      products.push({
-        id: `ms_${href}`,
-        title,
-        price,
-        imageUrl,
-        platform: 'Meesho',
-        url,
-      });
-
-      if (products.length >= 20) break;
-    }
-
-    console.log(`[Meesho] ${products.length} products extracted`);
-    return products
-      .filter(p => isValidProduct(p))
-      .filter(p => isRelevantToQuery(p, query));
+    console.warn('[Meesho] all methods returned 0 results');
+    return [];
   } catch (e: any) {
     console.error('[Meesho] error:', e?.message?.slice(0, 100));
     return [];
