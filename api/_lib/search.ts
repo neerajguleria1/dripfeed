@@ -472,11 +472,86 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
 //   - pricing.totalDiscount = discount % (not amount)
 //   - All 40 products have price > 0
 
+function parseFlipkartHtml(html: string, query: string): SearchProduct[] {
+  const stateMarker = html.indexOf('window.__INITIAL_STATE__');
+  if (stateMarker === -1) return [];
+  const braceOpen = html.indexOf('{', stateMarker);
+  if (braceOpen === -1) return [];
+  let depth2 = 0, stateEnd = 0;
+  for (let ci = braceOpen; ci < html.length; ci++) {
+    if (html[ci] === '{') depth2++;
+    else if (html[ci] === '}') { depth2--; if (depth2 === 0) { stateEnd = ci + 1; break; } }
+  }
+  if (!stateEnd) return [];
+  const state = JSON.parse(html.slice(braceOpen, stateEnd));
+  const pageData = state?.pageDataV4?.page?.data || {};
+  const slots: any[] = Object.values(pageData).flat() as any[];
+  const rawProducts: any[] = [];
+  for (const slot of slots) {
+    const p = (slot as any)?.widget?.data?.products;
+    if (Array.isArray(p)) rawProducts.push(...p);
+  }
+  if (!rawProducts.length) return [];
+  return rawProducts.slice(0, 20).map((p: any, i: number) => {
+    const info = p.productInfo?.value || p;
+    const prices: any[] = info.pricing?.prices || [];
+    const mrpEntry = prices.find((x: any) => x.strikeOff === true);
+    const spEntry  = prices.find((x: any) => x.priceType === 'SPECIAL_PRICE');
+    const mrp   = mrpEntry?.value || 0;
+    const price = spEntry?.value || mrpEntry?.value || 0;
+    const disc  = info.pricing?.totalDiscount || 0;
+    const rawImg = info.media?.images?.[0]?.url || '';
+    const imageUrl = rawImg
+      .replace('{@width}', '300').replace('{@height}', '400').replace('{@quality}', '70')
+      .replace(/^http:\/\//, 'https://');
+    const coSubtitle: string = info.titles?.coSubtitle || '';
+    const sizeMatch = coSubtitle.match(/^Size:\s*(.+)$/i);
+    return {
+      id: `fk_${info.id || i}`,
+      title: cleanText(info.titles?.title || info.titles?.newTitle || ''),
+      brand: info.titles?.superTitle || undefined,
+      price,
+      originalPrice: mrp > price ? mrp : undefined,
+      discount: disc > 0 ? disc : undefined,
+      imageUrl,
+      platform: 'Flipkart',
+      url: info.baseUrl ? `https://www.flipkart.com${info.baseUrl}` : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
+      size: sizeMatch ? sizeMatch[1].trim() : undefined,
+    };
+  }).filter(p => isValidProduct(p));
+}
+
 async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
-  if (!SCRAPER_KEYS.length) return [];
   if (isCircuitOpen('flipkart')) return [];
-  // Plain tier only (render:false) — 1 credit. __INITIAL_STATE__ is server-rendered
-  // so JS execution is not needed. Never escalate to render/premium.
+
+  // Fast path: hit Flipkart directly — no ScraperAPI, ~1-3s, 0 credits.
+  // __INITIAL_STATE__ is server-rendered so no JS needed.
+  try {
+    const { data: html } = await axios.get('https://www.flipkart.com/search', {
+      params: { q: query, sort: 'price_asc' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-IN,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+      },
+      timeout: 8000,
+      transformResponse: [(d) => d],
+    });
+    if (typeof html === 'string' && html.includes('window.__INITIAL_STATE__')) {
+      const products = parseFlipkartHtml(html, query);
+      if (products.length > 0) {
+        recordSuccess('flipkart');
+        console.log(`[Flipkart] direct: ${products.length} results`);
+        return products;
+      }
+    }
+  } catch (e: any) {
+    console.warn('[Flipkart] direct failed:', e?.message?.slice(0, 60));
+  }
+
+  // Fallback: ScraperAPI plain tier — 1 credit
+  if (!SCRAPER_KEYS.length) return [];
   try {
     const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
       params: {
@@ -489,71 +564,16 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
       transformResponse: [(d) => d],
     }));
     if (typeof html !== 'string' || !html.includes('window.__INITIAL_STATE__')) {
-      recordFailure('flipkart');
-      return [];
+      recordFailure('flipkart'); return [];
     }
     recordSuccess('flipkart');
-    console.log(`[Flipkart] plain tier, length=${html.length}`);
-
-    // Brace-counting parser — the lazy regex *? cuts JSON short at the first
-    // "};" it finds, which is often inside a nested object, not the real end.
-    const stateMarker = html.indexOf('window.__INITIAL_STATE__');
-    if (stateMarker === -1) return [];
-    const braceOpen = html.indexOf('{', stateMarker);
-    if (braceOpen === -1) return [];
-    let depth2 = 0, stateEnd = 0;
-    for (let ci = braceOpen; ci < html.length; ci++) {
-      if (html[ci] === '{') depth2++;
-      else if (html[ci] === '}') { depth2--; if (depth2 === 0) { stateEnd = ci + 1; break; } }
-    }
-    if (!stateEnd) return [];
-
-    const state = JSON.parse(html.slice(braceOpen, stateEnd));
-    const pageData = state?.pageDataV4?.page?.data || {};
-    const slots: any[] = Object.values(pageData).flat() as any[];
-    const products: any[] = [];
-    for (const slot of slots) {
-      const p = (slot as any)?.widget?.data?.products;
-      if (Array.isArray(p)) products.push(...p);
-    }
-    if (!products.length) return [];
-
-    return products.slice(0, 20).map((p: any, i: number) => {
-      const info = p.productInfo?.value || p;
-      const prices: any[] = info.pricing?.prices || [];
-      const mrpEntry  = prices.find((x: any) => x.strikeOff === true);
-      const spEntry   = prices.find((x: any) => x.priceType === 'SPECIAL_PRICE');
-      const mrp   = mrpEntry?.value || 0;
-      const price = spEntry?.value || mrpEntry?.value || 0;
-      const disc  = info.pricing?.totalDiscount || 0;
-      // ALL Flipkart images are http:// templates — replace placeholders AND fix protocol
-      const rawImg = info.media?.images?.[0]?.url || '';
-      const imageUrl = rawImg
-        .replace('{@width}', '300')
-        .replace('{@height}', '400')
-        .replace('{@quality}', '70')
-        .replace(/^http:\/\//, 'https://');
-      // coSubtitle is formatted "Size: S" / "Size: XL" etc. on apparel listings —
-      // only present for sized products, so guard with the "Size:" prefix check.
-      const coSubtitle: string = info.titles?.coSubtitle || '';
-      const sizeMatch = coSubtitle.match(/^Size:\s*(.+)$/i);
-      const size = sizeMatch ? sizeMatch[1].trim() : undefined;
-      return {
-        id: `fk_${info.id || i}`,
-        title: cleanText(info.titles?.title || info.titles?.newTitle || ''),
-        brand: info.titles?.superTitle || undefined,
-        price,
-        originalPrice: mrp > price ? mrp : undefined,
-        discount: disc > 0 ? disc : undefined,
-        imageUrl,
-        platform: 'Flipkart',
-        url: info.baseUrl
-          ? `https://www.flipkart.com${info.baseUrl}`
-          : `https://www.flipkart.com/search?q=${encodeURIComponent(query)}`,
-        size,
-      };
-    }).filter(p => isValidProduct(p));
-  } catch(e: any) { console.error('[Flipkart] parse error:', e?.message?.slice(0,100)); recordFailure('flipkart'); return []; }
+    console.log(`[Flipkart] ScraperAPI fallback: ${html.length}`);
+    return parseFlipkartHtml(html, query);
+  } catch (e: any) {
+    console.error('[Flipkart] error:', e?.message?.slice(0, 100));
+    recordFailure('flipkart');
+    return [];
+  }
 }
 
 async function fetchMyntra(query: string): Promise<SearchProduct[]> {
