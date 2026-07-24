@@ -410,7 +410,7 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
   if (isCircuitOpen('amazon')) return [];
   try {
     const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: { api_key: getNextRoundRobinKey(), url: `https://www.amazon.in/s?k=${encodeURIComponent(query)}&page=${page}`, country_code: 'in' },
+      params: { api_key: getNextRoundRobinKey(), url: `https://www.amazon.in/s?k=${encodeURIComponent(query)}&i=fashion&page=${page}`, country_code: 'in' },
       timeout: 20000,
       transformResponse: [(d) => d],
     }));
@@ -781,7 +781,8 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
 // a row on retry anyway. We also cap the total time any single platform gets
 // so one slow/hanging platform can never block the whole search response.
 const FAST_FAIL_MS = 4000;
-const PLATFORM_BUDGET_MS = 12000; // 12s max per platform — structured/plain APIs resolve in <5s
+const PLATFORM_BUDGET_MS = 12000;  // default cap for fast platforms
+const AMAZON_BUDGET_MS   = 35000;  // Amazon ScraperAPI plain can take 20-30s
 
 function withTimeout<T>(promise: Promise<T[]>, ms: number): Promise<T[]> {
   return Promise.race([
@@ -840,7 +841,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
   if (db) { setMemCache(cacheKey, db); return db; }
 
   const [az1, fk, aj, ms, mn] = await Promise.all([
-    withRetry(() => fetchAmazonPage(searchTerm, 1), 'Amazon'),
+    withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS),
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
     withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
@@ -924,7 +925,7 @@ export async function searchProductsStreaming(
   }
 
   await Promise.all([
-    fetchAmazonPage(searchTerm, 1).catch(() => []).then(r => processed('amazon', r)),
+    withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS).catch(() => []).then(r => processed('amazon', r)),
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
