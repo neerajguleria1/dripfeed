@@ -8,6 +8,8 @@ export interface Offer {
   readonly originalPrice: number | undefined;
   readonly imageUrl: string;
   readonly productUrl: string;
+  readonly color: string | undefined;
+  readonly size: string | undefined;
   readonly originalProduct: SearchProduct;
 }
 

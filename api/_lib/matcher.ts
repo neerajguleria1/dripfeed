@@ -106,6 +106,8 @@ function toOffer(np: NormalizedProduct): Offer {
     originalPrice:     p.originalPrice,
     imageUrl:          p.imageUrl,
     productUrl:        p.url,
+    color:             np.color,
+    size:              np.size,
     originalProduct:   p,
   };
 }
