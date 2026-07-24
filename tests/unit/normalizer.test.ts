@@ -27,6 +27,7 @@ import {
   buildTokens,
   normalizeProduct,
   normalizeProducts,
+  applyVocab,
 } from '../../api/_lib/normalizer.js';
 import type { SearchProduct } from '../../api/_lib/types/searchProduct.js';
 
@@ -272,8 +273,9 @@ describe('buildTokens — sorted deduplicated arrays', () => {
   });
   it("Levi's 501 tokens", () => {
     // 'Levi's' → 'levi s' → 's' dropped (1 char) → 'levi' token
+    // 'jeans' → vocab → 'jean'
     expect(buildTokens("Levi's Men 501 Original Fit Jeans"))
-      .toEqual(['501', 'fit', 'jeans', 'levi', 'men', 'original']);
+      .toEqual(['501', 'fit', 'jean', 'levi', 'men', 'original']);
   });
   it('Kurta set tokens — stop words removed', () => {
     // 'set' and 'with' are stop words; 'dupatta' is not a stop word
@@ -320,7 +322,8 @@ describe('normalizeProduct — Flipkart', () => {
     expect(norm.normalizedBrand).toBe('nike');
   });
   it('tokens', () => {
-    expect(norm.tokens).toEqual(['air', 'force', 'low', 'men', 'nike', 'sneakers']);
+    // 'sneakers' → vocab → 'sneaker'
+    expect(norm.tokens).toEqual(['air', 'force', 'low', 'men', 'nike', 'sneaker']);
   });
   it('size normalized from structured field', () => {
     expect(norm.size).toBe('uk 9');
@@ -343,7 +346,8 @@ describe('normalizeProduct — Myntra', () => {
     expect(norm.normalizedBrand).toBe('nike');
   });
   it('tokens', () => {
-    expect(norm.tokens).toEqual(['air', 'casual', 'force', 'men', 'nike', 'shoes', 'white']);
+    // 'shoes' → vocab → 'shoe'
+    expect(norm.tokens).toEqual(['air', 'casual', 'force', 'men', 'nike', 'shoe', 'white']);
   });
   it('color is undefined', () => expect(norm.color).toBeUndefined());
   it('size is undefined',  () => expect(norm.size).toBeUndefined());
@@ -383,7 +387,8 @@ describe('normalizeProduct — Meesho (no brand, noisy title)', () => {
     expect(norm.normalizedBrand).toBeUndefined();
   });
   it('tokens', () => {
-    expect(norm.tokens).toEqual(['adrika', 'arrival', 'kurtis', 'refined']);
+    // 'kurtis' → vocab → 'kurti'
+    expect(norm.tokens).toEqual(['adrika', 'arrival', 'kurti', 'refined']);
   });
   it('color is undefined', () => expect(norm.color).toBeUndefined());
   it('size is undefined',  () => expect(norm.size).toBeUndefined());
@@ -459,5 +464,137 @@ describe('normalizeProducts — batch convenience wrapper', () => {
   });
   it('returns [] for empty input', () => {
     expect(normalizeProducts([])).toEqual([]);
+  });
+});
+
+// ─── Milestone 3 — applyVocab ─────────────────────────────────────────────────
+
+describe('applyVocab — individual token mapping', () => {
+  // Footwear
+  it('sneakers → sneaker', () => expect(applyVocab('sneakers')).toBe('sneaker'));
+  it('shoes    → shoe',    () => expect(applyVocab('shoes')).toBe('shoe'));
+  it('sandals  → sandal',  () => expect(applyVocab('sandals')).toBe('sandal'));
+  it('boots    → boot',    () => expect(applyVocab('boots')).toBe('boot'));
+  it('slippers → slipper', () => expect(applyVocab('slippers')).toBe('slipper'));
+  // Tops
+  it('shirts   → shirt',   () => expect(applyVocab('shirts')).toBe('shirt'));
+  // Bottoms
+  it('trousers → trouser', () => expect(applyVocab('trousers')).toBe('trouser'));
+  it('jeans    → jean',    () => expect(applyVocab('jeans')).toBe('jean'));
+  it('shorts   → short',   () => expect(applyVocab('shorts')).toBe('short'));
+  it('joggers  → jogger',  () => expect(applyVocab('joggers')).toBe('jogger'));
+  // Ethnic
+  it('kurtas   → kurta',   () => expect(applyVocab('kurtas')).toBe('kurta'));
+  it('kurtis   → kurti',   () => expect(applyVocab('kurtis')).toBe('kurti'));
+  // Dresses
+  it('dresses  → dress',   () => expect(applyVocab('dresses')).toBe('dress'));
+  // Unknown token — pass through unchanged
+  it('unknown token is unchanged', () => expect(applyVocab('nike')).toBe('nike'));
+  it('already canonical is unchanged', () => expect(applyVocab('sneaker')).toBe('sneaker'));
+});
+
+// ─── Milestone 3 — buildTokens vocab integration ─────────────────────────────
+
+describe('buildTokens — vocab normalization applied', () => {
+  it('sneaker and sneakers produce identical tokens', () => {
+    expect(buildTokens('Nike Air Force 1 Sneaker')).toEqual(
+      buildTokens('Nike Air Force 1 Sneakers'),
+    );
+  });
+
+  it('shoe and shoes produce identical tokens', () => {
+    expect(buildTokens('Nike Air Force 1 Shoe')).toEqual(
+      buildTokens('Nike Air Force 1 Shoes'),
+    );
+  });
+
+  it('dress and dresses produce identical tokens', () => {
+    expect(buildTokens('H&M Women Floral Wrap Dress')).toEqual(
+      buildTokens('H&M Women Floral Wrap Dresses'),
+    );
+  });
+
+  it('kurta and kurtas produce identical tokens', () => {
+    expect(buildTokens('Biba Women Ethnic Kurta')).toEqual(
+      buildTokens('Biba Women Ethnic Kurtas'),
+    );
+  });
+
+  it('shirt and shirts produce identical tokens', () => {
+    expect(buildTokens('Puma Men Solid Shirt')).toEqual(
+      buildTokens('Puma Men Solid Shirts'),
+    );
+  });
+
+  it('sandal and sandals produce identical tokens', () => {
+    expect(buildTokens('Bata Women Sandal')).toEqual(
+      buildTokens('Bata Women Sandals'),
+    );
+  });
+
+  it('boot and boots produce identical tokens', () => {
+    expect(buildTokens('Woodland Men Leather Boot')).toEqual(
+      buildTokens('Woodland Men Leather Boots'),
+    );
+  });
+
+  it('trouser and trousers produce identical tokens', () => {
+    expect(buildTokens('Allen Solly Men Slim Trouser')).toEqual(
+      buildTokens('Allen Solly Men Slim Trousers'),
+    );
+  });
+
+  it('jean and jeans produce identical tokens', () => {
+    expect(buildTokens("Levi's Men 501 Original Fit Jean")).toEqual(
+      buildTokens("Levi's Men 501 Original Fit Jeans"),
+    );
+  });
+
+  it('slipper and slippers produce identical tokens', () => {
+    expect(buildTokens('Paragon Men Slipper')).toEqual(
+      buildTokens('Paragon Men Slippers'),
+    );
+  });
+});
+
+// ─── Milestone 3 — Before vs After: Amazon ↔ Flipkart Nike Air Force 1 ───────
+//
+// Before Milestone 3:
+//   Amazon tokens:   ['07', 'air', 'force', 'men', 'nike', 'sneaker', 'white']
+//   Flipkart tokens: ['air', 'force', 'low',  'men', 'nike', 'sneakers']
+//   Intersection: {air, force, men, nike} = 4
+//   Union: {07, air, force, low, men, nike, sneaker, sneakers, white} = 9
+//   Jaccard = 4/9 = 0.444   →   score = 1.0*0.45 + 0.444*0.55 = 0.694  (below 0.75)
+//
+// After Milestone 3:
+//   Amazon tokens:   ['07', 'air', 'force', 'men', 'nike', 'sneaker', 'white']
+//   Flipkart tokens: ['air', 'force', 'low',  'men', 'nike', 'sneaker']
+//   Intersection: {air, force, men, nike, sneaker} = 5
+//   Union: {07, air, force, low, men, nike, sneaker, white} = 8
+//   Jaccard = 5/8 = 0.625   →   score = 1.0*0.45 + 0.625*0.55 = 0.794  (above 0.75 ✓)
+
+describe('Milestone 3 — Amazon ↔ Flipkart Nike AF1 similarity improvement', () => {
+  const azTokens = normalizeProduct(amazonProduct).tokens;
+  const fkTokens = normalizeProduct(flipkartProduct).tokens;
+
+  it('Flipkart tokens no longer contain "sneakers" (mapped to "sneaker")', () => {
+    expect(fkTokens).not.toContain('sneakers');
+    expect(fkTokens).toContain('sneaker');
+  });
+
+  it('Amazon and Flipkart both produce "sneaker" token', () => {
+    expect(azTokens).toContain('sneaker');
+    expect(fkTokens).toContain('sneaker');
+  });
+
+  it('Jaccard after vocab improvement > 0.6 (was 0.444 before)', () => {
+    expect(jaccard(azTokens, fkTokens)).toBeGreaterThan(0.6);
+  });
+
+  it('composite score after vocab improvement >= 0.75 (was 0.694 before)', () => {
+    const BRAND_WEIGHT = 0.45;
+    const TITLE_WEIGHT = 0.55;
+    const score = 1.0 * BRAND_WEIGHT + jaccard(azTokens, fkTokens) * TITLE_WEIGHT;
+    expect(score).toBeGreaterThanOrEqual(0.75);
   });
 });

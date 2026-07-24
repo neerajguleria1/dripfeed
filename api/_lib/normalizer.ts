@@ -23,6 +23,7 @@
 
 import type { SearchProduct } from './types/searchProduct.js';
 import type { NormalizedProduct } from './types/normalizedProduct.js';
+import { VOCAB_MAP } from './vocab.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,23 @@ export function tokenize(input: string): string[] {
     .filter((token) => token.length >= MIN_TOKEN_LENGTH);
 }
 
+// ─── Step 6.5 — Apply vocabulary normalization ──────────────────────────────
+
+/**
+ * Maps a single token to its canonical form using VOCAB_MAP.
+ *
+ * Examples:
+ *   "sneakers" → "sneaker"
+ *   "shoes"    → "shoe"
+ *   "kurtas"   → "kurta"
+ *
+ * Returns the token unchanged when it has no entry in the map.
+ * Pure — no side effects, no mutation.
+ */
+export function applyVocab(token: string): string {
+  return VOCAB_MAP[token] ?? token;
+}
+
 // ─── Step 7 — Sort and deduplicate tokens ────────────────────────────────────
 
 /**
@@ -237,7 +255,7 @@ export function buildTokens(rawTitle: string): string[] {
   return sortAndDedupe(
     tokenize(
       normalizeTitle(rawTitle)
-    )
+    ).map(applyVocab)
   );
 }
 
