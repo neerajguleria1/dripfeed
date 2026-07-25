@@ -542,17 +542,33 @@ export default function SearchPage() {
     es.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.type === 'platform' && Array.isArray(payload.products) && payload.products.length) {
+        if (payload.type === 'canonicals' && Array.isArray(payload.canonicals) && payload.canonicals.length) {
           settled = true;
           setLoading(false);
-          setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'done' }));
-          setProducts((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
-            return [...prev, ...newOnes].sort((a, b) => a.price - b.price);
+          // Flatten canonicals → ProductData (cheapest offer per canonical)
+          const flat: ProductData[] = payload.canonicals.map((c: any) => {
+            const o = c.offers?.[0];
+            return {
+              id: c.id,
+              title: c.title,
+              brand: c.brand,
+              imageUrl: o?.imageUrl,
+              price: o?.price ?? 0,
+              originalPrice: o?.originalPrice,
+              discount: o?.discount,
+              platform: o?.platform ?? '',
+              url: o?.affiliateUrl || o?.productUrl || '',
+              color: o?.color,
+              size: o?.size,
+            };
           });
-        } else if (payload.type === 'platform' && Array.isArray(payload.products) && !payload.products.length) {
-          setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'empty' }));
+          setProducts(flat);
+        } else if (payload.type === 'platform') {
+          if (payload.count > 0) {
+            setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'done' }));
+          } else {
+            setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'empty' }));
+          }
         } else if (payload.type === 'done') {
           setLoading(false);
           setHasMore(false);
