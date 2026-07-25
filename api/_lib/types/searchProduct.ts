@@ -29,7 +29,8 @@ export interface SearchProduct {
    *   - Ajio:     color reliable, size never present in search results
    *   - Flipkart: size reliable ("Size: S/M/L/XL" in titles.coSubtitle),
    *               color not structured
-   *   - Amazon / Meesho: neither field available in search results
+   *   - Meesho:   color + size extracted from rendered HTML (best-effort)
+   *   - Amazon:   neither field available in search results
    * Leave undefined rather than guess.
    */
   color?: string;

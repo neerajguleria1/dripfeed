@@ -665,12 +665,24 @@ async function fetchMeesho(query: string): Promise<SearchProduct[]> {
       const title = cleanText(altMatch?.[1] || pMatch?.[1] || '');
       if (!title || title.length < 3) continue;
 
+      // Color: Meesho renders swatch images with alt="ColorName" inside the card
+      const swatchAlts = [...inner.matchAll(/<img[^>]+alt=["']([A-Za-z][^"']{1,20})["'][^>]*>/gi)]
+        .map(m => m[1].trim())
+        .filter(a => a !== title && !/^\d/.test(a) && a.length < 25);
+      const color = swatchAlts[0];
+
+      // Size: Meesho renders size pills as short text nodes like "S", "M", "XL", "38"
+      const sizeMatches = [...inner.matchAll(/>\s*([A-Z0-9]{1,5})\s*</g)]
+        .map(m => m[1].trim())
+        .filter(s => /^(XS|S|M|L|XL|XXL|XXXL|[0-9]{2,3})$/.test(s));
+      const size = sizeMatches.length ? sizeMatches.join('/') : undefined;
+
       const url = href.startsWith('http') ? href : `https://www.meesho.com${href}`;
       const key = `${title.toLowerCase()}::${price}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
-      products.push({ id: `ms_${href}`, title, price, imageUrl, platform: 'Meesho', url });
+      products.push({ id: `ms_${href}`, title, price, imageUrl, platform: 'Meesho', url, color, size });
       if (products.length >= 20) break;
     }
 
@@ -807,7 +819,7 @@ export async function searchProducts(query: string): Promise<SearchProduct[]> {
     withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS),
     withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
     withRetry(() => fetchAjio(searchTerm), 'Ajio'),
-    withRetry(() => fetchMeesho(searchTerm), 'Meesho'),
+    withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []),
     withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []),
   ]);
 
@@ -891,7 +903,7 @@ export async function searchProductsStreaming(
     withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS).catch(() => []).then(r => processed('amazon', r)),
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
-    fetchMeesho(searchTerm).catch(() => []).then(r => processed('meesho', r)),
+    withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []).then(r => processed('meesho', r)),
     withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []).then(r => processed('myntra', r)),
   ]);
 
