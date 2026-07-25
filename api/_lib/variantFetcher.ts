@@ -1,40 +1,66 @@
 /**
  * variantFetcher.ts
  *
- * Fetches all available variants for a single Ajio product from Ajio's
- * internal PDP (Product Detail Page) JSON API.
+ * Fetches all variant data for a single Ajio product from Ajio's
+ * internal PDP JSON API.
  *
  * ── Architecture ──────────────────────────────────────────────────────────────
  *   • parseAjioPdpResponse() — pure function, exported for unit testing.
- *     Takes the raw PDP JSON object, returns ProductVariant[].
+ *     Takes the raw /api/p/{colorCode} JSON, returns AjioProductVariants.
  *     No HTTP, no side effects, no global state.
  *
  *   • fetchAjioVariants() — async wrapper.
  *     Calls the PDP API via ScraperAPI, delegates parsing to the pure function.
- *     Returns [] on any failure — never throws.
+ *     Returns null on any failure — never throws.
  *
- * ── Data source ───────────────────────────────────────────────────────────────
- *   Ajio PDP API: https://www.ajio.com/api/pdp/{productCode}
- *   - Returns structured JSON at ScraperAPI plain tier (1 credit).
- *   - No JS rendering required.
- *   - productCode is already present in SearchProduct.id as "aj_{code}".
+ * ── Verified API endpoint ─────────────────────────────────────────────────────
+ *   GET https://www.ajio.com/api/p/{colorCode}
  *
- * ── Ajio PDP response shape (verified) ───────────────────────────────────────
+ *   colorCode = "{baseProduct}_{color}"  e.g. "460886329_white"
+ *   Already present in SearchProduct.url as the path segment after /p/
+ *   e.g. url "/nike-men-air-force-1-07-sneakers/p/460886329_white"
+ *        → colorCode "460886329_white"
+ *
+ *   NOT /api/pdp/{productCode} — that endpoint returns HTML, not JSON.
+ *
+ * ── Verified response structure ───────────────────────────────────────────────
  *   {
- *     "colorVariants": [
+ *     "baseProduct": "460886329",
+ *     "code": "460886329_white",          ← the requested colorCode
+ *
+ *     "baseOptions": [{
+ *       "variantType": "FnlColorVariant",
+ *       "options": [                       ← ALL colors for this product
+ *         {
+ *           "code": "460886329_white",
+ *           "color": "WHITE",
+ *           "url": "/nike.../p/460886329_white",
+ *           "priceData": { "value": 7495 },
+ *           "wasPriceData": { "value": 7495 },
+ *           "stock": { "stockLevelStatus": "inStock", "stockLevel": 10 },
+ *           "modelImage": { "url": "https://assets.ajio.com/...MODEL.jpg" },
+ *           "variantOptionQualifiers": [
+ *             { "qualifier": "color", "swatchImage": { "url": "https://...SWATCH.jpg" } }
+ *           ]
+ *         }
+ *       ]
+ *     }],
+ *
+ *     "variantOptions": [                  ← ALL sizes for the REQUESTED color
  *       {
- *         "colorGroup":  "469486197_white",   // "{code}_{colorName}"
- *         "images":      [{ "url": "https://..." }],
- *         "price":       { "value": 8299 },
- *         "wasPrice":    { "value": 9999 },   // MRP — may be absent
- *         "url":         "/nike-air-force-1/p/469486197_white",
- *         "available":   true
+ *         "code": "460886329003",          ← full SKU (color + size)
+ *         "url": "/nike.../p/460886329003",← direct buy URL for this SKU
+ *         "priceData": { "value": 7495 },
+ *         "wasPriceData": { "value": 7495 },
+ *         "stock": { "stockLevelStatus": "inStock", "stockLevel": 37 },
+ *         "modelImage": { "url": "https://assets.ajio.com/...MODEL.jpg" },
+ *         "scDisplaySize": "7",            ← display label
+ *         "displaySizeFormat": "UK",       ← size system
+ *         "variantOptionQualifiers": [
+ *           { "qualifier": "size", "value": "8" },
+ *           { "qualifier": "color", "value": "white" }
+ *         ]
  *       }
- *     ],
- *     "sizes": [
- *       { "size": "UK 7", "available": true,  "price": { "value": 8299 } },
- *       { "size": "UK 8", "available": true,  "price": { "value": 8299 } },
- *       { "size": "UK 9", "available": false, "price": { "value": 8299 } }
  *     ]
  *   }
  *
@@ -44,24 +70,19 @@
  */
 
 import axios from 'axios';
-import type { ProductVariant } from './types/productVariant.js';
+import type { AjioProductVariants, AjioColorVariant, AjioSizeVariant } from './types/productVariant.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AJIO_BASE = 'https://www.ajio.com';
-const AJIO_PDP_API = (code: string) => `${AJIO_BASE}/api/pdp/${code}`;
+const AJIO_PDP_API = (colorCode: string) => `${AJIO_BASE}/api/p/${colorCode}`;
 
 const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY ?? '';
 const SCRAPER_TIMEOUT_MS = 15_000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Converts a raw price value from the Ajio API to an integer INR amount.
- * Ajio prices are already numeric in the JSON (no ₹ symbol, no commas).
- * Returns 0 for absent, null, or non-numeric values.
- */
-function parseAjioPrice(raw: unknown): number {
+function parsePrice(raw: unknown): number {
   if (typeof raw === 'number') return Math.round(raw);
   if (typeof raw === 'string') {
     const n = parseFloat(raw.replace(/[^0-9.]/g, ''));
@@ -70,48 +91,127 @@ function parseAjioPrice(raw: unknown): number {
   return 0;
 }
 
-/**
- * Extracts the human-readable color name from Ajio's colorGroup string.
- *
- * colorGroup format: "{productCode}_{colorName}"
- * Examples:
- *   "469486197_white"      → "White"
- *   "469486197_navy_blue"  → "Navy Blue"
- *   "469486197_off_white"  → "Off White"
- *
- * Returns undefined when the input is absent or malformed.
- */
-function parseAjioColor(colorGroup: unknown): string | undefined {
-  if (typeof colorGroup !== 'string' || !colorGroup) return undefined;
-  // Strip the leading numeric product code and the first underscore
-  const withoutCode = colorGroup.replace(/^\d+_/, '');
-  if (!withoutCode) return undefined;
-  // Replace remaining underscores with spaces and title-case each word
-  return withoutCode
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+function priceFromObj(obj: unknown): number {
+  if (!obj || typeof obj !== 'object') return 0;
+  return parsePrice((obj as Record<string, unknown>)['value']);
 }
 
-/**
- * Converts a relative Ajio URL to an absolute https:// URL.
- * Passes through already-absolute URLs unchanged.
- * Returns the Ajio homepage as a safe fallback for empty/invalid input.
- */
-function toAbsoluteAjioUrl(url: unknown): string {
+function toAbsoluteUrl(url: unknown): string {
   if (typeof url !== 'string' || !url) return AJIO_BASE;
-  if (url.startsWith('https://') || url.startsWith('http://')) {
-    return url.replace(/^http:\/\//, 'https://');
-  }
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://')) return url.replace('http://', 'https://');
   return `${AJIO_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
-/**
- * Converts a raw Ajio image URL to https://.
- * Ajio image URLs are sometimes http:// — always upgrade.
- */
-function toAbsoluteImageUrl(url: unknown): string {
+function toHttps(url: unknown): string {
   if (typeof url !== 'string' || !url) return '';
   return url.replace(/^http:\/\//, 'https://');
+}
+
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ─── Color parser ─────────────────────────────────────────────────────────────
+
+function parseColorOption(raw: unknown): AjioColorVariant | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const c = raw as Record<string, unknown>;
+
+  const colorCode = typeof c['code'] === 'string' ? c['code'] : '';
+  if (!colorCode) return null;
+
+  // Color name: prefer variantOptionQualifiers[qualifier=color].value,
+  // fall back to the top-level color field
+  const qualifiers = Array.isArray(c['variantOptionQualifiers']) ? c['variantOptionQualifiers'] : [];
+  const colorQualifier = qualifiers.find(
+    (q: unknown) => q && typeof q === 'object' && (q as Record<string, unknown>)['qualifier'] === 'color'
+  ) as Record<string, unknown> | undefined;
+  const rawColorName = colorQualifier?.['value'] ?? c['color'] ?? '';
+  const colorName = typeof rawColorName === 'string' && rawColorName
+    ? titleCase(rawColorName.toLowerCase().replace(/_/g, ' '))
+    : '';
+
+  // Swatch image
+  const swatchRaw = colorQualifier?.['swatchImage'];
+  const swatchUrl = toHttps(
+    swatchRaw && typeof swatchRaw === 'object'
+      ? (swatchRaw as Record<string, unknown>)['url']
+      : ''
+  );
+
+  // Product image from modelImage
+  const modelImage = c['modelImage'];
+  const imageUrl = toHttps(
+    modelImage && typeof modelImage === 'object'
+      ? (modelImage as Record<string, unknown>)['url']
+      : ''
+  );
+  if (!imageUrl) return null;
+
+  const price = priceFromObj(c['priceData']);
+  if (price <= 0) return null;
+
+  const mrp = priceFromObj(c['wasPriceData']);
+  const originalPrice = mrp > price ? mrp : undefined;
+
+  const stockObj = c['stock'] as Record<string, unknown> | undefined;
+  const available = stockObj?.['stockLevelStatus'] !== 'outOfStock';
+
+  const buyUrl = toAbsoluteUrl(c['url']);
+
+  return { colorCode, colorName, swatchUrl, imageUrl, price, originalPrice, available, buyUrl };
+}
+
+// ─── Size parser ──────────────────────────────────────────────────────────────
+
+function parseSizeOption(raw: unknown, colorImageUrl: string): AjioSizeVariant | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const s = raw as Record<string, unknown>;
+
+  const skuCode = typeof s['code'] === 'string' ? s['code'] : '';
+  if (!skuCode) return null;
+
+  // Size label: prefer scDisplaySize (the display-formatted label),
+  // fall back to the size qualifier value
+  const sizeLabel = typeof s['scDisplaySize'] === 'string' && s['scDisplaySize']
+    ? s['scDisplaySize']
+    : (() => {
+        const qualifiers = Array.isArray(s['variantOptionQualifiers']) ? s['variantOptionQualifiers'] : [];
+        const sizeQ = qualifiers.find(
+          (q: unknown) => q && typeof q === 'object' && (q as Record<string, unknown>)['qualifier'] === 'size'
+        ) as Record<string, unknown> | undefined;
+        return typeof sizeQ?.['value'] === 'string' ? sizeQ['value'] : '';
+      })();
+  if (!sizeLabel) return null;
+
+  const sizeFormat = typeof s['displaySizeFormat'] === 'string' && s['displaySizeFormat']
+    ? s['displaySizeFormat']
+    : 'UK';
+
+  const price = priceFromObj(s['priceData']);
+  if (price <= 0) return null;
+
+  const mrp = priceFromObj(s['wasPriceData']);
+  const originalPrice = mrp > price ? mrp : undefined;
+
+  const stockObj = s['stock'] as Record<string, unknown> | undefined;
+  const available = stockObj?.['stockLevelStatus'] === 'inStock';
+  const stockLevel = typeof stockObj?.['stockLevel'] === 'number' ? stockObj['stockLevel'] : 0;
+
+  const buyUrl = toAbsoluteUrl(s['url']);
+
+  // Image: use the SKU's own modelImage if present, otherwise inherit from color
+  const modelImage = s['modelImage'];
+  const skuImage = toHttps(
+    modelImage && typeof modelImage === 'object'
+      ? (modelImage as Record<string, unknown>)['url']
+      : ''
+  );
+  const imageUrl = skuImage || colorImageUrl;
+  if (!imageUrl) return null;
+
+  return { skuCode, sizeLabel, sizeFormat, price, originalPrice, available, stockLevel, buyUrl, imageUrl };
 }
 
 // ─── Pure parser (exported for unit testing) ──────────────────────────────────
@@ -119,139 +219,48 @@ function toAbsoluteImageUrl(url: unknown): string {
 /**
  * parseAjioPdpResponse
  *
- * Converts a raw Ajio PDP API response object into a flat ProductVariant[].
+ * Converts a raw Ajio /api/p/{colorCode} response into AjioProductVariants.
  *
- * Ajio's data model has two independent dimensions:
- *   1. colorVariants[] — one entry per color, each with its own image,
- *      price, URL, and availability flag.
- *   2. sizes[] — a flat list of sizes for the parent product, each with
- *      its own availability and price.
- *
- * These two dimensions are NOT nested in the API response. A color variant
- * does not contain a list of sizes. This means we cannot produce a
- * color×size matrix from the PDP response alone — we produce two separate
- * variant lists:
- *   • One ProductVariant per color (size = undefined)
- *   • One ProductVariant per size  (color = undefined)
- *
- * The frontend will display them in two separate rows:
- *   Color: ⚪ White  ⚫ Black  🔵 Navy
- *   Size:  UK 7  UK 8  UK 9  UK 10
- *
- * Selecting a color changes the image and buyUrl.
- * Selecting a size changes the price (sizes can have different prices on Ajio).
- *
- * @param raw - The parsed JSON object from /api/pdp/{productCode}.
+ * @param raw - The parsed JSON object from /api/p/{colorCode}.
  *              Typed as `unknown` so the parser is safe against any shape.
- * @returns   - Flat array of ProductVariant. Empty array on invalid input.
+ * @returns   - AjioProductVariants, or null on invalid/empty input.
  */
-export function parseAjioPdpResponse(raw: unknown): ProductVariant[] {
-  if (!raw || typeof raw !== 'object') return [];
-
+export function parseAjioPdpResponse(raw: unknown): AjioProductVariants | null {
+  if (!raw || typeof raw !== 'object') return null;
   const data = raw as Record<string, unknown>;
-  const variants: ProductVariant[] = [];
 
-  // ── Color variants ──────────────────────────────────────────────────────────
-  const colorVariants = data['colorVariants'];
-  if (Array.isArray(colorVariants)) {
-    for (const cv of colorVariants) {
-      if (!cv || typeof cv !== 'object') continue;
-      const c = cv as Record<string, unknown>;
+  const colorCode = typeof data['code'] === 'string' ? data['code'] : '';
+  const baseProduct = typeof data['baseProduct'] === 'string' ? data['baseProduct'] : '';
 
-      const colorGroup = c['colorGroup'];
-      const color = parseAjioColor(colorGroup);
-      const variantId = typeof colorGroup === 'string' ? colorGroup : '';
-      if (!variantId) continue;
+  // ── Colors from baseOptions[0].options ──────────────────────────────────────
+  const baseOptions = Array.isArray(data['baseOptions']) ? data['baseOptions'] : [];
+  const colorOptionsRaw: unknown[] =
+    baseOptions.length > 0 &&
+    baseOptions[0] &&
+    typeof baseOptions[0] === 'object' &&
+    Array.isArray((baseOptions[0] as Record<string, unknown>)['options'])
+      ? (baseOptions[0] as Record<string, unknown>)['options'] as unknown[]
+      : [];
 
-      // Image: prefer the first entry in images[], fall back to outfitPictureURL
-      const images = c['images'];
-      const firstImageUrl =
-        Array.isArray(images) && images.length > 0 && typeof images[0] === 'object' && images[0] !== null
-          ? toAbsoluteImageUrl((images[0] as Record<string, unknown>)['url'])
-          : '';
-      const outfitUrl = toAbsoluteImageUrl(
-        typeof c['outfitPictureURL'] === 'string' ? c['outfitPictureURL'] : ''
-      );
-      const imageUrl = firstImageUrl || outfitUrl;
-      if (!imageUrl) continue;
+  const colors: AjioColorVariant[] = colorOptionsRaw
+    .map(parseColorOption)
+    .filter((c): c is AjioColorVariant => c !== null);
 
-      // Price
-      const priceObj = c['price'];
-      const price = parseAjioPrice(
-        priceObj && typeof priceObj === 'object'
-          ? (priceObj as Record<string, unknown>)['value']
-          : priceObj
-      );
-      if (price <= 0) continue;
+  // ── Sizes from variantOptions ────────────────────────────────────────────────
+  // variantOptions is a flat array (not nested under a wrapper object like baseOptions)
+  const variantOptionsRaw = Array.isArray(data['variantOptions']) ? data['variantOptions'] : [];
 
-      // MRP
-      const wasPriceObj = c['wasPrice'] ?? c['wasPriceData'];
-      const originalPrice = parseAjioPrice(
-        wasPriceObj && typeof wasPriceObj === 'object'
-          ? (wasPriceObj as Record<string, unknown>)['value']
-          : wasPriceObj
-      );
+  // Use the fetched color's image as fallback for sizes that lack their own image
+  const fetchedColor = colors.find(c => c.colorCode === colorCode) ?? colors[0];
+  const colorImageUrl = fetchedColor?.imageUrl ?? '';
 
-      // Buy URL
-      const buyUrl = toAbsoluteAjioUrl(c['url']);
+  const sizes: AjioSizeVariant[] = variantOptionsRaw
+    .map(s => parseSizeOption(s, colorImageUrl))
+    .filter((s): s is AjioSizeVariant => s !== null);
 
-      // Availability — default true when absent
-      const available = c['available'] !== false;
+  if (colors.length === 0 && sizes.length === 0) return null;
 
-      variants.push({
-        variantId,
-        color,
-        size: undefined,
-        imageUrl,
-        price,
-        originalPrice: originalPrice > price ? originalPrice : undefined,
-        buyUrl,
-        available,
-      });
-    }
-  }
-
-  // ── Size variants ───────────────────────────────────────────────────────────
-  // Sizes are a flat list on the parent product. Each size entry may have its
-  // own price (Ajio sometimes prices sizes differently). The imageUrl and buyUrl
-  // for a size variant are the same as the parent product's first color variant
-  // (or the first color variant's data) — we use the first color variant's
-  // image and URL as the representative, since sizes don't have their own images.
-  const firstColorVariant = variants[0];
-  const sizes = data['sizes'];
-  if (Array.isArray(sizes) && firstColorVariant) {
-    for (const sv of sizes) {
-      if (!sv || typeof sv !== 'object') continue;
-      const s = sv as Record<string, unknown>;
-
-      const sizeLabel = typeof s['size'] === 'string' ? s['size'].trim() : '';
-      if (!sizeLabel) continue;
-
-      const priceObj = s['price'];
-      const price = parseAjioPrice(
-        priceObj && typeof priceObj === 'object'
-          ? (priceObj as Record<string, unknown>)['value']
-          : priceObj
-      );
-      // Fall back to first color variant's price when size has no price
-      const effectivePrice = price > 0 ? price : firstColorVariant.price;
-
-      const available = s['available'] !== false;
-
-      variants.push({
-        variantId: `size_${sizeLabel.replace(/\s+/g, '_').toLowerCase()}`,
-        color: undefined,
-        size: sizeLabel,
-        imageUrl: firstColorVariant.imageUrl,
-        price: effectivePrice,
-        originalPrice: firstColorVariant.originalPrice,
-        buyUrl: firstColorVariant.buyUrl,
-        available,
-      });
-    }
-  }
-
-  return variants;
+  return { colorCode, baseProduct, colors, sizes };
 }
 
 // ─── Async fetcher ────────────────────────────────────────────────────────────
@@ -259,28 +268,25 @@ export function parseAjioPdpResponse(raw: unknown): ProductVariant[] {
 /**
  * fetchAjioVariants
  *
- * Fetches all variants for a single Ajio product from the PDP API.
+ * Fetches variant data for a single Ajio product from the PDP API.
  *
- * Uses ScraperAPI plain tier (1 credit) — Ajio's PDP API returns structured
- * JSON without requiring JavaScript rendering.
+ * Uses ScraperAPI plain tier (1 credit) — Ajio's /api/p/ endpoint returns
+ * structured JSON without requiring JavaScript rendering.
  *
- * @param productCode - The Ajio product code, e.g. "469486197".
- *                      Extracted from SearchProduct.id by stripping the "aj_" prefix.
- * @returns           - Array of ProductVariant. Empty array on any failure.
- *
- * @example
- * const variants = await fetchAjioVariants('469486197');
- * // variants[0] → { variantId: '469486197_white', color: 'White', size: undefined, ... }
- * // variants[3] → { variantId: 'size_uk_7', color: undefined, size: 'UK 7', ... }
+ * @param colorCode - The Ajio colorCode e.g. "460886329_white".
+ *                    Extracted from SearchProduct.url by taking the segment
+ *                    after /p/ — e.g. url "/nike.../p/460886329_white"
+ *                    → colorCode "460886329_white".
+ * @returns         - AjioProductVariants, or null on any failure.
  */
-export async function fetchAjioVariants(productCode: string): Promise<ProductVariant[]> {
-  if (!productCode || !productCode.trim()) return [];
+export async function fetchAjioVariants(colorCode: string): Promise<AjioProductVariants | null> {
+  if (!colorCode?.trim()) return null;
   if (!SCRAPER_API_KEY) {
     console.warn('[AjioVariants] No SCRAPER_API_KEY configured');
-    return [];
+    return null;
   }
 
-  const targetUrl = AJIO_PDP_API(productCode.trim());
+  const targetUrl = AJIO_PDP_API(colorCode.trim());
 
   try {
     const { data } = await axios.get<string>('https://api.scraperapi.com/', {
@@ -288,40 +294,42 @@ export async function fetchAjioVariants(productCode: string): Promise<ProductVar
         api_key:      SCRAPER_API_KEY,
         url:          targetUrl,
         country_code: 'in',
-        // No render:true — Ajio's PDP API returns JSON directly
       },
       timeout: SCRAPER_TIMEOUT_MS,
-      // Keep raw string so we control JSON.parse and can catch malformed responses
       transformResponse: [(res: unknown) => res],
     });
 
     const text = typeof data === 'string' ? data : String(data);
 
     if (!text || text.length < 100) {
-      console.warn(`[AjioVariants] Empty response for product ${productCode}`);
-      return [];
+      console.warn(`[AjioVariants] Empty response for colorCode ${colorCode}`);
+      return null;
     }
 
     if (/access denied|captcha|are you a human|blocked/i.test(text.slice(0, 800))) {
-      console.warn(`[AjioVariants] Blocked response for product ${productCode}`);
-      return [];
+      console.warn(`[AjioVariants] Blocked response for colorCode ${colorCode}`);
+      return null;
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(text);
     } catch {
-      console.warn(`[AjioVariants] Non-JSON response for product ${productCode}, length=${text.length}`);
-      return [];
+      console.warn(`[AjioVariants] Non-JSON response for colorCode ${colorCode}, length=${text.length}`);
+      return null;
     }
 
-    const variants = parseAjioPdpResponse(parsed);
-    console.log(`[AjioVariants] product=${productCode} variants=${variants.length}`);
-    return variants;
+    const result = parseAjioPdpResponse(parsed);
+    if (result) {
+      console.log(`[AjioVariants] colorCode=${colorCode} colors=${result.colors.length} sizes=${result.sizes.length}`);
+    } else {
+      console.warn(`[AjioVariants] No variant data parsed for colorCode ${colorCode}`);
+    }
+    return result;
 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 100) : String(e).slice(0, 100);
-    console.error(`[AjioVariants] fetch error for product ${productCode}:`, msg);
-    return [];
+    console.error(`[AjioVariants] fetch error for colorCode ${colorCode}:`, msg);
+    return null;
   }
 }

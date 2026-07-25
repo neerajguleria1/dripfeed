@@ -1,490 +1,562 @@
 /**
  * variantFetcher.test.ts
  *
- * Unit tests for the Ajio variant fetcher — parser only.
+ * Unit tests for parseAjioPdpResponse() — pure function, no HTTP.
  *
- * All tests are pure: no HTTP calls, no ScraperAPI, no environment variables.
- * fetchAjioVariants() is NOT tested here (it requires a live API key).
- * Only parseAjioPdpResponse() is tested — it is a pure function.
- *
- * Fixture data is shaped to match the verified Ajio PDP API response format.
+ * Fixture data mirrors the verified Ajio /api/p/{colorCode} response:
+ *   baseOptions[0].options[]  → colors
+ *   variantOptions[]          → sizes for the fetched color
  */
 
 import { describe, it, expect } from 'vitest';
 import { parseAjioPdpResponse } from '../../api/_lib/variantFetcher.js';
-import type { ProductVariant } from '../../api/_lib/types/productVariant.js';
+import type { AjioProductVariants } from '../../api/_lib/types/productVariant.js';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-/** Minimal valid color variant entry as returned by Ajio's PDP API */
-function makeColorVariant(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function makeColorOption(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    colorGroup:  '469486197_white',
-    images:      [{ url: 'https://assets.ajio.com/medias/sys_master/white.jpg' }],
-    price:       { value: 8299 },
-    wasPrice:    { value: 9999 },
-    url:         '/nike-air-force-1/p/469486197_white',
-    available:   true,
+    code:  '460886329_white',
+    color: 'WHITE',
+    url:   '/nike-men-air-force-1-07-sneakers/p/460886329_white',
+    priceData:    { value: 7495 },
+    wasPriceData: { value: 8999 },
+    stock: { stockLevelStatus: 'inStock', stockLevel: 10 },
+    modelImage: { url: 'https://assets.ajio.com/medias/460886329-white-MODEL.jpg' },
+    variantOptionQualifiers: [
+      {
+        qualifier:    'color',
+        value:        'white',
+        swatchImage:  { url: 'https://assets.ajio.com/medias/460886329-white-SWATCH.jpg' },
+      },
+    ],
     ...overrides,
   };
 }
 
-/** Minimal valid size entry as returned by Ajio's PDP API */
-function makeSizeEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function makeSizeOption(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    size:      'UK 8',
-    available: true,
-    price:     { value: 8299 },
+    code:              '460886329003',
+    url:               '/nike-men-air-force-1-07-sneakers/p/460886329003',
+    priceData:         { value: 7495 },
+    wasPriceData:      { value: 8999 },
+    stock:             { stockLevelStatus: 'inStock', stockLevel: 37 },
+    modelImage:        { url: 'https://assets.ajio.com/medias/460886329-white-MODEL.jpg' },
+    scDisplaySize:     '7',
+    displaySizeFormat: 'UK',
+    variantOptionQualifiers: [
+      { qualifier: 'color', value: 'white' },
+      { qualifier: 'size',  value: '8' },
+    ],
     ...overrides,
   };
 }
 
-/** A realistic full PDP response with 3 colors and 4 sizes */
-const FULL_PDP_RESPONSE = {
-  colorVariants: [
-    makeColorVariant({ colorGroup: '469486197_white', url: '/nike-af1/p/469486197_white' }),
-    makeColorVariant({
-      colorGroup: '469486197_navy_blue',
-      images: [{ url: 'https://assets.ajio.com/medias/sys_master/navy.jpg' }],
-      price: { value: 8499 },
-      wasPrice: { value: 9999 },
-      url: '/nike-af1/p/469486197_navy_blue',
-    }),
-    makeColorVariant({
-      colorGroup: '469486197_black',
-      images: [{ url: 'https://assets.ajio.com/medias/sys_master/black.jpg' }],
-      price: { value: 7999 },
-      wasPrice: { value: 9999 },
-      url: '/nike-af1/p/469486197_black',
-    }),
-  ],
-  sizes: [
-    makeSizeEntry({ size: 'UK 7',  available: true  }),
-    makeSizeEntry({ size: 'UK 8',  available: true  }),
-    makeSizeEntry({ size: 'UK 9',  available: false }),
-    makeSizeEntry({ size: 'UK 10', available: true  }),
+/** Realistic full response: 1 color (white) + 3 sizes */
+const FULL_RESPONSE = {
+  code:        '460886329_white',
+  baseProduct: '460886329',
+  baseOptions: [{
+    variantType: 'FnlColorVariant',
+    options: [
+      makeColorOption({ code: '460886329_white', color: 'WHITE' }),
+      makeColorOption({
+        code:  '460886329_black',
+        color: 'BLACK',
+        url:   '/nike-men-air-force-1-07-sneakers/p/460886329_black',
+        priceData:    { value: 7495 },
+        wasPriceData: { value: 8999 },
+        stock: { stockLevelStatus: 'inStock', stockLevel: 5 },
+        modelImage: { url: 'https://assets.ajio.com/medias/460886329-black-MODEL.jpg' },
+        variantOptionQualifiers: [
+          {
+            qualifier:   'color',
+            value:       'black',
+            swatchImage: { url: 'https://assets.ajio.com/medias/460886329-black-SWATCH.jpg' },
+          },
+        ],
+      }),
+    ],
+  }],
+  variantOptions: [
+    makeSizeOption({ code: '460886329002', scDisplaySize: '6', stock: { stockLevelStatus: 'inStock',    stockLevel: 20 }, url: '/nike-men-air-force-1-07-sneakers/p/460886329002' }),
+    makeSizeOption({ code: '460886329003', scDisplaySize: '7', stock: { stockLevelStatus: 'inStock',    stockLevel: 37 }, url: '/nike-men-air-force-1-07-sneakers/p/460886329003' }),
+    makeSizeOption({ code: '460886329004', scDisplaySize: '8', stock: { stockLevelStatus: 'outOfStock', stockLevel: 0  }, url: '/nike-men-air-force-1-07-sneakers/p/460886329004' }),
   ],
 };
 
-// ─── Edge case inputs ─────────────────────────────────────────────────────────
+// ─── Invalid / empty inputs ───────────────────────────────────────────────────
 
-describe('parseAjioPdpResponse — invalid / empty inputs', () => {
-  it('returns [] for null', () => {
-    expect(parseAjioPdpResponse(null)).toEqual([]);
-  });
+describe('parseAjioPdpResponse — invalid inputs', () => {
+  it('returns null for null',            () => expect(parseAjioPdpResponse(null)).toBeNull());
+  it('returns null for undefined',       () => expect(parseAjioPdpResponse(undefined)).toBeNull());
+  it('returns null for a string',        () => expect(parseAjioPdpResponse('bad')).toBeNull());
+  it('returns null for a number',        () => expect(parseAjioPdpResponse(42)).toBeNull());
+  it('returns null for an empty object', () => expect(parseAjioPdpResponse({})).toBeNull());
 
-  it('returns [] for undefined', () => {
-    expect(parseAjioPdpResponse(undefined)).toEqual([]);
-  });
-
-  it('returns [] for a string', () => {
-    expect(parseAjioPdpResponse('not an object')).toEqual([]);
-  });
-
-  it('returns [] for a number', () => {
-    expect(parseAjioPdpResponse(42)).toEqual([]);
-  });
-
-  it('returns [] for an empty object', () => {
-    expect(parseAjioPdpResponse({})).toEqual([]);
-  });
-
-  it('returns [] when colorVariants is missing', () => {
-    expect(parseAjioPdpResponse({ sizes: [] })).toEqual([]);
-  });
-
-  it('returns [] when colorVariants is an empty array', () => {
-    expect(parseAjioPdpResponse({ colorVariants: [] })).toEqual([]);
-  });
-
-  it('returns [] when colorVariants contains only invalid entries', () => {
-    expect(parseAjioPdpResponse({ colorVariants: [null, 42, 'bad'] })).toEqual([]);
+  it('returns null when baseOptions and variantOptions are both empty', () => {
+    expect(parseAjioPdpResponse({
+      code: '460886329_white',
+      baseProduct: '460886329',
+      baseOptions: [{ options: [] }],
+      variantOptions: [],
+    })).toBeNull();
   });
 });
 
-// ─── Color variant parsing ────────────────────────────────────────────────────
+// ─── Root fields ──────────────────────────────────────────────────────────────
 
-describe('parseAjioPdpResponse — color variant parsing', () => {
-  it('produces one color variant per colorVariants entry', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const colorVariants = result.filter(v => v.color !== undefined);
-    expect(colorVariants).toHaveLength(3);
+describe('parseAjioPdpResponse — root fields', () => {
+  it('sets colorCode from response.code', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colorCode).toBe('460886329_white');
   });
 
-  it('sets variantId to the colorGroup string', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant()] });
-    expect(result[0].variantId).toBe('469486197_white');
+  it('sets baseProduct from response.baseProduct', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.baseProduct).toBe('460886329');
   });
 
-  it('parses single-word color correctly', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant({ colorGroup: '469486197_white' })] });
-    expect(result[0].color).toBe('White');
-  });
-
-  it('parses multi-word color with underscores correctly', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ colorGroup: '469486197_navy_blue' })],
-    });
-    expect(result[0].color).toBe('Navy Blue');
-  });
-
-  it('parses three-word color correctly', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ colorGroup: '469486197_off_white' })],
-    });
-    expect(result[0].color).toBe('Off White');
-  });
-
-  it('size is undefined on color variants', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant()] });
-    expect(result[0].size).toBeUndefined();
-  });
-
-  it('parses price correctly', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant({ price: { value: 8299 } })] });
-    expect(result[0].price).toBe(8299);
-  });
-
-  it('parses originalPrice when wasPrice > price', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ price: { value: 8299 }, wasPrice: { value: 9999 } })],
-    });
-    expect(result[0].originalPrice).toBe(9999);
-  });
-
-  it('sets originalPrice to undefined when wasPrice equals price', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ price: { value: 8299 }, wasPrice: { value: 8299 } })],
-    });
-    expect(result[0].originalPrice).toBeUndefined();
-  });
-
-  it('sets originalPrice to undefined when wasPrice is absent', () => {
-    const cv = makeColorVariant();
-    delete cv['wasPrice'];
-    const result = parseAjioPdpResponse({ colorVariants: [cv] });
-    expect(result[0].originalPrice).toBeUndefined();
-  });
-
-  it('converts relative URL to absolute', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ url: '/nike-af1/p/469486197_white' })],
-    });
-    expect(result[0].buyUrl).toBe('https://www.ajio.com/nike-af1/p/469486197_white');
-  });
-
-  it('passes through already-absolute https URL unchanged', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ url: 'https://www.ajio.com/nike-af1/p/469486197_white' })],
-    });
-    expect(result[0].buyUrl).toBe('https://www.ajio.com/nike-af1/p/469486197_white');
-  });
-
-  it('upgrades http:// image URL to https://', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ images: [{ url: 'http://assets.ajio.com/img.jpg' }] })],
-    });
-    expect(result[0].imageUrl).toBe('https://assets.ajio.com/img.jpg');
-  });
-
-  it('uses outfitPictureURL as image fallback when images[] is empty', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [{
-        colorGroup:       '469486197_white',
-        images:           [],
-        outfitPictureURL: 'https://assets.ajio.com/outfit.jpg',
-        price:            { value: 8299 },
-        url:              '/p/469486197_white',
-        available:        true,
-      }],
-    });
-    expect(result[0].imageUrl).toBe('https://assets.ajio.com/outfit.jpg');
-  });
-
-  it('sets available: true when field is true', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant({ available: true })] });
-    expect(result[0].available).toBe(true);
-  });
-
-  it('sets available: false when field is false', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant({ available: false })] });
-    expect(result[0].available).toBe(false);
-  });
-
-  it('defaults available to true when field is absent', () => {
-    const cv = makeColorVariant();
-    delete cv['available'];
-    const result = parseAjioPdpResponse({ colorVariants: [cv] });
-    expect(result[0].available).toBe(true);
-  });
-
-  it('skips color variants with price <= 0', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ price: { value: 0 } })],
-    });
-    expect(result).toHaveLength(0);
-  });
-
-  it('skips color variants with missing colorGroup', () => {
-    const cv = makeColorVariant();
-    delete cv['colorGroup'];
-    const result = parseAjioPdpResponse({ colorVariants: [cv] });
-    expect(result).toHaveLength(0);
-  });
-
-  it('skips color variants with missing image', () => {
-    const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ images: [], outfitPictureURL: '' })],
-    });
-    expect(result).toHaveLength(0);
+  it('defaults colorCode to empty string when code is absent', () => {
+    const { code: _omit, ...rest } = FULL_RESPONSE as Record<string, unknown>;
+    const result = parseAjioPdpResponse(rest)!;
+    expect(result.colorCode).toBe('');
   });
 });
 
-// ─── Size variant parsing ─────────────────────────────────────────────────────
+// ─── Color parsing ────────────────────────────────────────────────────────────
 
-describe('parseAjioPdpResponse — size variant parsing', () => {
-  it('produces one size variant per sizes entry', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const sizeVariants = result.filter(v => v.size !== undefined);
-    expect(sizeVariants).toHaveLength(4);
+describe('parseAjioPdpResponse — colors (baseOptions)', () => {
+  it('parses all color options', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors).toHaveLength(2);
   });
 
-  it('sets variantId to "size_{normalized_label}"', () => {
+  it('sets colorCode on each color', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].colorCode).toBe('460886329_white');
+    expect(result.colors[1].colorCode).toBe('460886329_black');
+  });
+
+  it('title-cases the color name from qualifier value', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].colorName).toBe('White');
+    expect(result.colors[1].colorName).toBe('Black');
+  });
+
+  it('title-cases multi-word color names', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant()],
-      sizes: [makeSizeEntry({ size: 'UK 8' })],
-    });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.variantId).toBe('size_uk_8');
+      code: 'x_navy_blue', baseProduct: 'x',
+      baseOptions: [{ options: [makeColorOption({
+        code: 'x_navy_blue',
+        variantOptionQualifiers: [{ qualifier: 'color', value: 'navy_blue', swatchImage: { url: 'https://s.com/s.jpg' } }],
+      })] }],
+      variantOptions: [],
+    })!;
+    expect(result.colors[0].colorName).toBe('Navy Blue');
   });
 
-  it('color is undefined on size variants', () => {
+  it('falls back to top-level color field when qualifier is absent', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant()],
-      sizes: [makeSizeEntry()],
-    });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.color).toBeUndefined();
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ variantOptionQualifiers: [] })] }],
+      variantOptions: [],
+    })!;
+    expect(result.colors[0].colorName).toBe('White');
   });
 
-  it('size label is preserved exactly', () => {
+  it('extracts swatch URL from color qualifier swatchImage', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].swatchUrl).toBe('https://assets.ajio.com/medias/460886329-white-SWATCH.jpg');
+  });
+
+  it('extracts imageUrl from modelImage', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].imageUrl).toBe('https://assets.ajio.com/medias/460886329-white-MODEL.jpg');
+  });
+
+  it('upgrades http:// image URLs to https://', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant()],
-      sizes: [makeSizeEntry({ size: 'UK 10' })],
-    });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.size).toBe('UK 10');
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ modelImage: { url: 'http://assets.ajio.com/img.jpg' } })] }],
+      variantOptions: [],
+    })!;
+    expect(result.colors[0].imageUrl).toBe('https://assets.ajio.com/img.jpg');
   });
 
-  it('uses size-specific price when provided', () => {
+  it('parses price from priceData.value', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].price).toBe(7495);
+  });
+
+  it('sets originalPrice when wasPriceData > price', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].originalPrice).toBe(8999);
+  });
+
+  it('sets originalPrice to undefined when wasPriceData equals price', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ price: { value: 8299 } })],
-      sizes: [makeSizeEntry({ size: 'UK 8', price: { value: 8999 } })],
-    });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.price).toBe(8999);
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ priceData: { value: 7495 }, wasPriceData: { value: 7495 } })] }],
+      variantOptions: [],
+    })!;
+    expect(result.colors[0].originalPrice).toBeUndefined();
   });
 
-  it('falls back to first color variant price when size has no price', () => {
+  it('sets available: true when stockLevelStatus is inStock', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].available).toBe(true);
+  });
+
+  it('sets available: false when stockLevelStatus is outOfStock', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ price: { value: 8299 } })],
-      sizes: [{ size: 'UK 8', available: true }],  // no price field
-    });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.price).toBe(8299);
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ stock: { stockLevelStatus: 'outOfStock', stockLevel: 0 } })] }],
+      variantOptions: [],
+    })!;
+    expect(result.colors[0].available).toBe(false);
   });
 
-  it('inherits imageUrl from first color variant', () => {
+  it('converts relative buyUrl to absolute', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.colors[0].buyUrl).toBe('https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329_white');
+  });
+
+  it('passes through already-absolute buyUrl', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ images: [{ url: 'https://assets.ajio.com/white.jpg' }] })],
-      sizes: [makeSizeEntry()],
-    });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.imageUrl).toBe('https://assets.ajio.com/white.jpg');
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ url: 'https://www.ajio.com/p/460886329_white' })] }],
+      variantOptions: [],
+    })!;
+    expect(result.colors[0].buyUrl).toBe('https://www.ajio.com/p/460886329_white');
   });
 
-  it('inherits buyUrl from first color variant', () => {
+  it('skips color options with price <= 0', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant({ url: '/nike-af1/p/469486197_white' })],
-      sizes: [makeSizeEntry()],
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ priceData: { value: 0 } })] }],
+      variantOptions: [],
     });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.buyUrl).toBe('https://www.ajio.com/nike-af1/p/469486197_white');
+    expect(result).toBeNull();
   });
 
-  it('sets available: false for out-of-stock sizes', () => {
+  it('skips color options with missing modelImage', () => {
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant()],
-      sizes: [makeSizeEntry({ available: false })],
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption({ modelImage: null })] }],
+      variantOptions: [],
     });
-    const sizeVariant = result.find(v => v.size !== undefined);
-    expect(sizeVariant?.available).toBe(false);
+    expect(result).toBeNull();
   });
 
-  it('skips size entries with empty size label', () => {
+  it('skips color options with missing code', () => {
+    const opt = makeColorOption();
+    delete opt['code'];
     const result = parseAjioPdpResponse({
-      colorVariants: [makeColorVariant()],
-      sizes: [makeSizeEntry({ size: '' })],
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [opt] }],
+      variantOptions: [],
     });
-    const sizeVariants = result.filter(v => v.size !== undefined);
-    expect(sizeVariants).toHaveLength(0);
+    expect(result).toBeNull();
+  });
+});
+
+// ─── Size parsing ─────────────────────────────────────────────────────────────
+
+describe('parseAjioPdpResponse — sizes (variantOptions)', () => {
+  it('parses all size options', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes).toHaveLength(3);
   });
 
-  it('produces no size variants when sizes array is absent', () => {
-    const result = parseAjioPdpResponse({ colorVariants: [makeColorVariant()] });
-    const sizeVariants = result.filter(v => v.size !== undefined);
-    expect(sizeVariants).toHaveLength(0);
+  it('sets skuCode from size option code', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].skuCode).toBe('460886329002');
+    expect(result.sizes[1].skuCode).toBe('460886329003');
   });
 
-  it('produces no size variants when there are no valid color variants (no representative)', () => {
-    // Sizes need a color variant to inherit image/url from — without one, skip all sizes
+  it('sets sizeLabel from scDisplaySize', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].sizeLabel).toBe('6');
+    expect(result.sizes[1].sizeLabel).toBe('7');
+  });
+
+  it('falls back to size qualifier value when scDisplaySize is absent', () => {
+    const opt = makeSizeOption();
+    delete opt['scDisplaySize'];
     const result = parseAjioPdpResponse({
-      colorVariants: [],
-      sizes: [makeSizeEntry()],
-    });
-    expect(result).toHaveLength(0);
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [opt],
+    })!;
+    expect(result.sizes[0].sizeLabel).toBe('8');
+  });
+
+  it('sets sizeFormat from displaySizeFormat', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].sizeFormat).toBe('UK');
+  });
+
+  it('defaults sizeFormat to "UK" when absent', () => {
+    const opt = makeSizeOption();
+    delete opt['displaySizeFormat'];
+    const result = parseAjioPdpResponse({
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [opt],
+    })!;
+    expect(result.sizes[0].sizeFormat).toBe('UK');
+  });
+
+  it('parses price from priceData.value', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].price).toBe(7495);
+  });
+
+  it('sets originalPrice when wasPriceData > price', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].originalPrice).toBe(8999);
+  });
+
+  it('sets originalPrice to undefined when wasPriceData equals price', () => {
+    const result = parseAjioPdpResponse({
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [makeSizeOption({ priceData: { value: 7495 }, wasPriceData: { value: 7495 } })],
+    })!;
+    expect(result.sizes[0].originalPrice).toBeUndefined();
+  });
+
+  it('sets available: true when stockLevelStatus is inStock', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].available).toBe(true);
+    expect(result.sizes[1].available).toBe(true);
+  });
+
+  it('sets available: false when stockLevelStatus is outOfStock', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[2].available).toBe(false);
+  });
+
+  it('sets stockLevel from stock.stockLevel', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].stockLevel).toBe(20);
+    expect(result.sizes[1].stockLevel).toBe(37);
+    expect(result.sizes[2].stockLevel).toBe(0);
+  });
+
+  it('converts relative buyUrl to absolute', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[1].buyUrl).toBe('https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329003');
+  });
+
+  it('each size has a distinct buyUrl (its own SKU URL)', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    const urls = result.sizes.map(s => s.buyUrl);
+    expect(new Set(urls).size).toBe(3);
+  });
+
+  it('uses SKU modelImage as imageUrl when present', () => {
+    const result = parseAjioPdpResponse(FULL_RESPONSE)!;
+    expect(result.sizes[0].imageUrl).toBe('https://assets.ajio.com/medias/460886329-white-MODEL.jpg');
+  });
+
+  it('falls back to fetched color imageUrl when SKU has no modelImage', () => {
+    const opt = makeSizeOption();
+    delete opt['modelImage'];
+    const result = parseAjioPdpResponse({
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [opt],
+    })!;
+    expect(result.sizes[0].imageUrl).toBe('https://assets.ajio.com/medias/460886329-white-MODEL.jpg');
+  });
+
+  it('skips size options with missing skuCode', () => {
+    const opt = makeSizeOption();
+    delete opt['code'];
+    const result = parseAjioPdpResponse({
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [opt],
+    })!;
+    expect(result.sizes).toHaveLength(0);
+  });
+
+  it('skips size options with missing sizeLabel', () => {
+    const opt = makeSizeOption();
+    delete opt['scDisplaySize'];
+    (opt['variantOptionQualifiers'] as unknown[]) = [{ qualifier: 'color', value: 'white' }];
+    const result = parseAjioPdpResponse({
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [opt],
+    })!;
+    expect(result.sizes).toHaveLength(0);
+  });
+
+  it('skips size options with price <= 0', () => {
+    const result = parseAjioPdpResponse({
+      code: '460886329_white', baseProduct: '460886329',
+      baseOptions: [{ options: [makeColorOption()] }],
+      variantOptions: [makeSizeOption({ priceData: { value: 0 } })],
+    })!;
+    expect(result.sizes).toHaveLength(0);
+  });
+
+  it('produces empty sizes array when variantOptions is absent', () => {
+    const { variantOptions: _omit, ...rest } = FULL_RESPONSE as Record<string, unknown>;
+    const result = parseAjioPdpResponse(rest)!;
+    expect(result.sizes).toHaveLength(0);
   });
 });
 
 // ─── Full response integration ────────────────────────────────────────────────
 
-describe('parseAjioPdpResponse — full response', () => {
-  it('produces correct total variant count (3 colors + 4 sizes)', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    expect(result).toHaveLength(7);
+describe('parseAjioPdpResponse — full response integration', () => {
+  let result: AjioProductVariants;
+
+  beforeAll(() => {
+    result = parseAjioPdpResponse(FULL_RESPONSE)!;
   });
 
-  it('color variants come before size variants', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const firstSizeIndex = result.findIndex(v => v.size !== undefined);
-    const lastColorIndex = result.map(v => v.color !== undefined).lastIndexOf(true);
-    expect(lastColorIndex).toBeLessThan(firstSizeIndex);
+  it('returns non-null result', () => {
+    expect(result).not.toBeNull();
   });
 
-  it('all color variants have color defined and size undefined', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const colorVariants = result.filter(v => v.color !== undefined);
-    expect(colorVariants.every(v => v.size === undefined)).toBe(true);
+  it('has 2 colors and 3 sizes', () => {
+    expect(result.colors).toHaveLength(2);
+    expect(result.sizes).toHaveLength(3);
   });
 
-  it('all size variants have size defined and color undefined', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const sizeVariants = result.filter(v => v.size !== undefined);
-    expect(sizeVariants.every(v => v.color === undefined)).toBe(true);
+  it('all colors have https buyUrl', () => {
+    expect(result.colors.every(c => c.buyUrl.startsWith('https://'))).toBe(true);
   });
 
-  it('all variants have non-empty buyUrl', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    expect(result.every(v => v.buyUrl.startsWith('https://'))).toBe(true);
+  it('all colors have https imageUrl', () => {
+    expect(result.colors.every(c => c.imageUrl.startsWith('https://'))).toBe(true);
   });
 
-  it('all variants have non-empty imageUrl', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    expect(result.every(v => v.imageUrl.startsWith('https://'))).toBe(true);
+  it('all sizes have https buyUrl', () => {
+    expect(result.sizes.every(s => s.buyUrl.startsWith('https://'))).toBe(true);
   });
 
-  it('all variants have price > 0', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    expect(result.every(v => v.price > 0)).toBe(true);
+  it('all sizes have https imageUrl', () => {
+    expect(result.sizes.every(s => s.imageUrl.startsWith('https://'))).toBe(true);
   });
 
-  it('out-of-stock size (UK 9) is marked available: false', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const uk9 = result.find(v => v.size === 'UK 9');
-    expect(uk9?.available).toBe(false);
+  it('all colors have price > 0', () => {
+    expect(result.colors.every(c => c.price > 0)).toBe(true);
   });
 
-  it('in-stock sizes are marked available: true', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const uk8 = result.find(v => v.size === 'UK 8');
-    expect(uk8?.available).toBe(true);
+  it('all sizes have price > 0', () => {
+    expect(result.sizes.every(s => s.price > 0)).toBe(true);
   });
 
-  it('navy blue color is parsed correctly', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const navy = result.find(v => v.color === 'Navy Blue');
-    expect(navy).toBeDefined();
-    expect(navy?.variantId).toBe('469486197_navy_blue');
-    expect(navy?.price).toBe(8499);
+  it('all colors have distinct colorCodes', () => {
+    const codes = result.colors.map(c => c.colorCode);
+    expect(new Set(codes).size).toBe(result.colors.length);
   });
 
-  it('each color variant has a distinct buyUrl', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const colorVariants = result.filter(v => v.color !== undefined);
-    const urls = colorVariants.map(v => v.buyUrl);
-    const uniqueUrls = new Set(urls);
-    expect(uniqueUrls.size).toBe(colorVariants.length);
+  it('all sizes have distinct skuCodes', () => {
+    const codes = result.sizes.map(s => s.skuCode);
+    expect(new Set(codes).size).toBe(result.sizes.length);
   });
 
-  it('each color variant has a distinct variantId', () => {
-    const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
-    const colorVariants = result.filter(v => v.color !== undefined);
-    const ids = colorVariants.map(v => v.variantId);
-    const uniqueIds = new Set(ids);
-    expect(uniqueIds.size).toBe(colorVariants.length);
+  it('all sizes have distinct buyUrls', () => {
+    const urls = result.sizes.map(s => s.buyUrl);
+    expect(new Set(urls).size).toBe(result.sizes.length);
+  });
+
+  it('out-of-stock size (UK 8) has available: false and stockLevel: 0', () => {
+    const uk8 = result.sizes.find(s => s.sizeLabel === '8');
+    expect(uk8?.available).toBe(false);
+    expect(uk8?.stockLevel).toBe(0);
+  });
+
+  it('in-stock size (UK 7) has available: true and stockLevel > 0', () => {
+    const uk7 = result.sizes.find(s => s.sizeLabel === '7');
+    expect(uk7?.available).toBe(true);
+    expect(uk7?.stockLevel).toBeGreaterThan(0);
   });
 });
 
-// ─── Example output ───────────────────────────────────────────────────────────
-// This test documents the exact expected output shape for a known input.
-// It serves as a living specification and regression guard.
+// ─── Example output spec ──────────────────────────────────────────────────────
+// Documents the exact expected output for a known input — living specification.
 
-describe('parseAjioPdpResponse — example output (Nike Air Force 1, product 469486197)', () => {
-  const result = parseAjioPdpResponse(FULL_PDP_RESPONSE);
+describe('parseAjioPdpResponse — example output spec (Nike AF1 460886329_white)', () => {
+  const result = parseAjioPdpResponse(FULL_RESPONSE)!;
 
-  it('first variant is White color', () => {
-    const expected: ProductVariant = {
-      variantId:     '469486197_white',
-      color:         'White',
-      size:          undefined,
-      imageUrl:      'https://assets.ajio.com/medias/sys_master/white.jpg',
-      price:         8299,
-      originalPrice: 9999,
-      buyUrl:        'https://www.ajio.com/nike-af1/p/469486197_white',
-      available:     true,
-    };
-    expect(result[0]).toEqual(expected);
+  it('root fields are correct', () => {
+    expect(result.colorCode).toBe('460886329_white');
+    expect(result.baseProduct).toBe('460886329');
   });
 
-  it('second variant is Navy Blue color', () => {
-    const expected: ProductVariant = {
-      variantId:     '469486197_navy_blue',
-      color:         'Navy Blue',
-      size:          undefined,
-      imageUrl:      'https://assets.ajio.com/medias/sys_master/navy.jpg',
-      price:         8499,
-      originalPrice: 9999,
-      buyUrl:        'https://www.ajio.com/nike-af1/p/469486197_navy_blue',
+  it('first color is White with correct fields', () => {
+    expect(result.colors[0]).toEqual({
+      colorCode:     '460886329_white',
+      colorName:     'White',
+      swatchUrl:     'https://assets.ajio.com/medias/460886329-white-SWATCH.jpg',
+      imageUrl:      'https://assets.ajio.com/medias/460886329-white-MODEL.jpg',
+      price:         7495,
+      originalPrice: 8999,
       available:     true,
-    };
-    expect(result[1]).toEqual(expected);
+      buyUrl:        'https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329_white',
+    });
   });
 
-  it('fourth variant is UK 7 size', () => {
-    const expected: ProductVariant = {
-      variantId:     'size_uk_7',
-      color:         undefined,
-      size:          'UK 7',
-      imageUrl:      'https://assets.ajio.com/medias/sys_master/white.jpg',
-      price:         8299,
-      originalPrice: 9999,
-      buyUrl:        'https://www.ajio.com/nike-af1/p/469486197_white',
+  it('second color is Black with correct fields', () => {
+    expect(result.colors[1]).toEqual({
+      colorCode:     '460886329_black',
+      colorName:     'Black',
+      swatchUrl:     'https://assets.ajio.com/medias/460886329-black-SWATCH.jpg',
+      imageUrl:      'https://assets.ajio.com/medias/460886329-black-MODEL.jpg',
+      price:         7495,
+      originalPrice: 8999,
       available:     true,
-    };
-    expect(result[3]).toEqual(expected);
+      buyUrl:        'https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329_black',
+    });
   });
 
-  it('sixth variant is UK 9 size (out of stock)', () => {
-    const expected: ProductVariant = {
-      variantId:     'size_uk_9',
-      color:         undefined,
-      size:          'UK 9',
-      imageUrl:      'https://assets.ajio.com/medias/sys_master/white.jpg',
-      price:         8299,
-      originalPrice: 9999,
-      buyUrl:        'https://www.ajio.com/nike-af1/p/469486197_white',
+  it('first size (UK 6) has correct fields', () => {
+    expect(result.sizes[0]).toEqual({
+      skuCode:       '460886329002',
+      sizeLabel:     '6',
+      sizeFormat:    'UK',
+      price:         7495,
+      originalPrice: 8999,
+      available:     true,
+      stockLevel:    20,
+      buyUrl:        'https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329002',
+      imageUrl:      'https://assets.ajio.com/medias/460886329-white-MODEL.jpg',
+    });
+  });
+
+  it('second size (UK 7) has correct fields', () => {
+    expect(result.sizes[1]).toEqual({
+      skuCode:       '460886329003',
+      sizeLabel:     '7',
+      sizeFormat:    'UK',
+      price:         7495,
+      originalPrice: 8999,
+      available:     true,
+      stockLevel:    37,
+      buyUrl:        'https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329003',
+      imageUrl:      'https://assets.ajio.com/medias/460886329-white-MODEL.jpg',
+    });
+  });
+
+  it('third size (UK 8, out of stock) has correct fields', () => {
+    expect(result.sizes[2]).toEqual({
+      skuCode:       '460886329004',
+      sizeLabel:     '8',
+      sizeFormat:    'UK',
+      price:         7495,
+      originalPrice: 8999,
       available:     false,
-    };
-    expect(result[5]).toEqual(expected);
+      stockLevel:    0,
+      buyUrl:        'https://www.ajio.com/nike-men-air-force-1-07-sneakers/p/460886329004',
+      imageUrl:      'https://assets.ajio.com/medias/460886329-white-MODEL.jpg',
+    });
   });
 });
