@@ -613,7 +613,23 @@ export default function SearchPage() {
     setLoading(true);
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
-      const fetched: ProductData[] = data.products || [];
+      const canonicals: any[] = data.products || [];
+      const fetched: ProductData[] = canonicals.map((c: any) => {
+        const o = c.offers?.[0];
+        return {
+          id: c.id,
+          title: c.title,
+          brand: c.brand,
+          imageUrl: o?.imageUrl,
+          price: o?.price ?? 0,
+          originalPrice: o?.originalPrice,
+          discount: o?.discount,
+          platform: o?.platform ?? '',
+          url: o?.affiliateUrl || o?.productUrl || '',
+          color: o?.color,
+          size: o?.size,
+        };
+      });
       setProducts(fetched);
       setHasMore(false);
     } catch {
@@ -647,7 +663,22 @@ export default function SearchPage() {
     setTimeout(() => {
       fetchThrift(searchQuery);
       api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
-        .then(({ data: rel }) => { if (rel?.sections?.length) setRelatedSections(rel); })
+        .then(({ data: rel }) => {
+          if (rel?.sections?.length) {
+            const mapped = {
+              ...rel,
+              sections: rel.sections.map((s: any) => ({
+                ...s,
+                products: (s.products || []).map((c: any) => {
+                  const o = c.offers?.[0];
+                  if (!o) return null;
+                  return { id: c.id, title: c.title, brand: c.brand, imageUrl: o.imageUrl, price: o.price ?? 0, originalPrice: o.originalPrice, discount: o.discount, platform: o.platform ?? '', url: o.affiliateUrl || o.productUrl || '', color: o.color, size: o.size };
+                }).filter(Boolean),
+              })),
+            };
+            setRelatedSections(mapped);
+          }
+        })
         .catch(() => {});
     }, 2000);
   }, [fetchResultsStreaming, fetchResultsBlocking, fetchThrift]);
@@ -656,7 +687,12 @@ export default function SearchPage() {
   useEffect(() => {
     if (query) return; // only on landing
     api.get('/search/trending').then(({ data }) => {
-      const items: ProductData[] = (data.products || data || []).slice(0, 9);
+      const canonicals: any[] = (data.products || data || []).slice(0, 9);
+      const items: ProductData[] = canonicals.map((c: any) => {
+        const o = c.offers?.[0];
+        if (!o) return null;
+        return { id: c.id, title: c.title, brand: c.brand, imageUrl: o.imageUrl, price: o.price ?? 0, originalPrice: o.originalPrice, discount: o.discount, platform: o.platform ?? '', url: o.affiliateUrl || o.productUrl || '', color: o.color, size: o.size };
+      }).filter(Boolean) as ProductData[];
       if (items.length) setTrendingProducts(items);
     }).catch(() => {});
   }, [query]);
