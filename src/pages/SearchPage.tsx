@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp } from 'lucide-react';
+import { useAjioVariants } from '../hooks/useAjioVariants';
+import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
+import type { VariantSelection } from '../components/product/AjioVariantPanel';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
@@ -201,6 +204,22 @@ function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave
           <h2 className="text-[14px] sm:text-[16px] font-bold text-[#0F0F1A] leading-snug mt-1 line-clamp-3">
             {product.title}
           </h2>
+
+          {/* Variant metadata — display only */}
+          {(product.color || product.size) && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {product.color && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                  <span>&#127912;</span> <span className="capitalize">{product.color}</span>
+                </span>
+              )}
+              {product.size && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                  <span>&#128207;</span> {product.size}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
@@ -249,9 +268,38 @@ function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave
 function ResultCard({ product, index, onSave, saved }: { product: ProductData; index: number; onSave?: (p: ProductData) => void; saved?: boolean }) {
   const [copied, setCopied] = useState(false);
 
+  // ── Ajio variant state (isolated per card) ────────────────────────────────
+  const isAjio = product.platform.toLowerCase() === 'ajio';
+  const [variantOpen, setVariantOpen] = useState(false);
+  const [activeImage, setActiveImage] = useState(product.imageUrl);
+  const [activePrice, setActivePrice] = useState(product.price);
+  const [activeOriginalPrice, setActiveOriginalPrice] = useState(product.originalPrice);
+  const [activeBuyUrl, setActiveBuyUrl] = useState(product.url);
+  const { variants, status, fetch: fetchVariants } = useAjioVariants();
+
+  // Extract Ajio productId from the product URL: segment after /p/
+  const ajioProductId = isAjio
+    ? (() => { const m = product.url.match(/\/p\/([^/?#]+)/); return m ? m[1] : ''; })()
+    : '';
+
+  function handleVariantToggle(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    if (!variantOpen && (status === 'idle' || status === 'error') && ajioProductId) {
+      fetchVariants(ajioProductId);
+    }
+    setVariantOpen(v => !v);
+  }
+
+  function handleVariantSelect(sel: VariantSelection) {
+    setActiveImage(sel.imageUrl);
+    setActivePrice(sel.price);
+    setActiveOriginalPrice(sel.originalPrice);
+    setActiveBuyUrl(sel.buyUrl);
+  }
+
   async function handleCopy(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    await navigator.clipboard.writeText(product.url);
+    await navigator.clipboard.writeText(activeBuyUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -265,14 +313,14 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
     >
       {/* Image — tappable area opens product */}
       <a
-        href={product.url}
+        href={activeBuyUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+        onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
         className="block overflow-hidden bg-neutral-50 relative"
       >
         <img
-          src={product.imageUrl}
+          src={activeImage}
           alt={product.title}
           className="w-full aspect-[3/4] object-cover"
           loading="lazy"
@@ -297,26 +345,43 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
       <div className="p-3 flex flex-col flex-1">
         <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
         <a
-          href={product.url}
+          href={activeBuyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
           className="text-[13px] font-medium text-[#0F0F1A] leading-snug mt-0.5 line-clamp-2 min-h-[36px]"
         >
           {product.title}
         </a>
 
-        <div className="mt-auto pt-2 flex items-center justify-between gap-1">
-          <div>
-            <span className="text-[15px] font-bold text-[#0F0F1A] tabular-nums">
-              {formatPrice(product.price)}
-            </span>
-            {product.originalPrice && product.originalPrice > product.price && (
-              <span className="block text-[11px] text-neutral-400 line-through tabular-nums">
-                {formatPrice(product.originalPrice)}
+        {/* Variant metadata — display only, shown when platform provides it */}
+        {(product.color || product.size) && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {product.color && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                <span>&#127912;</span> <span className="capitalize">{product.color}</span>
+              </span>
+            )}
+            {product.size && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                <span>&#128207;</span> {product.size}
               </span>
             )}
           </div>
+        )}
+
+        <div className="mt-auto pt-2 flex items-center justify-between gap-1">
+          <div>
+            <span className="text-[15px] font-bold text-[#0F0F1A] tabular-nums">
+              {formatPrice(activePrice)}
+            </span>
+            {activeOriginalPrice && activeOriginalPrice > activePrice && (
+              <span className="block text-[11px] text-neutral-400 line-through tabular-nums">
+                {formatPrice(activeOriginalPrice)}
+              </span>
+            )}
+          </div>
+          {/* Copy + Save buttons */}
           <div className="flex items-center gap-1.5">
             <button onClick={handleCopy} aria-label="Copy link"
               className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors">
@@ -331,15 +396,38 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
 
         {/* Buy button — full width, prominent on mobile */}
         <a
-          href={product.url}
+          href={activeBuyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
           className="mt-2.5 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
         >
           Buy on {product.platform.split(' ')[0]}
           <ArrowRight className="w-3 h-3" />
         </a>
+
+        {/* Ajio-only: View Colors & Sizes toggle */}
+        {isAjio && ajioProductId && (
+          <>
+            <button
+              onClick={handleVariantToggle}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#C9A96E] border border-[#C9A96E]/30 hover:border-[#C9A96E] hover:bg-[#C9A96E]/5 py-2 rounded-xl transition-all duration-150"
+            >
+              {variantOpen ? (
+                <><ChevronUp className="w-3 h-3" /> Hide variants</>
+              ) : (
+                <>&#127912; View Colors &amp; Sizes</>
+              )}
+            </button>
+            {variantOpen && (
+              <AjioVariantPanel
+                variants={variants}
+                status={status}
+                onSelect={handleVariantSelect}
+              />
+            )}
+          </>
+        )}
       </div>
     </motion.div>
   );
@@ -410,11 +498,9 @@ export default function SearchPage() {
   });
 
   function handleSave(product: ProductData) {
-    const id = product.id || '';
-    if (!id) return;
     setSavedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
       localStorage.setItem('df_saved', JSON.stringify([...next]));
       return next;
     });
@@ -781,10 +867,10 @@ export default function SearchPage() {
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} onSave={handleSave} saved={savedIds.has(filteredProducts[0].id ?? '')} />}
+              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} onSave={handleSave} saved={savedIds.has(filteredProducts[0].id)} />}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {gridProducts.map((product, i) => (
-                  <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id ?? '')} />
+                  <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
                 ))}
               </div>
             </InfiniteScroll>
@@ -860,7 +946,7 @@ export default function SearchPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {section.products.map((product, i) => (
-                      <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id ?? '')} />
+                      <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
                     ))}
                   </div>
                 </div>
@@ -1034,13 +1120,13 @@ export default function SearchPage() {
 
               {/* Featured first product */}
               {trendingProducts[0] && (
-                <FeaturedCard product={trendingProducts[0]} onSave={handleSave} saved={savedIds.has(trendingProducts[0].id ?? '')} />
+                <FeaturedCard product={trendingProducts[0]} onSave={handleSave} saved={savedIds.has(trendingProducts[0].id)} />
               )}
 
               {/* Remaining products grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {trendingProducts.slice(1).map((product, i) => (
-                  <ResultCard key={product.id} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id ?? '')} />
+                  <ResultCard key={product.id} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
                 ))}
               </div>
             </motion.div>

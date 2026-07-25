@@ -423,6 +423,21 @@ export default function ComparePage() {
                           <span className="text-[11px] uppercase tracking-wide text-neutral-400 font-medium truncate">{p.platform}</span>
                         </div>
                         <p className="text-[11px] text-neutral-500 line-clamp-1">{p.title}</p>
+                        {/* Variant metadata — display only */}
+                        {(p.color || p.size) && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {p.color && (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                                <span>&#127912;</span> <span className="capitalize">{p.color}</span>
+                              </span>
+                            )}
+                            {p.size && (
+                              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                                <span>&#128207;</span> {p.size}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="flex items-baseline gap-1.5 mt-1">
                           <span className={i === 0 ? 'text-[20px] font-bold text-[#0F0F1A] tabular-nums' : 'text-[16px] font-semibold text-[#1A1A2E] tabular-nums'}>
                             {i === 0 ? <PriceCounter value={p.price} className="text-[20px] font-bold text-[#0F0F1A]" /> : formatPrice(p.price)}
