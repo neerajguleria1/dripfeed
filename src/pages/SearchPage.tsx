@@ -11,7 +11,8 @@ import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
-import type { ProductData } from '../types/product';
+import Analytics from '../utils/analytics';
+import type { CanonicalProductData, OfferData } from '../types/product';
 import type { FilterState } from '../components/search/SearchFilters';
 
 interface ThriftResult {
@@ -92,14 +93,17 @@ function matchesPriceRange(price: number, range: string): boolean {
   }
 }
 
-function sortProducts(products: ProductData[], sort: FilterState['sort']): ProductData[] {
+function sortProducts(products: CanonicalProductData[], sort: FilterState['sort']): CanonicalProductData[] {
   const sorted = [...products];
+  const cheapest = (c: CanonicalProductData) => c.offers[0]?.price ?? 0;
+  const bestDiscount = (c: CanonicalProductData) =>
+    Math.max(...c.offers.map(o => o.discount ?? 0));
   switch (sort) {
-    case 'price-asc': return sorted.sort((a, b) => a.price - b.price);
-    case 'discount-desc': return sorted.sort((a, b) => (b.discount || 0) - (a.discount || 0));
-    case 'newest': return sorted;
-    case 'platform': return sorted.sort((a, b) => a.platform.localeCompare(b.platform));
-    default: return sorted;
+    case 'price-asc':     return sorted.sort((a, b) => cheapest(a) - cheapest(b));
+    case 'discount-desc': return sorted.sort((a, b) => bestDiscount(b) - bestDiscount(a));
+    case 'newest':        return sorted;
+    case 'platform':      return sorted.sort((a, b) => (a.offers[0]?.platform ?? '').localeCompare(b.offers[0]?.platform ?? ''));
+    default:              return sorted;
   }
 }
 
@@ -119,19 +123,19 @@ function gtagEvent(name: string, params: Record<string, unknown>) {
   if (typeof (window as any).gtag === 'function') (window as any).gtag('event', name, params);
 }
 
-async function trackAndOpen(product: ProductData) {
+async function trackAndOpen(offer: OfferData) {
   gtagEvent('select_item', {
     item_list_name: 'search_results',
-    items: [{ item_name: product.title, item_brand: product.brand, item_category: product.platform, price: product.price }],
+    items: [{ item_name: offer.title, item_category: offer.platform, price: offer.price }],
   });
   try {
     const res = await fetch('/api/affiliate/redirect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        platform: product.platform,
-        productUrl: product.url,
-        productName: product.title,
+        platform: offer.platform,
+        productUrl: offer.productUrl,
+        productName: offer.title,
         device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'web',
         sessionId: sessionStorage.getItem('df_sid') || (() => {
           const id = Math.random().toString(36).slice(2);
@@ -141,9 +145,9 @@ async function trackAndOpen(product: ProductData) {
       }),
     });
     const { affiliateUrl } = await res.json();
-    window.open(affiliateUrl || product.url, '_blank', 'noopener,noreferrer');
+    window.open(affiliateUrl || offer.affiliateUrl || offer.productUrl, '_blank', 'noopener,noreferrer');
   } catch {
-    window.open(product.url, '_blank', 'noopener,noreferrer');
+    window.open(offer.affiliateUrl || offer.productUrl, '_blank', 'noopener,noreferrer');
   }
 }
 
@@ -539,6 +543,11 @@ export default function SearchPage() {
         } else if (payload.type === 'done') {
           setLoading(false);
           setHasMore(false);
+          setProducts(prev => {
+            if (prev.length === 0) Analytics.noResultsSearch(searchQuery);
+            else Analytics.searchResultViewed(searchQuery, prev.length);
+            return prev;
+          });
           setPlatformStatus(prev => {
             const updated = { ...prev };
             Object.keys(updated).forEach(k => { if (updated[k] === 'loading') updated[k] = 'empty'; });
@@ -600,6 +609,7 @@ export default function SearchPage() {
     setPlatformStatus({ amazon: 'loading', flipkart: 'loading', ajio: 'loading', myntra: 'loading', meesho: 'loading' });
     setRelatedSections(null);
 
+    Analytics.searchPerformed(searchQuery);
     const streamed = fetchResultsStreaming(searchQuery);
     if (!streamed) fetchResultsBlocking(searchQuery);
 

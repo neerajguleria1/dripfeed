@@ -14,6 +14,11 @@ import { handleAffiliate } from './_lib/handlers/affiliate.js';
 import { handleDebug } from './_lib/handlers/debug.js';
 import { handlePush } from './_lib/handlers/push.js';
 import { handleVariants } from './_lib/handlers/variants.js';
+import { handlePriceHistory } from './_lib/handlers/priceHistory.js';
+import { handleProductDetail } from './_lib/handlers/productDetail.js';
+import { handleRecommendations } from './_lib/handlers/recommendations.js';
+import { handleAnalytics } from './_lib/handlers/analytics.js';
+import { handleAlerts } from './_lib/handlers/alerts.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { url } = req;
@@ -29,10 +34,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path.startsWith('feed/')) return handleFeed(req, res, path.replace('feed/', ''));
   if (path.startsWith('preferences')) return handlePreferences(req, res, path.replace('preferences', ''));
   if (path.startsWith('affiliate/')) return handleAffiliate(req, res, path.replace('affiliate/', ''));
+  if (path.startsWith('alerts/')) return handleAlerts(req, res, path.replace('alerts/', ''));
+  if (path === 'alerts') return handleAlerts(req, res, '');
   if (path.startsWith('analytics/')) return res.status(200).json({ ok: true });
   if (path.startsWith('debug/')) return handleDebug(req, res, path.replace('debug/', ''));
   if (path.startsWith('push/')) return handlePush(req, res, path.replace('push/', ''));
   if (path === 'variants') return handleVariants(req, res);
+  if (path.startsWith('price-history/')) return handlePriceHistory(req, res, path.replace('price-history/', ''));
+  if (path.startsWith('product/')) return handleProductDetail(req, res, path.replace('product/', ''));
+  if (path.startsWith('recommendations/')) return handleRecommendations(req, res, path.replace('recommendations/', ''));
+  if (path.startsWith('analytics/')) return handleAnalytics(req, res, path.replace('analytics/', ''));
+  if (path === 'analytics') return handleAnalytics(req, res, '');
 
   return res.status(404).json({ error: 'Not found' });
 }

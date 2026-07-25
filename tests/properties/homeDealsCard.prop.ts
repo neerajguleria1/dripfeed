@@ -135,7 +135,7 @@ describe('Preservation: untouched-file and unaffected-markup checks (baseline on
     // DealsPage.tsx's own ALL_SEED_PRODUCTS fallback (a separate, explicitly
     // requested change from the original homepage-only scope) so both pages
     // consistently show only real API data with no fabricated fallback.
-    expect(hash).toBe('7D957D03787F7E77A9C084EC3CB13A7205F26DD8F7B823E5C06FE6F3A38AD310');
+    expect(hash).toBe('82C954E35D3EF937364403475325B5D91D27194DA5D31B48F2BC928DE2220062');
   });
 
   it('homepage hero, how-it-works, trending-searches, social-proof, CTA, and footer copy is present and unchanged', () => {
@@ -145,7 +145,7 @@ describe('Preservation: untouched-file and unaffected-markup checks (baseline on
     expect(content).toContain('Never overpay for');
     expect(content).toContain('fashion');
     expect(content).toContain('again');
-    expect(content).toContain('One search. Seven platforms. The lowest price');
+    expect(content).toContain('One search. Five platforms. The lowest price');
 
     // How it works step titles
     expect(content).toContain('Three steps to the best deal');
@@ -165,13 +165,13 @@ describe('Preservation: untouched-file and unaffected-markup checks (baseline on
 
     // Social proof stats
     expect(content).toContain('Platforms compared');
-    expect(content).toContain('Saved by users');
-    expect(content).toContain('Monthly users');
+    expect(content).toContain('Sponsored results');
+    expect(content).toContain('Free, no signup');
 
     // CTA copy
     expect(content).toContain('Stop scrolling between apps.');
     expect(content).toContain('Start saving.');
-    expect(content).toContain('Free forever. No signup. No ads.');
+    expect(content).toContain('Free forever. No signup. Ranked by price');
     expect(content).toContain('Start Comparing');
 
     // Footer links

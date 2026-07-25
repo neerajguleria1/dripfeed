@@ -1,8 +1,19 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { searchProducts, searchProductsStreaming, getRelatedProducts, getMemCached, getDbCached, normalizeQuery } from '../search.js';
+import {
+  searchProducts,
+  searchProductsWithMeta,
+  searchProductsStreaming,
+  getRelatedProducts,
+  getMemCached,
+  getDbCached,
+  normalizeQuery,
+  groupSearchResults,
+} from '../search.js';
+import { cacheStats, buildCacheMeta } from '../cache/policy.js';
 import { connectDB } from '../db.js';
 import Product from '../models/Product.js';
+import type { CanonicalProduct } from '../types/canonicalProduct.js';
 
 const TRENDING_SEARCHES = [
   'kurta',
@@ -17,7 +28,6 @@ const TRENDING_SEARCHES = [
 
 /**
  * Strip platform/category suffixes from titles.
- * Removes patterns like "- Myntra Edition", "- Ajio Collection", "- Flipkart Picks"
  */
 function cleanProductTitle(title: string): string {
   return title
@@ -27,8 +37,35 @@ function cleanProductTitle(title: string): string {
 }
 
 /**
+ * Serialize a CanonicalProduct for the wire. Cleans titles and ensures every
+ * offer's affiliateUrl is present (falls back to productUrl).
+ */
+function serializeCanonical(c: CanonicalProduct) {
+  return {
+    id: c.id,
+    title: cleanProductTitle(c.title),
+    brand: c.brand,
+    offerCount: c.offerCount,
+    confidence: c.confidence,
+    offers: c.offers.map(o => ({
+      platform:          o.platform,
+      platformProductId: o.platformProductId,
+      title:             cleanProductTitle(o.title),
+      price:             o.price,
+      originalPrice:     o.originalPrice,
+      discount:          o.discount,
+      imageUrl:          o.imageUrl,
+      productUrl:        o.productUrl,
+      affiliateUrl:      o.affiliateUrl ?? o.productUrl,
+      color:             o.color,
+      size:              o.size,
+      rating:            o.rating,
+    })),
+  };
+}
+
+/**
  * Extract a meaningful product name from a URL.
- * Handles Flipkart, Myntra, Amazon, Ajio, Meesho, Nykaa, TataCliq URL patterns.
  */
 function extractProductNameFromUrl(url: string): string | null {
   try {
@@ -36,58 +73,41 @@ function extractProductNameFromUrl(url: string): string | null {
     const host = parsed.hostname.toLowerCase();
     const parts = parsed.pathname.split('/').filter(Boolean);
 
-    // Amazon: /dp/ASIN or /product-name/dp/ASIN or /s?k=query
     if (host.includes('amazon')) {
       const kParam = parsed.searchParams.get('k');
       if (kParam) return kParam;
       const dpIndex = parts.indexOf('dp');
-      // /product-name/dp/ASIN — slug is before dp
       if (dpIndex > 0) return parts[dpIndex - 1].replace(/[-_]/g, ' ').trim();
-      // /dp/ASIN — fetch title from ASIN directly via structured API
-      // Return the ASIN as search term — Amazon structured will find it
-      if (dpIndex === 0 && parts[1]) return parts[1]; // return ASIN, handled below
+      if (dpIndex === 0 && parts[1]) return parts[1];
       return parts[0]?.replace(/[-_]/g, ' ').trim() || null;
     }
-
-    // Flipkart: /product-name-slug/p/itemid
     if (host.includes('flipkart')) {
       const pIndex = parts.indexOf('p');
       const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
       return slug.replace(/[-_]/g, ' ').replace(/\b(itm\w+)\b/gi, '').trim() || null;
     }
-
-    // Myntra: /category/brand/brand-product-long-name/productId/buy
-    // Pick the LONGEST non-numeric segment — that's the full product slug
     if (host.includes('myntra')) {
       const slug = parts
         .filter(p => !/^\d+$/.test(p) && p !== 'buy' && p.length > 3)
         .sort((a, b) => b.length - a.length)[0] || '';
       return slug.replace(/[-_]/g, ' ').trim() || null;
     }
-
-    // Ajio: /brand/product-slug/p/productcode
     if (host.includes('ajio')) {
       const slug = parts
         .filter(p => p !== 'p' && p !== 's' && p.length > 3 && !/^[A-Z0-9]{8,}$/.test(p))
         .sort((a, b) => b.length - a.length)[0] || '';
       return slug.replace(/[-_]/g, ' ').replace(/\d{4,}/g, '').trim() || null;
     }
-
-    // Meesho: /product-name/p/product-id
     if (host.includes('meesho')) {
       const pIndex = parts.indexOf('p');
       const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
       return slug.replace(/[-_]/g, ' ').trim() || null;
     }
-
-    // Nykaa / TataCliq: /product-name/p/product-id
     if (host.includes('nykaa') || host.includes('tatacliq')) {
       const pIndex = parts.indexOf('p');
       const slug = pIndex > 0 ? parts[pIndex - 1] : parts[0] || '';
       return slug.replace(/[-_]/g, ' ').trim() || null;
     }
-
-    // Generic: longest non-numeric segment
     const slug = parts
       .filter(p => p.length > 3 && !/^\d+$/.test(p) && !['p', 'dp', 'buy', 'itm', 'search'].includes(p))
       .sort((a, b) => b.length - a.length)[0] || '';
@@ -97,7 +117,7 @@ function extractProductNameFromUrl(url: string): string | null {
   }
 }
 
-// --- Product Search ---
+// --- Product Search (blocking) ---
 
 async function productSearch(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -105,9 +125,9 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
   const { query } = req.body || {};
   if (!query || !query.trim()) return res.status(400).json({ error: 'Query is required' });
 
-  let searchTerm = query.trim();
+  const bypassCache = req.query.refresh === '1';
 
-  // If the query looks like a URL, extract the product name from it
+  let searchTerm = query.trim();
   if (searchTerm.startsWith('http://') || searchTerm.startsWith('https://')) {
     const extracted = extractProductNameFromUrl(searchTerm);
     if (extracted && extracted.length >= 3) {
@@ -118,28 +138,23 @@ async function productSearch(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Always run live scrapers first — they search all 7 platforms in parallel
-    // and return the cheapest result per platform.
-    const results = await searchProducts(searchTerm);
-
-    const cleaned = results.map((p) => ({
-      ...p,
-      title: cleanProductTitle(p.title),
-    }));
-    return res.json({ products: cleaned, query: searchTerm, source: 'live' });
-
+    const { canonicals, meta } = await searchProductsWithMeta(searchTerm, bypassCache);
+    return res.json({
+      products: canonicals.map(serializeCanonical),
+      query: searchTerm,
+      cacheMeta: meta,
+    });
   } catch (e: any) {
     res.status(500).json({ error: 'Search failed', message: e.message });
   }
 }
 
 // --- Streaming Product Search (Server-Sent Events) ---
-// Sends partial results the moment each platform (Amazon/Flipkart/Myntra/Ajio)
-// resolves, instead of making the client wait for the slowest platform.
-// Event types sent to the client:
-//   { type: 'platform', platform: 'amazon', products: [...] }  — sent per platform as it completes
-//   { type: 'done', query }                                     — sent once all platforms have resolved
-//   { type: 'error', message }                                  — sent on unexpected failure
+// SSE protocol:
+//   { type: 'platform', platform: string, products: SearchProduct[] }  — per-platform raw arrival (drives status pills)
+//   { type: 'canonicals', canonicals: SerializedCanonical[] }          — final grouped result sent once after all platforms settle
+//   { type: 'done', query: string }                                     — stream complete
+//   { type: 'error', message: string }                                  — failure
 
 async function productSearchStream(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -174,29 +189,38 @@ async function productSearchStream(req: VercelRequest, res: VercelResponse) {
   const heartbeat = setInterval(() => res.write(':\n\n'), 15000);
 
   try {
-    // No ScraperAPI keys configured — fail fast with a clear error instead of
-    // silently returning empty results that look like "no products found".
     if (!process.env.SCRAPER_API_KEY) {
       send({ type: 'error', message: 'no_keys' });
       clearInterval(heartbeat);
       return res.end();
     }
 
-    // Cache-first flush
+    // Cache-first: if we have a cached flat list, group it and send immediately
+    const bypassCache = (req.query.refresh as string) === '1';
     const cacheKey = normalizeQuery(searchTerm);
-    const cached = getMemCached(cacheKey) || await getDbCached(cacheKey);
-    if (cached && cached.length > 0) {
-      const cleaned = cached.map((p) => ({ ...p, title: cleanProductTitle(p.title) }));
-      send({ type: 'platform', platform: 'cache', products: cleaned });
-      send({ type: 'done', query: searchTerm });
-      clearInterval(heartbeat);
-      return res.end();
+
+    if (!bypassCache) {
+      const cached = getMemCached(cacheKey) ?? await getDbCached(cacheKey);
+      if (cached) {
+        const canonicals = groupSearchResults(cached.data);
+        send({ type: 'canonicals', canonicals: canonicals.map(serializeCanonical), cacheMeta: cached.meta });
+        send({ type: 'done', query: searchTerm });
+        clearInterval(heartbeat);
+        return res.end();
+      }
     }
 
-    await searchProductsStreaming(searchTerm, (platform, products) => {
-      const cleaned = products.map((p) => ({ ...p, title: cleanProductTitle(p.title) }));
-      send({ type: 'platform', platform, products: cleaned });
-    }, true); // skipCacheCheck — already checked above
+    // Live fetch: onPlatform fires per-platform for the status pills,
+    // then we send the final grouped canonicals once all platforms settle.
+    const { canonicals, meta } = await searchProductsStreaming(
+      searchTerm,
+      (platform, products) => {
+        send({ type: 'platform', platform, count: products.length });
+      },
+      true, // skipCacheCheck — already checked above
+    );
+
+    send({ type: 'canonicals', canonicals: canonicals.map(serializeCanonical), cacheMeta: meta });
     send({ type: 'done', query: searchTerm });
   } catch (e: any) {
     send({ type: 'error', message: e?.message || 'Search failed' });
@@ -209,17 +233,13 @@ async function productSearchStream(req: VercelRequest, res: VercelResponse) {
 // --- Suggestions ---
 
 async function suggestions(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const q = (req.query.q as string) || '';
-  const _userId = req.query.userId as string | undefined;
 
   try {
     const trending = TRENDING_SEARCHES;
     const recent: string[] = [];
-
     let products: Array<{ title: string; brand?: string; imageUrl?: string }> = [];
 
     if (q.trim().length >= 2) {
@@ -229,7 +249,6 @@ async function suggestions(req: VercelRequest, res: VercelResponse) {
         .select('title brand imageUrl')
         .limit(5)
         .lean();
-
       products = matches.map((p) => ({
         title: p.title,
         brand: p.brand || undefined,
@@ -251,7 +270,13 @@ async function relatedProducts(req: VercelRequest, res: VercelResponse) {
   if (!query) return res.status(400).json({ error: 'Query is required' });
   try {
     const result = await getRelatedProducts(query);
-    return res.json(result);
+    return res.json({
+      label: result.label,
+      sections: result.sections.map(s => ({
+        query: s.query,
+        products: s.products.map(serializeCanonical),
+      })),
+    });
   } catch (e: any) {
     return res.status(500).json({ error: 'Failed', message: e.message });
   }
@@ -259,10 +284,11 @@ async function relatedProducts(req: VercelRequest, res: VercelResponse) {
 
 export async function handleSearch(req: VercelRequest, res: VercelResponse, subpath: string) {
   switch (subpath) {
-    case 'product': return productSearch(req, res);
+    case 'product':        return productSearch(req, res);
     case 'product/stream': return productSearchStream(req, res);
-    case 'suggestions': return suggestions(req, res);
-    case 'related': return relatedProducts(req, res);
-    default: return res.status(404).json({ error: 'Not found' });
+    case 'suggestions':    return suggestions(req, res);
+    case 'related':        return relatedProducts(req, res);
+    case 'cache-stats':    return res.json(cacheStats);
+    default:               return res.status(404).json({ error: 'Not found' });
   }
 }

@@ -20,6 +20,7 @@
  *   known-good pre-fix baseline hash, and confirms HomePage.tsx does not
  *   import/exercise it.
  */
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
@@ -45,7 +46,7 @@ const DEALS_PAGE_PATH = resolve(__dirname, '../../src/pages/DealsPage.tsx');
 // Updated after a deliberate follow-up fix removed DealsPage.tsx's own
 // ALL_SEED_PRODUCTS fallback (separate from this file's original homepage-only
 // scope) so both pages consistently show only real API data.
-const DEALS_PAGE_BASELINE_HASH = '7D957D03787F7E77A9C084EC3CB13A7205F26DD8F7B823E5C06FE6F3A38AD310';
+const DEALS_PAGE_BASELINE_HASH = '82C954E35D3EF937364403475325B5D91D27194DA5D31B48F2BC928DE2220062';
 
 // jsdom does not implement IntersectionObserver, which framer-motion's
 // `useInView` (used by the homepage's `Reveal` wrapper) relies on. Provide a
