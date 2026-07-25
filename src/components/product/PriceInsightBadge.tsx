@@ -1,5 +1,4 @@
 import type { PriceStats } from '../../hooks/usePriceHistory';
-import { formatPrice } from '../../utils/formatPrice';
 
 export type PriceSignal = 'at-lowest' | 'dropped' | 'near-high' | 'normal';
 
@@ -37,12 +36,12 @@ interface PriceInsightBadgeProps {
 const SIGNAL_CONFIG = {
   'at-lowest': {
     icon: '🟢',
-    label: (days: number) => `Lowest price in ${days} days`,
+    label: (_days: number) => `Lowest price in ${_days} days`,
     classes: 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900',
   },
   'dropped': {
     icon: '📉',
-    label: (days: number, current: number, high: number) => {
+    label: (_days: number, current: number, high: number) => {
       const drop = Math.round(high - current);
       return `Price dropped ₹${drop.toLocaleString('en-IN')} from peak`;
     },

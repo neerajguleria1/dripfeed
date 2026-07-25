@@ -12,8 +12,22 @@ import { SEOHead } from '../components/common/SEOHead';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import Analytics from '../utils/analytics';
-import type { CanonicalProductData, OfferData } from '../types/product';
 import type { FilterState } from '../components/search/SearchFilters';
+
+// Flat product shape returned by the streaming/blocking search endpoints
+interface ProductData {
+  id: string;
+  title: string;
+  brand?: string;
+  imageUrl?: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  platform: string;
+  url: string;
+  color?: string;
+  size?: string;
+}
 
 interface ThriftResult {
   _id: string;
@@ -93,16 +107,15 @@ function matchesPriceRange(price: number, range: string): boolean {
   }
 }
 
-function sortProducts(products: CanonicalProductData[], sort: FilterState['sort']): CanonicalProductData[] {
+function sortProducts(products: ProductData[], sort: FilterState['sort']): ProductData[] {
   const sorted = [...products];
-  const cheapest = (c: CanonicalProductData) => c.offers[0]?.price ?? 0;
-  const bestDiscount = (c: CanonicalProductData) =>
-    Math.max(...c.offers.map(o => o.discount ?? 0));
+  const cheapest = (c: ProductData) => c.price;
+  const bestDiscount = (c: ProductData) => c.discount ?? 0;
   switch (sort) {
     case 'price-asc':     return sorted.sort((a, b) => cheapest(a) - cheapest(b));
     case 'discount-desc': return sorted.sort((a, b) => bestDiscount(b) - bestDiscount(a));
     case 'newest':        return sorted;
-    case 'platform':      return sorted.sort((a, b) => (a.offers[0]?.platform ?? '').localeCompare(b.offers[0]?.platform ?? ''));
+    case 'platform':      return sorted.sort((a, b) => (a.platform ?? '').localeCompare(b.platform ?? ''));
     default:              return sorted;
   }
 }
@@ -123,7 +136,7 @@ function gtagEvent(name: string, params: Record<string, unknown>) {
   if (typeof (window as any).gtag === 'function') (window as any).gtag('event', name, params);
 }
 
-async function trackAndOpen(offer: OfferData) {
+async function trackAndOpen(offer: ProductData) {
   gtagEvent('select_item', {
     item_list_name: 'search_results',
     items: [{ item_name: offer.title, item_category: offer.platform, price: offer.price }],
@@ -134,7 +147,7 @@ async function trackAndOpen(offer: OfferData) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         platform: offer.platform,
-        productUrl: offer.productUrl,
+        productUrl: offer.url,
         productName: offer.title,
         device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'web',
         sessionId: sessionStorage.getItem('df_sid') || (() => {
@@ -145,9 +158,9 @@ async function trackAndOpen(offer: OfferData) {
       }),
     });
     const { affiliateUrl } = await res.json();
-    window.open(affiliateUrl || offer.affiliateUrl || offer.productUrl, '_blank', 'noopener,noreferrer');
+    window.open(affiliateUrl || offer.url, '_blank', 'noopener,noreferrer');
   } catch {
-    window.open(offer.affiliateUrl || offer.productUrl, '_blank', 'noopener,noreferrer');
+    window.open(offer.url, '_blank', 'noopener,noreferrer');
   }
 }
 

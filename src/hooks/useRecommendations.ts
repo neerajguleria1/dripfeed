@@ -34,10 +34,6 @@ export interface UseRecommendationsResult {
   fetch: (canonicalId: string) => void;
 }
 
-const EMPTY_SET: RecommendationSet = {
-  similar: [], betterDeal: [], popular: [], priceDropped: [], premium: [], budget: [],
-};
-
 function isEmpty(set: RecommendationSet): boolean {
   return Object.values(set).every(arr => arr.length === 0);
 }

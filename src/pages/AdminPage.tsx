@@ -172,15 +172,13 @@ export default function AdminPage() {
         </div>
       )}
 
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard icon={<Users className="w-5 h-5 text-[#0F0F1A]" />} label="Total Users" value={stats.users ?? '—'} />
-            <StatCard icon={<MousePointerClick className="w-5 h-5 text-[#0F0F1A]" />} label="Total Products" value={stats.products ?? '—'} />
-            <StatCard icon={<IndianRupee className="w-5 h-5 text-[#0F0F1A]" />} label="Revenue" value={formatINR(stats.revenue)} />
-            <StatCard icon={<TrendingUp className="w-5 h-5 text-[#0F0F1A]" />} label="Total Orders" value={stats.orders ?? '—'} />
-          </div>
-
-        </>
+      {tab === 'overview' && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard icon={<Users className="w-5 h-5 text-[#0F0F1A]" />} label="Total Users" value={stats.users ?? '—'} />
+          <StatCard icon={<MousePointerClick className="w-5 h-5 text-[#0F0F1A]" />} label="Total Products" value={stats.products ?? '—'} />
+          <StatCard icon={<IndianRupee className="w-5 h-5 text-[#0F0F1A]" />} label="Revenue" value={formatINR(stats.revenue)} />
+          <StatCard icon={<TrendingUp className="w-5 h-5 text-[#0F0F1A]" />} label="Total Orders" value={stats.orders ?? '—'} />
+        </div>
       )}
 
       {tab === 'alerts' && (

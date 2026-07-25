@@ -51,7 +51,7 @@ export function PriceChart({ points, days, onDaysChange, className = '' }: Price
   const gradId = useId().replace(/:/g, '');
 
   const { byPlatform, allDates, minP, maxP, lowestPoint } = useMemo(() => {
-    if (!points.length) return { byPlatform: {}, allDates: [], minP: 0, maxP: 0, lowestPoint: null };
+    if (!points.length) return { byPlatform: {} as Record<string, HistoryPoint[]>, allDates: [] as string[], minP: 0, maxP: 0, lowestPoint: null as HistoryPoint | null };
 
     const grouped: Record<string, HistoryPoint[]> = {};
     for (const pt of points) {

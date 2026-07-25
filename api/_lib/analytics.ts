@@ -106,7 +106,7 @@ export async function getDashboardMetrics(days = 7) {
     recommendationViews,
     avgLatencyResult,
     deviceBreakdown,
-    topBrands,
+    _topBrands,
     eventTotals,
   ] = await withDashboardTimeout(Promise.all([
 

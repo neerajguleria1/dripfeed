@@ -45,6 +45,7 @@ export interface IAnalyticsEvent {
   section?:    string;         // recommendation section type
   latencyMs?:  number;         // search latency in ms
   resultCount?: number;        // number of results returned
+  targetPrice?: number;        // alert target price
 }
 
 const RETENTION_DAYS = 90;

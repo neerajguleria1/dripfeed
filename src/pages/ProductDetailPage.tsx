@@ -29,10 +29,6 @@ function bestImage(product: CanonicalProductData): string {
   return product.offers[0]?.imageUrl ?? '';
 }
 
-function lowestOffer(product: CanonicalProductData): OfferData | null {
-  return product.offers[0] ?? null;
-}
-
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
 function PageSkeleton() {
