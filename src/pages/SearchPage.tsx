@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp } from 'lucide-react';
+import { useAjioVariants } from '../hooks/useAjioVariants';
+import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
+import type { VariantSelection } from '../components/product/AjioVariantPanel';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
@@ -265,9 +268,38 @@ function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave
 function ResultCard({ product, index, onSave, saved }: { product: ProductData; index: number; onSave?: (p: ProductData) => void; saved?: boolean }) {
   const [copied, setCopied] = useState(false);
 
+  // ── Ajio variant state (isolated per card) ────────────────────────────────
+  const isAjio = product.platform.toLowerCase() === 'ajio';
+  const [variantOpen, setVariantOpen] = useState(false);
+  const [activeImage, setActiveImage] = useState(product.imageUrl);
+  const [activePrice, setActivePrice] = useState(product.price);
+  const [activeOriginalPrice, setActiveOriginalPrice] = useState(product.originalPrice);
+  const [activeBuyUrl, setActiveBuyUrl] = useState(product.url);
+  const { variants, status, fetch: fetchVariants } = useAjioVariants();
+
+  // Extract Ajio productId from the product URL: segment after /p/
+  const ajioProductId = isAjio
+    ? (() => { const m = product.url.match(/\/p\/([^/?#]+)/); return m ? m[1] : ''; })()
+    : '';
+
+  function handleVariantToggle(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    if (!variantOpen && status === 'idle' && ajioProductId) {
+      fetchVariants(ajioProductId);
+    }
+    setVariantOpen(v => !v);
+  }
+
+  function handleVariantSelect(sel: VariantSelection) {
+    setActiveImage(sel.imageUrl);
+    setActivePrice(sel.price);
+    setActiveOriginalPrice(sel.originalPrice);
+    setActiveBuyUrl(sel.buyUrl);
+  }
+
   async function handleCopy(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    await navigator.clipboard.writeText(product.url);
+    await navigator.clipboard.writeText(activeBuyUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -281,14 +313,14 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
     >
       {/* Image — tappable area opens product */}
       <a
-        href={product.url}
+        href={activeBuyUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+        onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
         className="block overflow-hidden bg-neutral-50 relative"
       >
         <img
-          src={product.imageUrl}
+          src={activeImage}
           alt={product.title}
           className="w-full aspect-[3/4] object-cover"
           loading="lazy"
@@ -341,11 +373,11 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
         <div className="mt-auto pt-2 flex items-center justify-between gap-1">
           <div>
             <span className="text-[15px] font-bold text-[#0F0F1A] tabular-nums">
-              {formatPrice(product.price)}
+              {formatPrice(activePrice)}
             </span>
-            {product.originalPrice && product.originalPrice > product.price && (
+            {activeOriginalPrice && activeOriginalPrice > activePrice && (
               <span className="block text-[11px] text-neutral-400 line-through tabular-nums">
-                {formatPrice(product.originalPrice)}
+                {formatPrice(activeOriginalPrice)}
               </span>
             )}
           </div>
@@ -364,15 +396,38 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
 
         {/* Buy button — full width, prominent on mobile */}
         <a
-          href={product.url}
+          href={activeBuyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
           className="mt-2.5 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
         >
           Buy on {product.platform.split(' ')[0]}
           <ArrowRight className="w-3 h-3" />
         </a>
+
+        {/* Ajio-only: View Colors & Sizes toggle */}
+        {isAjio && ajioProductId && (
+          <>
+            <button
+              onClick={handleVariantToggle}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#C9A96E] border border-[#C9A96E]/30 hover:border-[#C9A96E] hover:bg-[#C9A96E]/5 py-2 rounded-xl transition-all duration-150"
+            >
+              {variantOpen ? (
+                <><ChevronUp className="w-3 h-3" /> Hide variants</>
+              ) : (
+                <>&#127912; View Colors &amp; Sizes</>
+              )}
+            </button>
+            {variantOpen && (
+              <AjioVariantPanel
+                variants={variants}
+                status={status}
+                onSelect={handleVariantSelect}
+              />
+            )}
+          </>
+        )}
       </div>
     </motion.div>
   );
