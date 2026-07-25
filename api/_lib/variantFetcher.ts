@@ -279,54 +279,56 @@ export function parseAjioPdpResponse(raw: unknown): AjioProductVariants | null {
  *                    → colorCode "460886329_white".
  * @returns         - AjioProductVariants, or null on any failure.
  */
+async function fetchAjioVariantsDirect(colorCode: string): Promise<AjioProductVariants | null> {
+  try {
+    const { data } = await axios.get<string>(AJIO_PDP_API(colorCode), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://www.ajio.com/',
+      },
+      timeout: 8000,
+      transformResponse: [(res: unknown) => res],
+    });
+    const text = typeof data === 'string' ? data : String(data);
+    if (!text || text.length < 100) return null;
+    if (/access denied|captcha|blocked/i.test(text.slice(0, 400))) return null;
+    const parsed = JSON.parse(text);
+    return parseAjioPdpResponse(parsed);
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAjioVariants(colorCode: string): Promise<AjioProductVariants | null> {
   if (!colorCode?.trim()) return null;
+
+  // Try direct first — 0 credits
+  const direct = await fetchAjioVariantsDirect(colorCode.trim());
+  if (direct) {
+    console.log(`[AjioVariants] direct hit colorCode=${colorCode} colors=${direct.colors.length} sizes=${direct.sizes.length}`);
+    return direct;
+  }
+
+  // Fallback: ScraperAPI plain tier — 1 credit
   if (!SCRAPER_API_KEY) {
     console.warn('[AjioVariants] No SCRAPER_API_KEY configured');
     return null;
   }
 
-  const targetUrl = AJIO_PDP_API(colorCode.trim());
-
   try {
     const { data } = await axios.get<string>('https://api.scraperapi.com/', {
-      params: {
-        api_key:      SCRAPER_API_KEY,
-        url:          targetUrl,
-        country_code: 'in',
-      },
+      params: { api_key: SCRAPER_API_KEY, url: AJIO_PDP_API(colorCode.trim()), country_code: 'in' },
       timeout: SCRAPER_TIMEOUT_MS,
       transformResponse: [(res: unknown) => res],
     });
-
     const text = typeof data === 'string' ? data : String(data);
-
-    if (!text || text.length < 100) {
-      console.warn(`[AjioVariants] Empty response for colorCode ${colorCode}`);
-      return null;
-    }
-
-    if (/access denied|captcha|are you a human|blocked/i.test(text.slice(0, 800))) {
-      console.warn(`[AjioVariants] Blocked response for colorCode ${colorCode}`);
-      return null;
-    }
-
+    if (!text || text.length < 100 || /access denied|captcha|blocked/i.test(text.slice(0, 800))) return null;
     let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      console.warn(`[AjioVariants] Non-JSON response for colorCode ${colorCode}, length=${text.length}`);
-      return null;
-    }
-
+    try { parsed = JSON.parse(text); } catch { return null; }
     const result = parseAjioPdpResponse(parsed);
-    if (result) {
-      console.log(`[AjioVariants] colorCode=${colorCode} colors=${result.colors.length} sizes=${result.sizes.length}`);
-    } else {
-      console.warn(`[AjioVariants] No variant data parsed for colorCode ${colorCode}`);
-    }
+    if (result) console.log(`[AjioVariants] scraperapi colorCode=${colorCode} colors=${result.colors.length} sizes=${result.sizes.length}`);
     return result;
-
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 100) : String(e).slice(0, 100);
     console.error(`[AjioVariants] fetch error for colorCode ${colorCode}:`, msg);
