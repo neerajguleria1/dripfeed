@@ -612,6 +612,8 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
         platform: 'Myntra',
         url,
         rating: p.rating || undefined,
+        color: p.primaryColour || undefined,
+        size: typeof p.sizes === 'string' && p.sizes ? p.sizes.split(',').slice(0, 4).join('/') : undefined,
       };
     }).filter((p: any) => isValidProduct(p));
   } catch (e: any) {
