@@ -284,7 +284,7 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
 
   function handleVariantToggle(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    if (!variantOpen && status === 'idle' && ajioProductId) {
+    if (!variantOpen && (status === 'idle' || status === 'error') && ajioProductId) {
       fetchVariants(ajioProductId);
     }
     setVariantOpen(v => !v);
@@ -345,10 +345,10 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
       <div className="p-3 flex flex-col flex-1">
         <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
         <a
-          href={product.url}
+          href={activeBuyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
           className="text-[13px] font-medium text-[#0F0F1A] leading-snug mt-0.5 line-clamp-2 min-h-[36px]"
         >
           {product.title}

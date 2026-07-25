@@ -17,6 +17,7 @@ export function useAjioVariants(): UseAjioVariantsResult {
   const fetch = useCallback((productId: string) => {
     if (!productId) return;
     setStatus('loading');
+    setVariants(null);
     api
       .get('/variants', { params: { platform: 'ajio', productId } })
       .then(({ data }) => {
