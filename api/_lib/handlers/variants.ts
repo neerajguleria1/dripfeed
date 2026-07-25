@@ -1,7 +1,7 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { fetchAjioVariants } from '../variantFetcher.js';
-import { getVariantCache, setVariantCache } from '../cache/variantCache.js';
+import { getVariantCache, setVariantCache, getVariantCacheDb, setVariantCacheDb } from '../cache/variantCache.js';
 
 export async function handleVariants(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
@@ -22,11 +22,13 @@ export async function handleVariants(req: VercelRequest, res: VercelResponse): P
     return;
   }
 
-  const cached = getVariantCache(productId);
-  if (cached) {
-    res.status(200).json(cached);
-    return;
-  }
+  // L1 — in-memory
+  const memHit = getVariantCache(productId);
+  if (memHit) { res.status(200).json(memHit); return; }
+
+  // L2 — MongoDB (persists across Vercel instances)
+  const dbHit = await getVariantCacheDb(productId);
+  if (dbHit) { setVariantCache(productId, dbHit); res.status(200).json(dbHit); return; }
 
   try {
     const variants = await fetchAjioVariants(productId);
@@ -35,6 +37,7 @@ export async function handleVariants(req: VercelRequest, res: VercelResponse): P
       return;
     }
     setVariantCache(productId, variants);
+    setVariantCacheDb(productId, variants);
     res.status(200).json(variants);
   } catch {
     res.status(500).json({ error: 'Unable to fetch variants' });
