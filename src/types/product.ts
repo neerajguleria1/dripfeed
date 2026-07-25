@@ -9,9 +9,9 @@ export interface ProductData {
   rating?: number;
   platform: string;
   url: string;
-  // Variant info — only populated when the source platform's search API
-  // exposes it (Ajio: color, Flipkart: size). Not available for every
-  // platform/listing, so always guard for undefined in the UI.
+  // Variant info — populated when the platform's search response includes it.
+  // Ajio: color | Flipkart: size | Myntra: color + size | Meesho: color + size (best-effort)
+  // Amazon: neither. Always guard for undefined in the UI.
   color?: string;
   size?: string;
 }
