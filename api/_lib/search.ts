@@ -771,7 +771,122 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
   }
 }
 
-// ─── Per-platform retry wrapper ──────────────────────────────────────────────
+// ─── Tata CLiQ ────────────────────────────────────────────────────────────────
+// Tata CLiQ is a React SPA — product data is NOT in __NEXT_DATA__.
+// The product grid renders client-side. We use ScraperAPI render=true +
+// wait_for_selector=.ProductModule__base to wait for cards, then parse DOM.
+//
+// Verified card structure (live render, 2025):
+//   <a class="ProductModule__base" href="https://www.tatacliq.com/slug/p-MPID">
+//     <img src="//img.tatacliq.com/images/...">
+//     <h3 class="ProductDescription__boldText">Brand</h3>
+//     <h2 class="ProductDescription__description">Title</h2>
+//     <h3 class="ProductDescription__boldText"> ₹1324</h3>  ← selling price
+//     <span> ₹4345</span>  (inside priceCancelled)           ← MRP
+//     <div class="StarRating__starRatingHigh">3.6
+//
+// Cost: 10 credits (render tier). ~50s response time.
+
+export function parseTataCliqHtml(html: string): SearchProduct[] {
+  const products: SearchProduct[] = [];
+  const seen = new Set<string>();
+  const splits = html.split('class="ProductModule__base"');
+
+  for (let i = 1; i < splits.length; i++) {
+    const chunk = splits[i];
+
+    // href — full URL or relative /slug/p-MPID
+    const hrefM = chunk.match(/href="(https?:\/\/www\.tatacliq\.com\/[^"]+|\/[^"]+\/p-[^"]+)"/);
+    if (!hrefM) continue;
+    const url = hrefM[1].startsWith('http') ? hrefM[1] : `https://www.tatacliq.com${hrefM[1]}`;
+
+    const styleIdM = url.match(/\/p-([A-Z0-9]+)/);
+    const styleId = styleIdM?.[1] ?? String(i);
+    if (seen.has(styleId)) continue;
+    seen.add(styleId);
+
+    // Image — protocol-relative //img.tatacliq.com/...
+    const imgM = chunk.match(/src="(\/\/img\.tatacliq\.com\/[^"]+)"/);
+    const imageUrl = imgM ? `https:${imgM[1]}` : '';
+    if (!imageUrl) continue;
+
+    // Brand — first ProductDescription__boldText
+    const brandM = chunk.match(/ProductDescription__boldText">([^<]+)</);
+    const brand = brandM ? cleanText(brandM[1]) : undefined;
+
+    // Title — ProductDescription__description h2
+    const titleM = chunk.match(/ProductDescription__description[^"]*">([^<]+)</);
+    const title = titleM ? cleanText(titleM[1]) : (brand ?? '');
+    if (!title || title.length < 5) continue;
+
+    // Selling price — last boldText h3 containing ₹
+    const boldPrices = [...chunk.matchAll(/ProductDescription__boldText">[^\u20b9]*\u20b9\s*([\d,]+)/g)];
+    const price = boldPrices.length ? parsePrice(boldPrices[boldPrices.length - 1][1]) : 0;
+    if (price <= 0) continue;
+
+    // MRP — inside priceCancelled
+    const mrpM = chunk.match(/priceCancelled[^>]*>[^\u20b9]*\u20b9\s*([\d,]+)/);
+    const mrp = mrpM ? parsePrice(mrpM[1]) : 0;
+
+    // Rating
+    const ratingM = chunk.match(/starRatingHigh">([\d.]+)/);
+    const rating = ratingM ? Number(ratingM[1]) : undefined;
+
+    products.push({
+      id: `tc_${styleId}`,
+      title,
+      brand,
+      price,
+      originalPrice: mrp > price ? mrp : undefined,
+      discount: mrp > price ? Math.round(((mrp - price) / mrp) * 100) : undefined,
+      imageUrl,
+      platform: 'Tata CLiQ',
+      url,
+      rating,
+    });
+
+    if (products.length >= 20) break;
+  }
+
+  return products;
+}
+
+async function fetchTataCliq(query: string): Promise<SearchProduct[]> {
+  if (!SCRAPER_KEYS.length) return [];
+  if (isCircuitOpen('tatacliq')) return [];
+
+  try {
+    const targetUrl = `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(query)}`;
+    const scraped = scraperUrl(targetUrl, { render: true, wait_for_selector: '.ProductModule__base' });
+    const { data: html } = await withScraperSlot(() => axios.get(scraped, {
+      responseType: 'text',
+      timeout: 70000,
+    }));
+
+    if (typeof html !== 'string' || html.length < 5000) {
+      console.warn('[TataCliq] short/invalid response, length:', typeof html === 'string' ? html.length : 0);
+      recordFailure('tatacliq');
+      return [];
+    }
+
+    if (!html.includes('ProductModule__base')) {
+      console.warn('[TataCliq] product grid did not render');
+      recordFailure('tatacliq');
+      return [];
+    }
+
+    const products = parseTataCliqHtml(html).filter(p => isValidProduct(p));
+    console.log(`[TataCliq] ${products.length} products from rendered HTML`);
+    recordSuccess('tatacliq');
+    return products;
+  } catch (e: any) {
+    console.error('[TataCliq] error:', e?.message?.slice(0, 100));
+    recordFailure('tatacliq');
+    return [];
+  }
+}
+
+
 // A single transient failure (momentary rate limit, timeout, one-off block)
 // shouldn't zero out a whole platform for the user. But blindly retrying is
 // dangerous: if the first attempt was already slow (e.g. it escalated through
@@ -847,7 +962,7 @@ export function groupSearchResults(products: SearchProduct[]): CanonicalProduct[
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 // Exported for diagnostic/testing purposes only (per-platform isolation).
-export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio, fetchMeesho };
+export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio, fetchMeesho, fetchTataCliq };
 
 export async function searchProducts(query: string): Promise<CanonicalProduct[]> {
   const { canonicals } = await searchProductsWithMeta(query);
@@ -914,6 +1029,7 @@ export async function searchProductsStreaming(
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []).then(r => processed('meesho', r)),
     withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []).then(r => processed('myntra', r)),
+    withTimeout(fetchTataCliq(searchTerm), 70000).catch(() => []).then(r => processed('tatacliq', r)),
   ]);
 
   const fetchedAt = new Date();
@@ -986,12 +1102,13 @@ export async function searchProductsWithMeta(
   recordCacheMiss(cacheKey);
 
   const scrapePromise = (async (): Promise<{ data: SearchProduct[]; meta: CacheMeta }> => {
-    const [az1, fk, aj, ms, mn] = await Promise.all([
+    const [az1, fk, aj, ms, mn, tc] = await Promise.all([
       withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS),
       withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
       withRetry(() => fetchAjio(searchTerm), 'Ajio'),
       withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []),
       withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []),
+      withTimeout(fetchTataCliq(searchTerm), 70000).catch(() => []),
     ]);
 
     const seenAsins = new Set<string>();
@@ -1002,7 +1119,7 @@ export async function searchProductsWithMeta(
       return true;
     });
 
-    const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms, ...mn]
+    const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms, ...mn, ...tc]
       .filter(p => isValidProduct(p))
       .filter(p => isRelevantToQuery(p, searchTerm))
       .map(p => ({ ...p, affiliateUrl: buildAffiliateUrl(p.platform, p.url) }));
