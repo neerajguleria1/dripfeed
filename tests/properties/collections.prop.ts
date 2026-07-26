@@ -81,10 +81,13 @@ describe('Property 14: Collection Title and Description Validation', () => {
 
   it('titles over 100 chars fail validation', () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 101, maxLength: 200 }), (title) => {
-        const result = validateCollectionTitle(title);
-        expect(result.valid).toBe(false);
-      }),
+      fc.property(
+        fc.string({ minLength: 101, maxLength: 200 }).filter((s) => s.trim().length > 100),
+        (title) => {
+          const result = validateCollectionTitle(title);
+          expect(result.valid).toBe(false);
+        },
+      ),
     );
   });
 

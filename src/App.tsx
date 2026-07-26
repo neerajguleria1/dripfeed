@@ -40,7 +40,7 @@ function RecentlyViewedSync() {
   const { user, setOnLoginSuccess } = useAuth();
   const { syncAfterLogin } = useRecentlyViewed(!!user);
   useEffect(() => {
-    setOnLoginSuccess(() => syncAfterLogin);
+    setOnLoginSuccess(syncAfterLogin);
     return () => setOnLoginSuccess(null);
   }, [syncAfterLogin, setOnLoginSuccess]);
   return null;

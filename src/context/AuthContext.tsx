@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react';
 import api from '../services/api';
 
 interface User {
@@ -16,7 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
-  /** Set by useRecentlyViewed to trigger post-login sync. */
+  /** Registered by RecentlyViewedSync to trigger post-login anon→backend sync. */
   onLoginSuccess: (() => Promise<void>) | null;
   setOnLoginSuccess: (fn: (() => Promise<void>) | null) => void;
 }
@@ -26,7 +26,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 function saveSession(data: { accessToken: string; refreshToken: string; user: any }) {
   localStorage.setItem('accessToken', data.accessToken);
   localStorage.setItem('refreshToken', data.refreshToken);
-  // Normalize: backend returns id, ensure role exists (decoded from JWT if missing)
   const user: User = {
     id: data.user.id || data.user._id,
     name: data.user.name || '',
@@ -43,12 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
   });
   const [loading, setLoading] = useState(false);
-  const [onLoginSuccess, setOnLoginSuccess] = useState<(() => Promise<void>) | null>(null);
+
+  // useRef avoids the React useState function-as-updater pitfall when storing a fn
+  const onLoginSuccessRef = useRef<(() => Promise<void>) | null>(null);
+  const setOnLoginSuccess = useCallback((fn: (() => Promise<void>) | null) => {
+    onLoginSuccessRef.current = fn;
+  }, []);
 
   async function afterLogin(userData: User) {
     setUser(userData);
-    if (onLoginSuccess) {
-      try { await onLoginSuccess(); } catch { /* non-fatal */ }
+    if (onLoginSuccessRef.current) {
+      try { await onLoginSuccessRef.current(); } catch { /* non-fatal */ }
     }
   }
 
@@ -84,7 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, googleLogin, logout, onLoginSuccess, setOnLoginSuccess }}>
+    <AuthContext.Provider value={{
+      user, loading, register, login, googleLogin, logout,
+      onLoginSuccess: onLoginSuccessRef.current,
+      setOnLoginSuccess,
+    }}>
       {children}
     </AuthContext.Provider>
   );
