@@ -10,6 +10,7 @@ import { staggerChildren, staggerItem } from '../design-system/animations';
 import api from '../services/api';
 import { getSeedByCategory } from '../utils/seedSearch';
 import type { ProductData } from '../types/product';
+import { TrendingProductsSection } from '../components/discovery/TrendingProductsSection';
 
 const CATEGORY_META: Record<string, {
   emoji: string;
@@ -311,6 +312,11 @@ export default function CategoryPage() {
                 </ul>
               </section>
             )}
+
+            {/* Trending in this category */}
+            <div className="mt-10 -mx-4">
+              <TrendingProductsSection category={categoryName} defaultWindow="7d" />
+            </div>
           </>
         )}
       </div>

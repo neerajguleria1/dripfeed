@@ -21,6 +21,7 @@ import { handleSimilarProducts } from './_lib/handlers/similarProducts.js';
 import { handleUsers } from './_lib/handlers/users.js';
 import { handleAnalytics } from './_lib/handlers/analytics.js';
 import { handleAlerts } from './_lib/handlers/alerts.js';
+import { handleTrending } from './_lib/handlers/trending.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { url } = req;
@@ -28,6 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Route to appropriate handler
   if (path.startsWith('auth/')) return handleAuth(req, res, path.replace('auth/', ''));
+  if (path === 'products/trending' || path.startsWith('products/trending/')) return handleTrending(req, res, path.replace('products/trending', ''));
   if (path.startsWith('products/')) return handleProducts(req, res, path.replace('products/', ''));
   if (path.startsWith('search/')) return handleSearch(req, res, path.replace('search/', ''));
   if (path.startsWith('collections')) return handleCollections(req, res, path.replace('collections', ''));

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, MousePointerClick, TrendingUp, IndianRupee, BarChart2, Search, ShoppingBag, Bell } from 'lucide-react';
+import { Users, MousePointerClick, TrendingUp, IndianRupee, BarChart2, Search, ShoppingBag, Bell, Flame } from 'lucide-react';
 import api from '../services/api';
 import { formatINR } from '../utils/format';
 
@@ -23,6 +23,10 @@ export default function AdminPage() {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [analyticsDays, setAnalyticsDays] = useState(7);
   const [alertsData, setAlertsData] = useState<any>(null);
+  const [trendingData, setTrendingData] = useState<any>(null);
+  const [trendingWindow, setTrendingWindow] = useState<'24h' | '7d' | '30d'>('7d');
+  const [weightsDraft, setWeightsDraft] = useState<Record<string, number> | null>(null);
+  const [weightsSaving, setWeightsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('overview');
 
@@ -51,6 +55,26 @@ export default function AdminPage() {
       .catch(() => {});
   }, [tab]);
 
+  useEffect(() => {
+    if (tab !== 'trending') return;
+    api.get('/products/trending/admin')
+      .then(({ data }) => {
+        setTrendingData(data);
+        setWeightsDraft(data.weights);
+      })
+      .catch(() => {});
+  }, [tab]);
+
+  async function saveWeights() {
+    if (!weightsDraft) return;
+    setWeightsSaving(true);
+    try {
+      await api.put('/products/trending/weights', weightsDraft);
+    } catch { /* non-fatal */ } finally {
+      setWeightsSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -66,7 +90,7 @@ export default function AdminPage() {
       <h1 className="text-2xl font-bold text-[#0F0F1A] mb-6" style={{ fontFamily: 'Instrument Serif, serif' }}>Admin Dashboard</h1>
 
       <div className="flex gap-2 mb-6 border-b border-[#0F0F1A]/10">
-        {['overview', 'analytics', 'alerts', 'affiliate', 'users'].map(t => (
+        {['overview', 'analytics', 'trending', 'alerts', 'affiliate', 'users'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -79,9 +103,82 @@ export default function AdminPage() {
         ))}
       </div>
 
+      {tab === 'trending' && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            {(['24h', '7d', '30d'] as const).map(w => (
+              <button key={w} onClick={() => setTrendingWindow(w)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  trendingWindow === w ? 'bg-[#0F0F1A] text-white' : 'bg-[#F8F5F2] text-[#0F0F1A]/60 hover:bg-[#0F0F1A]/10'
+                }`}>
+                {w}
+              </button>
+            ))}
+          </div>
+
+          {!trendingData && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-white/55 rounded-2xl border border-[#0F0F1A]/10" />)}
+            </div>
+          )}
+
+          {trendingData && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Flame className="w-4 h-4 text-[#C9A96E]" />
+                  <h2 className="font-semibold text-[#0F0F1A]">Top Trending ({trendingWindow})</h2>
+                </div>
+                {trendingData.windows[trendingWindow]?.products?.length === 0
+                  ? <p className="text-sm text-[#0F0F1A]/40">No trending data yet</p>
+                  : trendingData.windows[trendingWindow]?.products?.slice(0, 10).map((p: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-[#0F0F1A]/5 last:border-0">
+                      <div className="flex-1 mr-2">
+                        <p className="text-sm text-[#0F0F1A] line-clamp-1">{p.productTitle}</p>
+                        <p className="text-xs text-[#0F0F1A]/40">
+                          v:{p.signals.views} c:{p.signals.compareClicks} w:{p.signals.wishlistAdds} a:{p.signals.affiliateClicks}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-[#0F0F1A]/60 flex-shrink-0">{p.score.toFixed(1)}</span>
+                    </div>
+                  ))}
+              </div>
+
+              {weightsDraft && (
+                <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
+                  <h2 className="font-semibold text-[#0F0F1A] mb-1">Signal Weights</h2>
+                  <p className="text-xs text-[#0F0F1A]/40 mb-4">Adjust how each signal contributes to the trending score.</p>
+                  <div className="space-y-3">
+                    {Object.entries(weightsDraft).map(([key, val]) => (
+                      <div key={key} className="flex items-center gap-3">
+                        <label className="w-36 text-sm text-[#0F0F1A] capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          value={val}
+                          onChange={e => setWeightsDraft(prev => ({ ...prev!, [key]: Number(e.target.value) }))}
+                          className="w-20 border border-[#0F0F1A]/20 rounded-lg px-2 py-1 text-sm text-[#0F0F1A] focus:outline-none focus:border-[#0F0F1A]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={saveWeights}
+                    disabled={weightsSaving}
+                    className="mt-4 px-4 py-2 bg-[#0F0F1A] text-white text-sm font-medium rounded-lg hover:bg-[#0F0F1A]/80 transition-colors disabled:opacity-50"
+                  >
+                    {weightsSaving ? 'Saving…' : 'Save Weights'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === 'analytics' && (
         <div className="space-y-6">
-          {/* Period selector */}
           <div className="flex items-center gap-2">
             {[7, 14, 30].map(d => (
               <button key={d} onClick={() => setAnalyticsDays(d)}
@@ -101,7 +198,6 @@ export default function AdminPage() {
 
           {analyticsData && (
             <>
-              {/* Summary cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={<Search className="w-5 h-5 text-[#0F0F1A]" />} label="Searches" value={analyticsData.summary.totalSearches ?? 0} sub={`${analyticsData.summary.searchSuccessRate ?? 0}% success rate`} />
                 <StatCard icon={<ShoppingBag className="w-5 h-5 text-[#0F0F1A]" />} label="Product Views" value={analyticsData.summary.totalProductViews ?? 0} />
@@ -110,7 +206,6 @@ export default function AdminPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Top Searches */}
                 <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
                   <h2 className="font-semibold text-[#0F0F1A] mb-4">Top Searches</h2>
                   {analyticsData.topSearches.length === 0
@@ -123,7 +218,6 @@ export default function AdminPage() {
                     ))}
                 </div>
 
-                {/* Top Products */}
                 <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
                   <h2 className="font-semibold text-[#0F0F1A] mb-4">Top Products</h2>
                   {analyticsData.topProducts.length === 0
@@ -136,7 +230,6 @@ export default function AdminPage() {
                     ))}
                 </div>
 
-                {/* Most Clicked Retailers */}
                 <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
                   <h2 className="font-semibold text-[#0F0F1A] mb-4">Most Clicked Retailers</h2>
                   {analyticsData.topPlatforms.length === 0
@@ -153,7 +246,6 @@ export default function AdminPage() {
                     ))}
                 </div>
 
-                {/* No Result Searches */}
                 <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
                   <h2 className="font-semibold text-[#0F0F1A] mb-1">No-Result Searches</h2>
                   <p className="text-xs text-[#0F0F1A]/40 mb-4">{analyticsData.summary.noResultSearchCount} total</p>
@@ -277,4 +369,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

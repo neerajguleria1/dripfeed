@@ -13,6 +13,7 @@ import {
   type TrendingApiItem,
 } from '../utils/homeDealsMapping';
 import { RecentlyViewedSection } from '../components/product/RecentlyViewedSection';
+import { TrendingProductsSection } from '../components/discovery/TrendingProductsSection';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../context/AuthContext';
 
@@ -436,6 +437,11 @@ export default function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      {/* ───────────────────────────────────────────────────────────────────────
+          TRENDING PRODUCTS
+      ─────────────────────────────────────────────────────────────────────── */}
+      <TrendingProductsSection />
 
       {/* ───────────────────────────────────────────────────────────────────────
           RECENTLY VIEWED
