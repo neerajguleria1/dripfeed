@@ -5,7 +5,7 @@ import { ArrowLeft, Share2, TrendingDown, Sparkles, ExternalLink, Check } from '
 import SEOHead from '../components/common/SEOHead';
 import PlatformBadge from '../components/ui/PlatformBadge';
 // CompareCard replaced by inline editorial blocks for magazine-review layout
-import { PriceHistory } from '../components/product/PriceHistory';
+import { PriceHistoryPanel } from '../components/product/PriceHistoryPanel';
 import { AIAdviceCard } from '../components/product/AIAdviceCard';
 import { SaveButton } from '../components/product/SaveButton';
 import { PriceCounter } from '../components/common/PriceCounter';
@@ -16,7 +16,7 @@ import api from '../services/api';
 import { searchSeedProducts } from '../utils/seedSearch';
 import type { ProductData } from '../types/product';
 import type { AIAdvice } from '../components/product/AIAdviceCard';
-import type { PriceHistoryPoint } from '../components/product/PriceHistory';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Editorial Verdict — one-line reviewer's notes per platform
@@ -49,7 +49,8 @@ export default function ComparePage() {
   const [aiError, setAiError] = useState(false);
   const aiRequestedRef = useRef(false);
 
-  const [priceHistory] = useState<PriceHistoryPoint[]>([]);
+  // canonicalId for price history — derived from the first result's id once loaded
+  const canonicalId = platforms[0]?.id ?? '';
 
   useEffect(() => {
     aiRequestedRef.current = false;
@@ -459,13 +460,18 @@ export default function ComparePage() {
                 ))}
               </motion.section>
 
-              {/* ─── 3. Price History — Clean white card ─── */}
-              <section className="bg-white rounded-2xl border border-neutral-100 hover:border-[#C9A96E]/30 transition-all p-4 sm:p-6">
-                <h2 className="text-[13px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.1em] mb-5">
-                  Price History
-                </h2>
-                <PriceHistory history={priceHistory} />
-              </section>
+              {/* ─── 3. Price History — lazy-loaded panel ─── */}
+              {canonicalId && (
+                <section className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:border-[#C9A96E]/30 transition-all p-4 sm:p-6">
+                  <h2 className="text-[13px] sm:text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.1em] mb-5">
+                    Price History
+                  </h2>
+                  <PriceHistoryPanel
+                    canonicalId={canonicalId}
+                    currentPrice={lowest?.price ?? 0}
+                  />
+                </section>
+              )}
 
               {/* ─── 4. AI Advice — Gold theme "TagCheck Analysis" ─── */}
               {(aiLoading || aiAdvice) && (

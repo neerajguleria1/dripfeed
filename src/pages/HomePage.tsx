@@ -12,6 +12,10 @@ import {
   type DealApiItem,
   type TrendingApiItem,
 } from '../utils/homeDealsMapping';
+import { RecentlyViewedSection } from '../components/product/RecentlyViewedSection';
+import { TrendingProductsSection } from '../components/discovery/TrendingProductsSection';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -69,6 +73,8 @@ export default function HomePage() {
   const [dealsSectionState, setDealsSectionState] = useState<'loading' | 'deals' | 'trending' | 'empty'>('loading');
   const [searchQuery, setSearchQuery] = useState('');
   const heroRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { items: recentItems, loading: recentLoading } = useRecentlyViewed(!!user);
 
   useEffect(() => {
     let cancelled = false;
@@ -431,6 +437,18 @@ export default function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      {/* ───────────────────────────────────────────────────────────────────────
+          TRENDING PRODUCTS
+      ─────────────────────────────────────────────────────────────────────── */}
+      <TrendingProductsSection />
+
+      {/* ───────────────────────────────────────────────────────────────────────
+          RECENTLY VIEWED
+      ─────────────────────────────────────────────────────────────────────── */}
+      {(recentLoading || recentItems.length > 0) && (
+        <RecentlyViewedSection items={recentItems} loading={recentLoading} />
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           SOCIAL PROOF — Clean, confident numbers

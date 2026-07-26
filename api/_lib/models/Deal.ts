@@ -33,10 +33,17 @@ const DealSchema = new mongoose.Schema<IDeal>(
   { timestamps: true }
 );
 
-DealSchema.index({ detectedAt: -1 });
-DealSchema.index({ platform: 1 });
-DealSchema.index({ active: 1 });
-// TTL: remove deals older than 48 hours
+// ─── Indexes ──────────────────────────────────────────────────────────────────
+// Primary read path for deals handler: { active: true } with optional platform
+// and minDiscount filters, sorted by dropPercentage or detectedAt.
+// A compound index on (active, dropPercentage) covers the default sort and
+// the active=true filter with one index scan instead of a collection scan.
+DealSchema.index({ active: 1, dropPercentage: -1 });
+// Compound for platform-filtered queries: { active: true, platform: X }
+DealSchema.index({ active: 1, platform: 1, dropPercentage: -1 });
+// For sort=recent path: { active: true } sorted by detectedAt desc
+DealSchema.index({ active: 1, detectedAt: -1 });
+// TTL: auto-delete deals older than 48 hours
 DealSchema.index({ detectedAt: 1 }, { expireAfterSeconds: 172800 });
 
 export default mongoose.models.Deal || mongoose.model<IDeal>('Deal', DealSchema);

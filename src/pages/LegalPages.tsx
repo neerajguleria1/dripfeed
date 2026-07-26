@@ -344,3 +344,16 @@ export function NotFoundPage() {
   );
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   DEFAULT EXPORT — used by lazy() in App.tsx
+   Accepts a `page` prop so all legal pages live in one chunk.
+   ───────────────────────────────────────────────────────────── */
+type LegalPageKey = 'privacy' | 'terms' | 'disclosure' | '404';
+
+export default function LegalPages({ page }: { page: LegalPageKey }) {
+  if (page === 'privacy')    return <PrivacyPage />;
+  if (page === 'terms')      return <TermsPage />;
+  if (page === 'disclosure') return <AffiliateDisclosurePage />;
+  return <NotFoundPage />;
+}

@@ -20,7 +20,8 @@
 
 export const VOCAB_MAP: Readonly<Record<string, string>> = {
   // ── Footwear ──────────────────────────────────────────────────────────────
-  sneakers:  'sneaker',
+  sneaker:   'shoe',
+  sneakers:  'shoe',
   shoes:     'shoe',
   sandals:   'sandal',
   boots:     'boot',

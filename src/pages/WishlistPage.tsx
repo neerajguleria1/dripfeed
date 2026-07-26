@@ -23,12 +23,8 @@ interface WishlistItem {
   lowestPrice?: number;
   lowestPlatform?: string;
   notifyOnDrop: boolean;
-}
-
-// Mock sparkline data generator for now
-function mockPriceHistory(): number[] {
-  const base = 800 + Math.random() * 2000;
-  return Array.from({ length: 7 }, () => base + (Math.random() - 0.5) * 300);
+  /** Real price history from the backend (oldest-first, up to 7 entries). */
+  priceHistory?: number[];
 }
 
 export default function WishlistPage() {
@@ -143,7 +139,9 @@ export default function WishlistPage() {
                 : null;
               const dropped = priceDiff !== null && priceDiff < 0;
               const risen = priceDiff !== null && priceDiff > 0;
-              const sparkData = mockPriceHistory();
+              // Use real price history from the API; fall back to empty array
+              // so the Sparkline renders nothing rather than random data.
+              const sparkData = item.priceHistory ?? [];
 
               return (
                 <motion.div

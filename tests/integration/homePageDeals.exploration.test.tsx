@@ -24,6 +24,7 @@
  *      deals → trending → empty-state fallback chain, guarding against the
  *      bug (or an equivalent seed-data-masking regression) being reintroduced.
  */
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';

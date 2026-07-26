@@ -44,6 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const startTime = Date.now();
   const MAX_DURATION_MS = 9000; // Stay under 10s free tier limit
 
+  console.log('[populate-catalog] starting run at', new Date().toISOString());
+
   try {
     await connectDB();
 
@@ -53,7 +55,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (let i = 0; i < POPULAR_QUERIES.length; i += BATCH_SIZE) {
       // Check if we're running out of time
-      if (Date.now() - startTime > MAX_DURATION_MS) break;
+      if (Date.now() - startTime > MAX_DURATION_MS) {
+        console.log('[populate-catalog] approaching time limit — stopping early at query index', i);
+        break;
+      }
 
       const batch = POPULAR_QUERIES.slice(i, i + BATCH_SIZE);
 
@@ -110,6 +115,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       );
 
+      // Log any failures in this batch
+      results.forEach((r, idx) => {
+        if (r.status === 'rejected') {
+          console.error(`[populate-catalog] query "${batch[idx]}" failed:`, r.reason?.message);
+        }
+      });
+
       // Small delay between batches to avoid rate limiting
       if (i + BATCH_SIZE < POPULAR_QUERIES.length) {
         await sleep(SCRAPE_DELAY_MS);
@@ -117,6 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const duration = Date.now() - startTime;
+    console.log(`[populate-catalog] completed — processed=${processed} stored=${stored} skipped=${skipped} duration=${duration}ms`);
 
     return res.json({
       success: true,
@@ -127,6 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       totalQueries: POPULAR_QUERIES.length,
     });
   } catch (e: any) {
+    console.error('[populate-catalog] fatal error:', e?.message);
     return res.status(500).json({ error: 'Catalog population failed', message: e.message });
   }
 }

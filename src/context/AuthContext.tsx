@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react';
 import api from '../services/api';
 
 interface User {
@@ -16,6 +16,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
+  /** Registered by RecentlyViewedSync to trigger post-login anon→backend sync. */
+  onLoginSuccess: (() => Promise<void>) | null;
+  setOnLoginSuccess: (fn: (() => Promise<void>) | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -23,7 +26,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 function saveSession(data: { accessToken: string; refreshToken: string; user: any }) {
   localStorage.setItem('accessToken', data.accessToken);
   localStorage.setItem('refreshToken', data.refreshToken);
-  // Normalize: backend returns id, ensure role exists (decoded from JWT if missing)
   const user: User = {
     id: data.user.id || data.user._id,
     name: data.user.name || '',
@@ -41,12 +43,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [loading, setLoading] = useState(false);
 
+  // useRef avoids the React useState function-as-updater pitfall when storing a fn
+  const onLoginSuccessRef = useRef<(() => Promise<void>) | null>(null);
+  const setOnLoginSuccess = useCallback((fn: (() => Promise<void>) | null) => {
+    onLoginSuccessRef.current = fn;
+  }, []);
+
+  async function afterLogin(userData: User) {
+    setUser(userData);
+    if (onLoginSuccessRef.current) {
+      try { await onLoginSuccessRef.current(); } catch { /* non-fatal */ }
+    }
+  }
+
   async function register(name: string, email: string, password: string) {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/register', { name, email, password });
-      const user = saveSession(data);
-      setUser(user);
+      await afterLogin(saveSession(data));
     } finally { setLoading(false); }
   }
 
@@ -54,8 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      const user = saveSession(data);
-      setUser(user);
+      await afterLogin(saveSession(data));
     } finally { setLoading(false); }
   }
 
@@ -63,8 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/google', { idToken });
-      const user = saveSession(data);
-      setUser(user);
+      await afterLogin(saveSession(data));
     } finally { setLoading(false); }
   }
 
@@ -76,7 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, googleLogin, logout }}>
+    <AuthContext.Provider value={{
+      user, loading, register, login, googleLogin, logout,
+      onLoginSuccess: onLoginSuccessRef.current,
+      setOnLoginSuccess,
+    }}>
       {children}
     </AuthContext.Provider>
   );

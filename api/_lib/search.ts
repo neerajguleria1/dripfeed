@@ -2,6 +2,12 @@ import axios from 'axios';
 import { buildAffiliateUrl } from './affiliate.js';
 import { connectDB } from './db.js';
 import SearchCache from './models/SearchCache.js';
+import { normalizeProducts } from './normalizer.js';
+import { groupIntoCanonicals } from './matcher.js';
+import type { CanonicalProduct } from './types/canonicalProduct.js';
+import { saveBulkSnapshots, type SnapshotInput } from './priceHistory.js';
+import { evaluateAlerts } from './alertService.js';
+import { LRUCache } from './lruCache.js';
 
 // SearchProduct is defined in its own file so the normalizer and tests
 // can import the type without pulling in this module's heavy dependencies
@@ -48,42 +54,58 @@ async function withScraperSlot<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
-// Platforms that only work via costly ScraperAPI tiers (premium/ultra_premium)
-// get a much longer cache TTL so one expensive scrape serves many users instead
-// of re-paying the credit cost every few hours.
-const memCache = new Map<string, { data: SearchProduct[]; ts: number }>();
-const MEM_TTL           = 2 * 60 * 60 * 1000;   // 2h — cheap platforms (Amazon/Flipkart)
-const DB_TTL_MS         = 6 * 60 * 60 * 1000;   // 6h — cheap platforms
-const EXPENSIVE_TTL_MS  = 24 * 60 * 60 * 1000;  // 24h — Ajio (may hit premium tier)
+import {
+  QUERY_CACHE_TTL_MS,
+  buildCacheMeta,
+  liveCacheMeta,
+  recordCacheHit,
+  recordCacheMiss,
+  type CacheMeta,
+} from './cache/policy.js';
 
-function getMemCached(key: string, ttl = MEM_TTL): SearchProduct[] | null {
+// Bounded LRU — max 500 entries prevents unbounded growth on long-running
+// instances that receive thousands of distinct queries. LRU evicts the
+// least-recently-used entry when the cap is reached, keeping hot queries warm.
+interface MemEntry { data: SearchProduct[]; fetchedAt: Date; }
+const memCache = new LRUCache<string, MemEntry>({ maxSize: 500 });
+
+function getMemCached(key: string): { data: SearchProduct[]; meta: CacheMeta } | null {
   const entry = memCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.ts > ttl) { memCache.delete(key); return null; }
-  return entry.data;
+  if (Date.now() - entry.fetchedAt.getTime() > QUERY_CACHE_TTL_MS) {
+    memCache.delete(key);
+    return null;
+  }
+  return { data: entry.data, meta: buildCacheMeta(entry.fetchedAt, 'memory') };
 }
-function setMemCache(key: string, data: SearchProduct[]) {
-  memCache.set(key, { data, ts: Date.now() });
+function setMemCache(key: string, data: SearchProduct[], fetchedAt = new Date()) {
+  memCache.set(key, { data, fetchedAt });
 }
-async function getDbCached(query: string, ttl = DB_TTL_MS): Promise<SearchProduct[] | null> {
+async function getDbCached(query: string): Promise<{ data: SearchProduct[]; meta: CacheMeta } | null> {
   try {
     await connectDB();
     const doc = await SearchCache.findOne({ query }).lean();
     if (!doc) return null;
-    if (Date.now() - new Date(doc.cachedAt).getTime() > ttl) return null;
-    return doc.results as SearchProduct[];
+    const fetchedAt = doc.fetchedAt ?? doc.cachedAt;
+    if (Date.now() - new Date(fetchedAt).getTime() > QUERY_CACHE_TTL_MS) return null;
+    return { data: doc.results as SearchProduct[], meta: buildCacheMeta(new Date(fetchedAt), 'mongodb') };
   } catch { return null; }
 }
-async function setDbCache(query: string, results: SearchProduct[]) {
+async function setDbCache(query: string, results: SearchProduct[], fetchedAt = new Date(), canonicalIds: string[] = []) {
   try {
     await connectDB();
     await SearchCache.findOneAndUpdate(
       { query },
-      { results, cachedAt: new Date() },
+      { results, fetchedAt, cachedAt: fetchedAt, canonicalIds },
       { upsert: true, new: true }
     );
   } catch { /* non-fatal */ }
 }
+
+// ─── In-flight deduplication ──────────────────────────────────────────────────
+// If two requests arrive for the same query simultaneously, only one live
+// scrape fires. The second waits for the first to resolve and reuses its result.
+const inFlight = new Map<string, Promise<{ data: SearchProduct[]; meta: CacheMeta }>>();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -266,6 +288,29 @@ function getNextRoundRobinKey(): string {
   return key;
 }
 
+/**
+ * Build a ScraperAPI URL with the key embedded in the query string.
+ *
+ * SECURITY: The api_key must NEVER be passed via axios `params` because axios
+ * serialises params into the request config object, which appears verbatim in
+ * error stack traces and Vercel function logs. Building the URL as a string
+ * keeps the key out of any structured error object.
+ */
+function scraperUrl(
+  targetUrl: string,
+  extra: Record<string, string | boolean | number> = {},
+): string {
+  const key = getNextRoundRobinKey();
+  const base = new URL('https://api.scraperapi.com/');
+  base.searchParams.set('api_key', key);
+  base.searchParams.set('url', targetUrl);
+  base.searchParams.set('country_code', 'in');
+  for (const [k, v] of Object.entries(extra)) {
+    base.searchParams.set(k, String(v));
+  }
+  return base.toString();
+}
+
 // ─── Per-platform circuit breaker ────────────────────────────────────────────
 // After N consecutive failures, skip a platform for a cooldown window instead
 // of burning credits retrying a site that is actively blocking every request.
@@ -353,15 +398,10 @@ async function fetchWithEscalation(
 
   for (const tier of tiers) {
     try {
-      const { data } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-        params: {
-          api_key: getNextRoundRobinKey(),
-          url: targetUrl,
-          country_code: 'in',
-          ...tier.params,
-        },
+      const url = scraperUrl(targetUrl, tier.params as Record<string, string | boolean | number>);
+      const { data } = await withScraperSlot(() => axios.get(url, {
         timeout: tier.params.render ? 40000 : 15000,
-        transformResponse: [(res) => res], // keep raw string even for JSON content-type responses
+        transformResponse: [(res) => res],
       }));
       const text = typeof data === 'string' ? data : String(data);
       if (validate(text)) {
@@ -391,8 +431,8 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
   if (!SCRAPER_KEYS.length) { console.error('[Amazon] No API keys'); return []; }
   if (isCircuitOpen('amazon')) return [];
   try {
-    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: { api_key: getNextRoundRobinKey(), url: `https://www.amazon.in/s?k=${encodeURIComponent(query)}&i=fashion&page=${page}`, country_code: 'in' },
+    const url = scraperUrl(`https://www.amazon.in/s?k=${encodeURIComponent(query)}&i=fashion&page=${page}`);
+    const { data: html } = await withScraperSlot(() => axios.get(url, {
       timeout: 20000,
       transformResponse: [(d) => d],
     }));
@@ -535,13 +575,8 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
   // Fallback: ScraperAPI plain tier — 1 credit
   if (!SCRAPER_KEYS.length) return [];
   try {
-    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: getNextRoundRobinKey(),
-        url: `https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`,
-        render: false,
-        country_code: 'in',
-      },
+    const url = scraperUrl(`https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`);
+    const { data: html } = await withScraperSlot(() => axios.get(url, {
       timeout: 15000,
       transformResponse: [(d) => d],
     }));
@@ -564,12 +599,8 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
     const encoded = encodeURIComponent(query);
     // Myntra blocks Vercel datacenter IPs — route through ScraperAPI with Indian IP
     // Uses plain tier (1 credit) since window.__myx is server-rendered, no JS needed
-    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: getNextRoundRobinKey(),
-        url: `https://www.myntra.com/${encoded}`,
-        country_code: 'in',
-      },
+    const url = scraperUrl(`https://www.myntra.com/${encoded}`);
+    const { data: html } = await withScraperSlot(() => axios.get(url, {
       responseType: 'text',
       timeout: 25000,
     }));
@@ -625,14 +656,8 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
 async function fetchMeesho(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
   try {
-    const { data: html } = await withScraperSlot(() => axios.get('https://api.scraperapi.com/', {
-      params: {
-        api_key: getNextRoundRobinKey(),
-        url: `https://www.meesho.com/search?q=${encodeURIComponent(query)}`,
-        render: true,
-        country_code: 'in',
-        wait: 8000,
-      },
+    const url = scraperUrl(`https://www.meesho.com/search?q=${encodeURIComponent(query)}`, { render: true, wait: 8000 });
+    const { data: html } = await withScraperSlot(() => axios.get(url, {
       timeout: 90000,
       transformResponse: [(d) => d],
     }));
@@ -799,84 +824,68 @@ async function withRetry<T>(
   }
 }
 
+// ─── Matcher integration ──────────────────────────────────────────────────────
+// Normalizes a flat SearchProduct[] and groups it into CanonicalProduct[].
+// Same-platform duplicates within a canonical keep only the cheapest offer.
+// Canonicals are sorted by their cheapest offer price (ascending).
+export function groupSearchResults(products: SearchProduct[]): CanonicalProduct[] {
+  if (!products.length) return [];
+  const canonicals = groupIntoCanonicals(normalizeProducts(products));
+  return canonicals.map(canonical => {
+    // Keep only the cheapest offer per platform inside each canonical
+    const byPlatform = new Map<string, typeof canonical.offers[0]>();
+    for (const offer of canonical.offers) {
+      const key = offer.platform.toLowerCase();
+      const existing = byPlatform.get(key);
+      if (!existing || offer.price < existing.price) byPlatform.set(key, offer);
+    }
+    const deduped = Array.from(byPlatform.values()).sort((a, b) => a.price - b.price);
+    return { ...canonical, offers: deduped, offerCount: deduped.length };
+  }).sort((a, b) => (a.offers[0]?.price ?? Infinity) - (b.offers[0]?.price ?? Infinity));
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 // Exported for diagnostic/testing purposes only (per-platform isolation).
 export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio, fetchMeesho };
 
-export async function searchProducts(query: string): Promise<SearchProduct[]> {
-  const cacheKey = normalizeQuery(query);
-  const searchTerm = query.toLowerCase().trim();
-  console.log(`[search] keys=${SCRAPER_KEYS.length} key0=${SCRAPER_KEYS[0]?.slice(0,8)}... query=${searchTerm}`);
-
-  // Expensive platforms (Ajio may hit paid ScraperAPI tiers) get a longer
-  // cache TTL so one costly scrape serves many searches, not just 6h worth.
-  const mem = getMemCached(cacheKey, EXPENSIVE_TTL_MS);
-  if (mem) return mem;
-
-  const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
-  if (db) { setMemCache(cacheKey, db); return db; }
-
-  const [az1, fk, aj, ms, mn] = await Promise.all([
-    withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS),
-    withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
-    withRetry(() => fetchAjio(searchTerm), 'Ajio'),
-    withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []),
-    withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []),
-  ]);
-
-  // Deduplicate Amazon by ASIN
-  const seenAsins = new Set<string>();
-  const dedupedAmazon = az1.filter(p => {
-    const asin = p.url.split('/dp/')[1]?.split('?')[0];
-    if (!asin || seenAsins.has(asin)) return false;
-    seenAsins.add(asin);
-    return true;
-  });
-
-  const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms, ...mn]
-    .filter(p => isValidProduct(p))
-    .filter(p => isRelevantToQuery(p, searchTerm))
-    .sort((a, b) => a.price - b.price);
-
-  const withAffiliate = allResults.map(p => ({
-    ...p,
-    affiliateUrl: buildAffiliateUrl(p.platform, p.url),
-  }));
-
-  if (withAffiliate.length) {
-    setMemCache(cacheKey, withAffiliate);
-    setDbCache(cacheKey, withAffiliate);
-  }
-
-  return withAffiliate;
+export async function searchProducts(query: string): Promise<CanonicalProduct[]> {
+  const { canonicals } = await searchProductsWithMeta(query);
+  return canonicals;
 }
 
 /**
- * Streaming variant of searchProducts(). Fires all platform fetchers in
- * parallel exactly like searchProducts(), but invokes `onPlatform` as soon as
- * EACH platform's results are ready — instead of waiting for the slowest one
- * (Myntra/Ajio can take 40-90s on ScraperAPI escalation, while Amazon/Flipkart
- * often resolve in a few seconds). This lets callers (e.g. an SSE endpoint)
- * show partial results immediately rather than blocking on the whole batch.
- *
- * Caching, dedup, validity/relevance filtering, and affiliate URL generation
- * are identical to searchProducts() — only the delivery timing differs.
+ * Streaming variant: fires all platform fetchers in parallel, calls
+ * `onPlatform` as each platform resolves (drives the live status pills in
+ * the UI), then groups all collected results into CanonicalProduct[] once
+ * every platform has settled. Grouping requires seeing all platforms first
+ * because a Flipkart result may match an Amazon result that arrived earlier.
  */
 export async function searchProductsStreaming(
   query: string,
   onPlatform: (platform: string, products: SearchProduct[]) => void,
-  skipCacheCheck = false, // set true when caller already checked cache
-): Promise<SearchProduct[]> {
+  skipCacheCheck = false,
+): Promise<{ canonicals: CanonicalProduct[]; meta: CacheMeta }> {
   const cacheKey = normalizeQuery(query);
   const searchTerm = query.toLowerCase().trim();
 
   if (!skipCacheCheck) {
-    const mem = getMemCached(cacheKey, EXPENSIVE_TTL_MS);
-    if (mem) { if (mem.length) onPlatform('cache', mem); return mem; }
-    const db = await getDbCached(cacheKey, EXPENSIVE_TTL_MS);
-    if (db) { setMemCache(cacheKey, db); if (db.length) onPlatform('cache', db); return db; }
+    const mem = getMemCached(cacheKey);
+    if (mem) {
+      recordCacheHit('memory', cacheKey);
+      onPlatform('cache', mem.data);
+      return { canonicals: groupSearchResults(mem.data), meta: mem.meta };
+    }
+    const db = await getDbCached(cacheKey);
+    if (db) {
+      setMemCache(cacheKey, db.data, new Date(db.meta.fetchedAt));
+      recordCacheHit('mongodb', cacheKey);
+      onPlatform('cache', db.data);
+      return { canonicals: groupSearchResults(db.data), meta: db.meta };
+    }
   }
+
+  recordCacheMiss(cacheKey);
 
   const seenAsins = new Set<string>();
   const collected: SearchProduct[] = [];
@@ -893,12 +902,10 @@ export async function searchProductsStreaming(
     }
     const valid = items
       .filter(p => isValidProduct(p))
-      .filter(p => isRelevantToQuery(p, searchTerm));
-    const withAffiliate = valid.map(p => ({ ...p, affiliateUrl: buildAffiliateUrl(p.platform, p.url) }));
-    collected.push(...withAffiliate);
-    if (withAffiliate.length) {
-      onPlatform(platform, [...withAffiliate].sort((a, b) => a.price - b.price));
-    }
+      .filter(p => isRelevantToQuery(p, searchTerm))
+      .map(p => ({ ...p, affiliateUrl: buildAffiliateUrl(p.platform, p.url) }));
+    collected.push(...valid);
+    if (valid.length) onPlatform(platform, valid);
   }
 
   await Promise.all([
@@ -909,17 +916,135 @@ export async function searchProductsStreaming(
     withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []).then(r => processed('myntra', r)),
   ]);
 
-  const sorted = collected.sort((a, b) => a.price - b.price);
+  const fetchedAt = new Date();
+  if (collected.length) {
+    setMemCache(cacheKey, collected, fetchedAt);
+    const canonicals = groupSearchResults(collected);
+    setDbCache(cacheKey, collected, fetchedAt, canonicals.map(c => c.id));
 
-  if (sorted.length) {
-    setMemCache(cacheKey, sorted);
-    setDbCache(cacheKey, sorted);
+    // Fire-and-forget price history persistence
+    const snapshots: SnapshotInput[] = canonicals.flatMap(c =>
+      c.offers.map(o => ({
+        canonicalId:   c.id,
+        platform:      o.platform,
+        productId:     o.platformProductId,
+        price:         o.price,
+        originalPrice: o.originalPrice,
+        discount:      o.discount,
+        fetchedAt,
+        rating:        o.rating,
+      }))
+    );
+    saveBulkSnapshots(snapshots).catch(() => { /* non-fatal */ });
+    // Evaluate price alerts fire-and-forget after live prices are fetched
+    for (const c of canonicals) {
+      const lowestPrice = c.offers[0]?.price;
+      if (lowestPrice) evaluateAlerts(c.id, lowestPrice).catch(() => {});
+    }
+    return { canonicals, meta: liveCacheMeta() };
   }
 
-  return sorted;
+  return { canonicals: groupSearchResults(collected), meta: liveCacheMeta() };
 }
 
 export { getMemCached, getDbCached, normalizeQuery };
+
+export type { CacheMeta } from './cache/policy.js';
+
+// ─── searchProductsWithMeta ───────────────────────────────────────────────────
+// Returns both the canonical products AND cache metadata.
+// Used by the handler to attach freshness info to every API response.
+
+export async function searchProductsWithMeta(
+  query: string,
+  bypassCache = false,
+): Promise<{ canonicals: ReturnType<typeof groupSearchResults>; meta: CacheMeta }> {
+  const cacheKey = normalizeQuery(query);
+  const searchTerm = query.toLowerCase().trim();
+
+  if (!bypassCache) {
+    const mem = getMemCached(cacheKey);
+    if (mem) {
+      recordCacheHit('memory', cacheKey);
+      return { canonicals: groupSearchResults(mem.data), meta: mem.meta };
+    }
+    const db = await getDbCached(cacheKey);
+    if (db) {
+      setMemCache(cacheKey, db.data, new Date(db.meta.fetchedAt));
+      recordCacheHit('mongodb', cacheKey);
+      return { canonicals: groupSearchResults(db.data), meta: db.meta };
+    }
+  }
+
+  // In-flight dedup: if a live scrape is already running for this key, wait for it
+  const existing = inFlight.get(cacheKey);
+  if (existing) {
+    const result = await existing;
+    return { canonicals: groupSearchResults(result.data), meta: result.meta };
+  }
+
+  recordCacheMiss(cacheKey);
+
+  const scrapePromise = (async (): Promise<{ data: SearchProduct[]; meta: CacheMeta }> => {
+    const [az1, fk, aj, ms, mn] = await Promise.all([
+      withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS),
+      withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
+      withRetry(() => fetchAjio(searchTerm), 'Ajio'),
+      withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []),
+      withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []),
+    ]);
+
+    const seenAsins = new Set<string>();
+    const dedupedAmazon = az1.filter(p => {
+      const asin = p.url.split('/dp/')[1]?.split('?')[0];
+      if (!asin || seenAsins.has(asin)) return false;
+      seenAsins.add(asin);
+      return true;
+    });
+
+    const allResults = [...dedupedAmazon, ...fk, ...aj, ...ms, ...mn]
+      .filter(p => isValidProduct(p))
+      .filter(p => isRelevantToQuery(p, searchTerm))
+      .map(p => ({ ...p, affiliateUrl: buildAffiliateUrl(p.platform, p.url) }));
+
+    const fetchedAt = new Date();
+    if (allResults.length) {
+      setMemCache(cacheKey, allResults, fetchedAt);
+      const canonicals = groupSearchResults(allResults);
+      setDbCache(cacheKey, allResults, fetchedAt, canonicals.map(c => c.id));
+
+      // Fire-and-forget: persist price snapshots without blocking the response.
+      const snapshots: SnapshotInput[] = canonicals.flatMap(c =>
+        c.offers.map(o => ({
+          canonicalId:   c.id,
+          platform:      o.platform,
+          productId:     o.platformProductId,
+          price:         o.price,
+          originalPrice: o.originalPrice,
+          discount:      o.discount,
+          fetchedAt,
+          rating:        o.rating,
+        }))
+      );
+      saveBulkSnapshots(snapshots).catch(() => { /* non-fatal */ });
+      // Evaluate price alerts fire-and-forget
+      for (const c of canonicals) {
+        const lowestPrice = c.offers[0]?.price;
+        if (lowestPrice) evaluateAlerts(c.id, lowestPrice).catch(() => {});
+      }
+    }
+
+    return { data: allResults, meta: liveCacheMeta() };
+  })();
+
+  inFlight.set(cacheKey, scrapePromise);
+  try {
+    const result = await scrapePromise;
+    return { canonicals: groupSearchResults(result.data), meta: result.meta };
+  } finally {
+    inFlight.delete(cacheKey);
+  }
+}
 
 // ─── Related queries map ──────────────────────────────────────────────────────
 // Maps a search intent to related product queries for "Complete the Look"
@@ -982,11 +1107,10 @@ function findRelated(query: string): { label: string; queries: string[] } | null
   return null;
 }
 
-export async function getRelatedProducts(query: string): Promise<{ label: string; sections: { query: string; products: SearchProduct[] }[] }> {
+export async function getRelatedProducts(query: string): Promise<{ label: string; sections: { query: string; products: CanonicalProduct[] }[] }> {
   const related = findRelated(query);
   if (!related) return { label: 'You may also like', sections: [] };
 
-  // Fetch all related queries in parallel — they'll hit cache if already searched
   const sections = await Promise.all(
     related.queries.slice(0, 3).map(async (q) => {
       const products = await searchProducts(q).catch(() => []);
@@ -1002,23 +1126,31 @@ export async function getRelatedProducts(query: string): Promise<{ label: string
 
 const TRENDING_QUERIES = ['kurta sets women', 'sneakers men india', 'sarees silk', 'watches men under 5000'];
 
-export async function getTrending(): Promise<SearchProduct[]> {
+export async function getTrending(): Promise<CanonicalProduct[]> {
   const cacheKey = 'trending';
   const mem = getMemCached(cacheKey);
-  if (mem) return mem;
+  if (mem) return groupSearchResults(mem.data);
   const db = await getDbCached(cacheKey);
-  if (db) { setMemCache(cacheKey, db); return db; }
+  if (db) { setMemCache(cacheKey, db.data, new Date(db.meta.fetchedAt)); return groupSearchResults(db.data); }
 
-  const all = (await Promise.all(TRENDING_QUERIES.map(q => searchProducts(q).catch(() => [])))).flat();
+  // Fetch all trending queries, collect flat products, then group once
+  const allFlat = (await Promise.all(
+    TRENDING_QUERIES.map(q =>
+      searchProducts(q)
+        .then(canonicals => canonicals.flatMap(c => c.offers.map(o => o.originalProduct)))
+        .catch(() => [] as SearchProduct[])
+    )
+  )).flat();
+
   const seen = new Set<string>();
-  const unique = all.filter(p => {
+  const unique = allFlat.filter(p => {
     const k = p.title.toLowerCase().slice(0, 40);
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
-  }).slice(0, 24);
+  });
 
   setMemCache(cacheKey, unique);
   setDbCache(cacheKey, unique);
-  return unique;
+  return groupSearchResults(unique).slice(0, 24);
 }

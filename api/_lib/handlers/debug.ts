@@ -1,6 +1,7 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
+import { requireAdmin } from '../adminAuth.js';
 
 const SCRAPER_KEY = process.env.SCRAPER_API_KEY || '';
 
@@ -217,6 +218,10 @@ async function debugLiveSearch(req: VercelRequest, res: VercelResponse) {
 }
 
 export async function handleDebug(req: VercelRequest, res: VercelResponse, subpath: string) {
+  // Debug endpoints expose internal scraper keys and platform diagnostics.
+  // Restrict to admin users only.
+  if (!requireAdmin(req, res)) return;
+
   if (subpath === 'search') return debugSearch(req, res);
   if (subpath === 'search-old') return debugSearchOld(req, res);
   if (subpath === 'live') return debugLiveSearch(req, res);

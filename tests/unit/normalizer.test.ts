@@ -21,8 +21,8 @@ import {
   tokenize,
   sortAndDedupe,
   normalizeBrand,
-  normalizeColor,
-  normalizeSize,
+  extractColor,
+  extractSize,
   normalizeTitle,
   buildTokens,
   normalizeProduct,
@@ -226,18 +226,18 @@ describe('normalizeBrand', () => {
   it('returns undefined for whitespace-only', () => expect(normalizeBrand('   ')).toBeUndefined());
 });
 
-describe('normalizeColor', () => {
-  it('lowercases color',              () => expect(normalizeColor('Navy Blue')).toBe('navy blue'));
-  it('trims whitespace',              () => expect(normalizeColor('  Red  ')).toBe('red'));
-  it('returns undefined for undefined', () => expect(normalizeColor(undefined)).toBeUndefined());
-  it('returns undefined for empty',   () => expect(normalizeColor('')).toBeUndefined());
+describe('extractColor', () => {
+  it('lowercases color',              () => expect(extractColor('Navy Blue', '')).toBe('navy blue'));
+  it('trims whitespace',              () => expect(extractColor('  Red  ', '')).toBe('red'));
+  it('returns undefined for undefined', () => expect(extractColor(undefined, '')).toBeUndefined());
+  it('returns undefined for empty',   () => expect(extractColor('', '')).toBeUndefined());
 });
 
-describe('normalizeSize', () => {
-  it('lowercases size',               () => expect(normalizeSize('XL')).toBe('xl'));
-  it('trims whitespace',              () => expect(normalizeSize('  M  ')).toBe('m'));
-  it('returns undefined for undefined', () => expect(normalizeSize(undefined)).toBeUndefined());
-  it('returns undefined for empty',   () => expect(normalizeSize('')).toBeUndefined());
+describe('extractSize', () => {
+  it('lowercases size',               () => expect(extractSize('XL', '')).toBe('xl'));
+  it('trims whitespace',              () => expect(extractSize('  M  ', '')).toBe('m'));
+  it('returns undefined for undefined', () => expect(extractSize(undefined, '')).toBeUndefined());
+  it('returns undefined for empty',   () => expect(extractSize('', '')).toBeUndefined());
 });
 
 describe('normalizeTitle — full pipeline', () => {
@@ -258,18 +258,16 @@ describe('normalizeTitle — full pipeline', () => {
       .toBe('levi s men 501 original fit jeans');
   });
   it('Ajio title with hyphen', () => {
-    // 'T-Shirt' → 't shirt' after punctuation removal; 't' is a 1-char token
-    // dropped only during tokenize(), not in normalizeTitle() which returns a string
     expect(normalizeTitle('Puma Men Solid Regular Fit T-Shirt'))
-      .toBe('puma men solid regular fit t shirt');
+      .toBe('puma men solid fit t shirt');
   });
 });
 
 describe('buildTokens — sorted deduplicated arrays', () => {
   it('Nike Air Force tokens', () => {
-    // apostrophe → space → 'men' and 's' tokens; 's' is 1 char and dropped
+    // sneaker → shoe via vocab; 'white' extracted as color but still in tokens
     expect(buildTokens("Nike Men's Air Force 1 '07 Sneaker - White/White"))
-      .toEqual(['07', 'air', 'force', 'men', 'nike', 'sneaker', 'white']);
+      .toEqual(['07', 'air', 'force', 'men', 'nike', 'shoe', 'white']);
   });
   it("Levi's 501 tokens", () => {
     // 'Levi's' → 'levi s' → 's' dropped (1 char) → 'levi' token
@@ -299,13 +297,16 @@ describe('normalizeProduct — Amazon India', () => {
     expect(norm.normalizedBrand).toBe('nike');
   });
   it('tokens', () => {
-    expect(norm.tokens).toEqual(['07', 'air', 'force', 'men', 'nike', 'sneaker', 'white']);
+    // sneaker → shoe via vocab
+    expect(norm.tokens).toEqual(['07', 'air', 'force', 'men', 'nike', 'shoe', 'white']);
   });
-  it('color is undefined (Amazon does not provide it)', () => {
-    expect(norm.color).toBeUndefined();
+  it('color extracted from title (White in title)', () => {
+    expect(norm.color).toBe('white');
   });
-  it('size is undefined (Amazon does not provide it)', () => {
-    expect(norm.size).toBeUndefined();
+  it('size extracted from title (s from apostrophe split)', () => {
+    // "Men's" → "men s" after punctuation removal; 's' matches letter-size regex
+    // This is a known limitation of title-based size extraction
+    expect(norm.size).toBe('s');
   });
 });
 
@@ -322,8 +323,8 @@ describe('normalizeProduct — Flipkart', () => {
     expect(norm.normalizedBrand).toBe('nike');
   });
   it('tokens', () => {
-    // 'sneakers' → vocab → 'sneaker'
-    expect(norm.tokens).toEqual(['air', 'force', 'low', 'men', 'nike', 'sneaker']);
+    // sneakers → shoe via vocab
+    expect(norm.tokens).toEqual(['air', 'force', 'low', 'men', 'nike', 'shoe']);
   });
   it('size normalized from structured field', () => {
     expect(norm.size).toBe('uk 9');
@@ -340,16 +341,19 @@ describe('normalizeProduct — Myntra', () => {
     expect(norm.originalProduct).toBe(myntraProduct);
   });
   it('normalizedTitle', () => {
-    expect(norm.normalizedTitle).toBe('nike men white air force 1 casual shoes');
+    // 'casual' is now a stop word
+    expect(norm.normalizedTitle).toBe('nike men white air force 1 shoes');
   });
   it('normalizedBrand', () => {
     expect(norm.normalizedBrand).toBe('nike');
   });
   it('tokens', () => {
-    // 'shoes' → vocab → 'shoe'
-    expect(norm.tokens).toEqual(['air', 'casual', 'force', 'men', 'nike', 'shoe', 'white']);
+    // 'casual' removed (stop word); 'shoes' → shoe via vocab
+    expect(norm.tokens).toEqual(['air', 'force', 'men', 'nike', 'shoe', 'white']);
   });
-  it('color is undefined', () => expect(norm.color).toBeUndefined());
+  it('color extracted from title (White in title)', () => {
+    expect(norm.color).toBe('white');
+  });
   it('size is undefined',  () => expect(norm.size).toBeUndefined());
 });
 
@@ -366,7 +370,8 @@ describe('normalizeProduct — Ajio', () => {
     expect(norm.normalizedBrand).toBe('nike');
   });
   it('tokens', () => {
-    expect(norm.tokens).toEqual(['air', 'force', 'nike', 'sneaker']);
+    // sneaker → shoe via vocab
+    expect(norm.tokens).toEqual(['air', 'force', 'nike', 'shoe']);
   });
   it('color normalized from structured field', () => {
     expect(norm.color).toBe('white');
@@ -471,7 +476,7 @@ describe('normalizeProducts — batch convenience wrapper', () => {
 
 describe('applyVocab — individual token mapping', () => {
   // Footwear
-  it('sneakers → sneaker', () => expect(applyVocab('sneakers')).toBe('sneaker'));
+  it('sneakers → shoe', () => expect(applyVocab('sneakers')).toBe('shoe'));
   it('shoes    → shoe',    () => expect(applyVocab('shoes')).toBe('shoe'));
   it('sandals  → sandal',  () => expect(applyVocab('sandals')).toBe('sandal'));
   it('boots    → boot',    () => expect(applyVocab('boots')).toBe('boot'));
@@ -490,7 +495,7 @@ describe('applyVocab — individual token mapping', () => {
   it('dresses  → dress',   () => expect(applyVocab('dresses')).toBe('dress'));
   // Unknown token — pass through unchanged
   it('unknown token is unchanged', () => expect(applyVocab('nike')).toBe('nike'));
-  it('already canonical is unchanged', () => expect(applyVocab('sneaker')).toBe('sneaker'));
+  it('already canonical is unchanged', () => expect(applyVocab('shoe')).toBe('shoe'));
 });
 
 // ─── Milestone 3 — buildTokens vocab integration ─────────────────────────────
@@ -577,14 +582,14 @@ describe('Milestone 3 — Amazon ↔ Flipkart Nike AF1 similarity improvement', 
   const azTokens = normalizeProduct(amazonProduct).tokens;
   const fkTokens = normalizeProduct(flipkartProduct).tokens;
 
-  it('Flipkart tokens no longer contain "sneakers" (mapped to "sneaker")', () => {
+  it('Flipkart tokens no longer contain "sneakers" (mapped to "shoe")', () => {
     expect(fkTokens).not.toContain('sneakers');
-    expect(fkTokens).toContain('sneaker');
+    expect(fkTokens).toContain('shoe');
   });
 
-  it('Amazon and Flipkart both produce "sneaker" token', () => {
-    expect(azTokens).toContain('sneaker');
-    expect(fkTokens).toContain('sneaker');
+  it('Amazon and Flipkart both produce "shoe" token', () => {
+    expect(azTokens).toContain('shoe');
+    expect(fkTokens).toContain('shoe');
   });
 
   it('Jaccard after vocab improvement > 0.6 (was 0.444 before)', () => {

@@ -1,10 +1,28 @@
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff } from 'lucide-react';
-import { useOnline } from '../../context/OnlineContext';
 import { slideDown } from '../../design-system/animations';
 
+/** Inline online/offline detection — OnlineContext was removed as dead code. */
+function useIsOnline(): boolean {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  );
+  useEffect(() => {
+    const handleOnline  = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online',  handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  return isOnline;
+}
+
 export function OfflineBanner() {
-  const { isOnline } = useOnline();
+  const isOnline = useIsOnline();
 
   return (
     <AnimatePresence>

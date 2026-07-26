@@ -24,12 +24,20 @@ dist-ssr
 *.sw?
 
 .vercel
+.env*
 
 # Browser automation data
 browser-data/
 
-# Environment files
-.env
-
-.vercel
-.env*
+# Test / debug / scratch files
+*.txt
+*.json
+!package.json
+!package-lock.json
+!tsconfig*.json
+!vercel.json
+!wrangler.toml
+bundle.js
+*.html
+!index.html
+test-*.mjs
