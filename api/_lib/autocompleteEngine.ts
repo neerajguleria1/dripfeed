@@ -1,3 +1,4 @@
+import type { PipelineStage } from 'mongoose';
 import { connectDB } from './db.js';
 import AnalyticsEvent from './models/AnalyticsEvent.js';
 import SearchCache from './models/SearchCache.js';
@@ -62,7 +63,7 @@ async function fetchPopularQueries(
   const since = new Date(Date.now() - POPULAR_LOOKBACK_DAYS * 86400 * 1000);
   const norm = normalise(q);
 
-  const pipeline: object[] = [
+  const pipeline: PipelineStage[] = [
     {
       $match: {
         event: 'search_performed',

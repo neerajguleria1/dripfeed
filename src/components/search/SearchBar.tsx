@@ -46,7 +46,7 @@ export function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data, status, recentSearches, addRecentSearch, clearRecentSearches, fetch, cancel } =
+  const { data: autocompleteData, status, recentSearches, addRecentSearch, clearRecentSearches, fetch, cancel } =
     useAutocomplete();
 
   const isHero = size === 'hero';
@@ -56,7 +56,7 @@ export function SearchBar({
   useEffect(() => { setQuery(initialQuery); }, [initialQuery]);
 
   // Build flat list of selectable items for keyboard navigation
-  const items = buildItems(query, data, recentSearches);
+  const items = buildItems(query, autocompleteData, recentSearches);
 
   const handleSubmit = useCallback(
     (searchQuery: string) => {
@@ -244,7 +244,6 @@ export function SearchBar({
           >
             <DropdownContent
               query={query}
-              data={data}
               status={status}
               recentSearches={recentSearches}
               items={items}
@@ -315,7 +314,6 @@ function buildItems(
 
 interface DropdownContentProps {
   query: string;
-  data: ReturnType<typeof useAutocomplete>['data'];
   status: ReturnType<typeof useAutocomplete>['status'];
   recentSearches: string[];
   items: DropdownItem[];
@@ -327,7 +325,6 @@ interface DropdownContentProps {
 
 function DropdownContent({
   query,
-  data,
   status,
   recentSearches,
   items,
@@ -464,7 +461,7 @@ function DropdownContent({
               <X className="w-2.5 h-2.5" /> Clear
             </button>
           </li>
-          {recentItems.map((item, i) => renderItem(item, globalIdx++))}
+          {recentItems.map((item) => renderItem(item, globalIdx++))}
         </>
       )}
 
