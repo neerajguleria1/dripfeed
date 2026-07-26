@@ -6,7 +6,6 @@ import { SEOHead } from '../components/common/SEOHead';
 import { SaveButton } from '../components/product/SaveButton';
 import PlatformBadge from '../components/ui/PlatformBadge';
 import AffiliateButton from '../components/ui/AffiliateButton';
-import { ProductCard } from '../components/product/ProductCard';
 import { RecommendationSection, RecommendationSkeleton } from '../components/product/RecommendationSection';
 import { SimilarProductsSection } from '../components/product/SimilarProductsSection';
 import { useProductDetail } from '../hooks/useProductDetail';
@@ -231,7 +230,7 @@ function VariantSelector({ offers, activeOfferId, onSelect }: VariantSelectorPro
 export default function ProductDetailPage() {
   const { canonicalId } = useParams<{ canonicalId: string }>();
   const navigate = useNavigate();
-  const { product, similar, query, status, fetch } = useProductDetail();
+  const { product, query, status, fetch } = useProductDetail();
   const recs = useRecommendations();
 
   const [activeOfferId, setActiveOfferId] = useState('');
