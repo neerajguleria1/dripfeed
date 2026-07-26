@@ -16,6 +16,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
+  /** Set by useRecentlyViewed to trigger post-login sync. */
+  onLoginSuccess: (() => Promise<void>) | null;
+  setOnLoginSuccess: (fn: (() => Promise<void>) | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -40,13 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
   });
   const [loading, setLoading] = useState(false);
+  const [onLoginSuccess, setOnLoginSuccess] = useState<(() => Promise<void>) | null>(null);
+
+  async function afterLogin(userData: User) {
+    setUser(userData);
+    if (onLoginSuccess) {
+      try { await onLoginSuccess(); } catch { /* non-fatal */ }
+    }
+  }
 
   async function register(name: string, email: string, password: string) {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/register', { name, email, password });
-      const user = saveSession(data);
-      setUser(user);
+      await afterLogin(saveSession(data));
     } finally { setLoading(false); }
   }
 
@@ -54,8 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      const user = saveSession(data);
-      setUser(user);
+      await afterLogin(saveSession(data));
     } finally { setLoading(false); }
   }
 
@@ -63,8 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/google', { idToken });
-      const user = saveSession(data);
-      setUser(user);
+      await afterLogin(saveSession(data));
     } finally { setLoading(false); }
   }
 
@@ -76,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, googleLogin, logout }}>
+    <AuthContext.Provider value={{ user, loading, register, login, googleLogin, logout, onLoginSuccess, setOnLoginSuccess }}>
       {children}
     </AuthContext.Provider>
   );

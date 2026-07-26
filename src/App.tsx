@@ -1,5 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
+import { useRecentlyViewed } from './hooks/useRecentlyViewed';
 import { PreferencesProvider } from './context/PreferencesContext';
 import { ToastProvider } from './context/ToastContext';
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
@@ -32,6 +35,17 @@ import { PrivacyPage, TermsPage, AffiliateDisclosurePage, NotFoundPage } from '.
 import ClickStatsPage from './pages/ClickStatsPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 
+/** Registers post-login sync so anonymous history merges on login. */
+function RecentlyViewedSync() {
+  const { user, setOnLoginSuccess } = useAuth();
+  const { syncAfterLogin } = useRecentlyViewed(!!user);
+  useEffect(() => {
+    setOnLoginSuccess(() => syncAfterLogin);
+    return () => setOnLoginSuccess(null);
+  }, [syncAfterLogin, setOnLoginSuccess]);
+  return null;
+}
+
 // Auth pages — no header, no persistent bg
 function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -58,6 +72,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <AuthProvider>
+      <RecentlyViewedSync />
       <PreferencesProvider>
       <ToastProvider>
       <ScrollToTop />

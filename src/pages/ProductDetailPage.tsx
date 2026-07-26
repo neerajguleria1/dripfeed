@@ -8,8 +8,11 @@ import PlatformBadge from '../components/ui/PlatformBadge';
 import AffiliateButton from '../components/ui/AffiliateButton';
 import { RecommendationSection, RecommendationSkeleton } from '../components/product/RecommendationSection';
 import { SimilarProductsSection } from '../components/product/SimilarProductsSection';
+import { RecentlyViewedSection } from '../components/product/RecentlyViewedSection';
 import { useProductDetail } from '../hooks/useProductDetail';
 import { useRecommendations } from '../hooks/useRecommendations';
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/formatPrice';
 import Analytics from '../utils/analytics';
 import { PriceAlertModal } from '../components/product/PriceAlertModal';
@@ -232,6 +235,8 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const { product, query, status, fetch } = useProductDetail();
   const recs = useRecommendations();
+  const { user } = useAuth();
+  const { items: recentItems, trackView } = useRecentlyViewed(!!user);
 
   const [activeOfferId, setActiveOfferId] = useState('');
   const [copied, setCopied] = useState(false);
@@ -248,12 +253,26 @@ export default function ProductDetailPage() {
     if (status === 'success' && canonicalId) recs.fetch(canonicalId);
   }, [status, canonicalId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track product detail view
+  // Track product detail view + recently viewed
   useEffect(() => {
     if (status === 'success' && product && canonicalId) {
       Analytics.productDetailViewed(canonicalId, product.title);
+      const offer = product.offers[0];
+      if (offer) {
+        trackView({
+          id:            canonicalId,
+          title:         product.title,
+          brand:         product.brand,
+          imageUrl:      offer.imageUrl,
+          price:         offer.price,
+          originalPrice: offer.originalPrice,
+          discount:      offer.discount,
+          platform:      offer.platform,
+          url:           offer.affiliateUrl || offer.productUrl,
+        });
+      }
     }
-  }, [status, canonicalId, product]);
+  }, [status, canonicalId, product, trackView]);
 
   // Track 404
   useEffect(() => {
@@ -575,6 +594,12 @@ export default function ProductDetailPage() {
               <RecommendationSection title="Budget Alternative" items={recs.data.budget} aria-label="Budget alternatives" />
             </>
           )}
+
+          {/* ── Recently Viewed (compact, excludes current product) ── */}
+          <RecentlyViewedSection
+            items={recentItems.filter(p => p.id !== canonicalId)}
+            compact
+          />
 
           {/* ASCI disclosure */}
           <p className="text-[11px] text-neutral-400 text-center pt-2">
