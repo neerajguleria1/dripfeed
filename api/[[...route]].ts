@@ -5,6 +5,7 @@ export const config = { maxDuration: 60, regions: ['bom1'] }; // bom1 = Mumbai
 import { handleAuth } from './_lib/handlers/auth.js';
 import { handleProducts } from './_lib/handlers/products.js';
 import { handleSearch } from './_lib/handlers/search.js';
+import { handleAutocomplete } from './_lib/handlers/autocomplete.js';
 import { handleCollections } from './_lib/handlers/collections.js';
 import { handleWishlist } from './_lib/handlers/wishlist.js';
 import { handleThrift } from './_lib/handlers/thrift.js';
@@ -31,6 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path.startsWith('auth/')) return handleAuth(req, res, path.replace('auth/', ''));
   if (path === 'products/trending' || path.startsWith('products/trending/')) return handleTrending(req, res, path.replace('products/trending', ''));
   if (path.startsWith('products/')) return handleProducts(req, res, path.replace('products/', ''));
+  if (path === 'search/autocomplete') return handleAutocomplete(req, res);
   if (path.startsWith('search/')) return handleSearch(req, res, path.replace('search/', ''));
   if (path.startsWith('collections')) return handleCollections(req, res, path.replace('collections', ''));
   if (path.startsWith('wishlist')) return handleWishlist(req, res, path.replace('wishlist', ''));
