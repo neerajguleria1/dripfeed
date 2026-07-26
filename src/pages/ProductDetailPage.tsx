@@ -8,6 +8,7 @@ import PlatformBadge from '../components/ui/PlatformBadge';
 import AffiliateButton from '../components/ui/AffiliateButton';
 import { ProductCard } from '../components/product/ProductCard';
 import { RecommendationSection, RecommendationSkeleton } from '../components/product/RecommendationSection';
+import { SimilarProductsSection } from '../components/product/SimilarProductsSection';
 import { useProductDetail } from '../hooks/useProductDetail';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { formatPrice } from '../utils/formatPrice';
@@ -555,36 +556,8 @@ export default function ProductDetailPage() {
             )}
           </section>
 
-          {/* ── Similar Products ── */}
-          {similar.length > 0 && (
-            <section aria-label="Similar products" className="mb-6">
-              <h2 className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.1em] mb-4">
-                Similar Products
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                {similar.map(p => {
-                  const offer = p.offers[0];
-                  if (!offer) return null;
-                  return (
-                    <ProductCard
-                      key={p.id}
-                      product={{
-                        id: p.id,
-                        title: p.title,
-                        brand: p.brand,
-                        imageUrl: offer.imageUrl,
-                        price: offer.price,
-                        originalPrice: offer.originalPrice,
-                        discount: offer.discount,
-                        platform: offer.platform,
-                        url: offer.affiliateUrl || offer.productUrl,
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          {/* ── Similar Products (lazy, scored, up to 8) ── */}
+          {canonicalId && <SimilarProductsSection canonicalId={canonicalId} />}
 
           {/* ── Recommendations ── */}
           {recs.status === 'loading' && (

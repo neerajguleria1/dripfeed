@@ -17,6 +17,7 @@ import { handleVariants } from './_lib/handlers/variants.js';
 import { handlePriceHistory } from './_lib/handlers/priceHistory.js';
 import { handleProductDetail } from './_lib/handlers/productDetail.js';
 import { handleRecommendations } from './_lib/handlers/recommendations.js';
+import { handleSimilarProducts } from './_lib/handlers/similarProducts.js';
 import { handleAnalytics } from './_lib/handlers/analytics.js';
 import { handleAlerts } from './_lib/handlers/alerts.js';
 
@@ -41,7 +42,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path.startsWith('push/')) return handlePush(req, res, path.replace('push/', ''));
   if (path === 'variants') return handleVariants(req, res);
   if (path.startsWith('price-history/')) return handlePriceHistory(req, res, path.replace('price-history/', ''));
-  if (path.startsWith('product/')) return handleProductDetail(req, res, path.replace('product/', ''));
+  if (path.startsWith('product/')) {
+    const sub = path.replace('product/', '');
+    // GET /api/products/:id/similar — must be checked before the generic product handler
+    const similarMatch = sub.match(/^([^/]+)\/similar$/);
+    if (similarMatch) return handleSimilarProducts(req, res, similarMatch[1]);
+    return handleProductDetail(req, res, sub);
+  }
   if (path.startsWith('recommendations/')) return handleRecommendations(req, res, path.replace('recommendations/', ''));
   if (path.startsWith('analytics/')) return handleAnalytics(req, res, path.replace('analytics/', ''));
   if (path === 'analytics') return handleAnalytics(req, res, '');
