@@ -24,6 +24,14 @@ const PriceHistoryPanel = lazy(() =>
   import('../components/product/PriceHistoryPanel').then(m => ({ default: m.PriceHistoryPanel }))
 );
 
+const AiAssistantCard = lazy(() =>
+  import('../components/product/AiAssistantCard').then(m => ({ default: m.AiAssistantCard }))
+);
+
+const PricePredictionBadge = lazy(() =>
+  import('../components/product/PricePredictionBadge').then(m => ({ default: m.PricePredictionBadge }))
+);
+
 const SITE_URL = 'https://dripfeed-v21.vercel.app';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -540,6 +548,16 @@ export default function ProductDetailPage() {
             </motion.div>
           </section>
 
+          {/* ── Price Prediction ── */}
+          {canonicalId && lowest && (
+            <Suspense fallback={null}>
+              <PricePredictionBadge
+                canonicalId={canonicalId}
+                platform={lowest.platform.toLowerCase()}
+              />
+            </Suspense>
+          )}
+
           {/* ── Price History (lazy) ── */}
           <section
             className="bg-white rounded-2xl border border-neutral-100 hover:border-[#C9A96E]/30 transition-all mb-6"
@@ -576,6 +594,15 @@ export default function ProductDetailPage() {
 
           {/* ── Similar Products (lazy, scored, up to 8) ── */}
           {canonicalId && <SimilarProductsSection canonicalId={canonicalId} />}
+
+          {/* ── AI Shopping Assistant ── */}
+          {canonicalId && (
+            <Suspense fallback={
+              <div className="bg-white rounded-2xl border border-neutral-100 h-14 animate-pulse mb-6" />
+            }>
+              <AiAssistantCard canonicalId={canonicalId} />
+            </Suspense>
+          )}
 
           {/* ── Recommendations ── */}
           {recs.status === 'loading' && (

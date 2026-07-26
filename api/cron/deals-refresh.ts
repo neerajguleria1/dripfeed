@@ -9,6 +9,8 @@ import Deal from '../_lib/models/Deal.js';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  console.log('[deals-refresh] starting run at', new Date().toISOString());
+
   try {
     await connectDB();
 
@@ -18,8 +20,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { $set: { active: false } }
     );
 
+    console.log(`[deals-refresh] completed — deactivated ${result.modifiedCount} expired deals`);
     return res.json({ cleaned: result.modifiedCount });
   } catch (e: any) {
+    console.error('[deals-refresh] error:', e?.message);
     return res.status(500).json({ error: 'Deals refresh failed', message: e.message });
   }
 }

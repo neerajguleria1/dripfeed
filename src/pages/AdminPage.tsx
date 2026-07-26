@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, MousePointerClick, TrendingUp, IndianRupee, BarChart2, Search, ShoppingBag, Bell, Flame } from 'lucide-react';
+import { Users, MousePointerClick, TrendingUp, IndianRupee, BarChart2, Search, ShoppingBag, Bell, Flame, ShieldCheck, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import api from '../services/api';
 import { formatINR } from '../utils/format';
 
@@ -29,6 +29,24 @@ export default function AdminPage() {
   const [weightsSaving, setWeightsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('overview');
+
+  // Quality tab state
+  const [qualitySummary, setQualitySummary] = useState<any>(null);
+  const [qualityProducts, setQualityProducts] = useState<any[]>([]);
+  const [qualityTotal, setQualityTotal] = useState(0);
+  const [qualityPage, setQualityPage] = useState(1);
+  const [qualityHasMore, setQualityHasMore] = useState(false);
+  const [qualityGradeFilter, setQualityGradeFilter] = useState<string>('');
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [qualityExpanded, setQualityExpanded] = useState<string | null>(null);
+
+  // Catalog health tab state
+  const [catalogSummary, setCatalogSummary] = useState<any>(null);
+  const [catalogPoor, setCatalogPoor] = useState<any[]>([]);
+  const [catalogPoorTotal, setCatalogPoorTotal] = useState(0);
+  const [catalogPoorPage, setCatalogPoorPage] = useState(1);
+  const [catalogPoorHasMore, setCatalogPoorHasMore] = useState(false);
+  const [catalogTriggerLoading, setCatalogTriggerLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([api.get('/admin/stats'), api.get('/admin/users'), api.get('/admin/affiliate-stats')])
@@ -65,6 +83,62 @@ export default function AdminPage() {
       .catch(() => {});
   }, [tab]);
 
+  // Load quality summary whenever quality tab is opened
+  useEffect(() => {
+    if (tab !== 'quality') return;
+    api.get('/admin/product-quality/summary')
+      .then(({ data }) => setQualitySummary(data))
+      .catch(() => {});
+  }, [tab]);
+
+  // Load quality products page
+  useEffect(() => {
+    if (tab !== 'quality') return;
+    setQualityLoading(true);
+    const params: Record<string, string> = { page: String(qualityPage), limit: '20', sort: 'asc' };
+    if (qualityGradeFilter) params.grade = qualityGradeFilter;
+    api.get('/admin/product-quality', { params })
+      .then(({ data }) => {
+        setQualityProducts(data.products ?? []);
+        setQualityTotal(data.total ?? 0);
+        setQualityHasMore(data.hasMore ?? false);
+      })
+      .catch(() => {})
+      .finally(() => setQualityLoading(false));
+  }, [tab, qualityPage, qualityGradeFilter]);
+
+  // Load catalog health summary
+  useEffect(() => {
+    if (tab !== 'catalog') return;
+    api.get('/admin/catalog-health/summary')
+      .then(({ data }) => setCatalogSummary(data))
+      .catch(() => {});
+  }, [tab]);
+
+  // Load poor catalog products
+  useEffect(() => {
+    if (tab !== 'catalog') return;
+    api.get('/admin/catalog-health/poor', { params: { page: String(catalogPoorPage), limit: '20' } })
+      .then(({ data }) => {
+        setCatalogPoor(data.products ?? []);
+        setCatalogPoorTotal(data.total ?? 0);
+        setCatalogPoorHasMore(data.hasMore ?? false);
+      })
+      .catch(() => {});
+  }, [tab, catalogPoorPage]);
+
+  async function handleCatalogTrigger() {
+    setCatalogTriggerLoading(true);
+    try {
+      await api.post('/admin/catalog-health/trigger');
+      // Refresh summary after trigger
+      const { data } = await api.get('/admin/catalog-health/summary');
+      setCatalogSummary(data);
+    } catch { /* non-fatal */ } finally {
+      setCatalogTriggerLoading(false);
+    }
+  }
+
   async function saveWeights() {
     if (!weightsDraft) return;
     setWeightsSaving(true);
@@ -89,12 +163,12 @@ export default function AdminPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-[#0F0F1A] mb-6" style={{ fontFamily: 'Instrument Serif, serif' }}>Admin Dashboard</h1>
 
-      <div className="flex gap-2 mb-6 border-b border-[#0F0F1A]/10">
-        {['overview', 'analytics', 'trending', 'alerts', 'affiliate', 'users'].map(t => (
+      <div className="flex gap-2 mb-6 border-b border-[#0F0F1A]/10 overflow-x-auto">
+        {['overview', 'analytics', 'trending', 'alerts', 'affiliate', 'users', 'quality', 'catalog'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors whitespace-nowrap ${
               tab === t ? 'border-[#0F0F1A] text-[#0F0F1A]' : 'border-transparent text-[#0F0F1A]/50 hover:text-[#0F0F1A]'
             }`}
           >
@@ -364,6 +438,331 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {tab === 'quality' && (
+        <div className="space-y-6">
+          {/* Summary cards */}
+          {qualitySummary && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                icon={<ShieldCheck className="w-5 h-5 text-[#0F0F1A]" />}
+                label="Total Products"
+                value={qualitySummary.total ?? 0}
+                sub={`Avg score: ${qualitySummary.avgScore ?? 0}/100`}
+              />
+              <StatCard
+                icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                label="Grade A+B"
+                value={(qualitySummary.grades?.A ?? 0) + (qualitySummary.grades?.B ?? 0)}
+                sub="High quality"
+              />
+              <StatCard
+                icon={<AlertTriangle className="w-5 h-5 text-amber-500" />}
+                label="Grade C"
+                value={qualitySummary.grades?.C ?? 0}
+                sub="Needs attention"
+              />
+              <StatCard
+                icon={<XCircle className="w-5 h-5 text-red-500" />}
+                label="Grade D (Poor)"
+                value={qualitySummary.grades?.D ?? 0}
+                sub="Critical issues"
+              />
+            </div>
+          )}
+
+          {/* Top issues */}
+          {qualitySummary?.topIssues?.length > 0 && (
+            <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
+              <h2 className="font-semibold text-[#0F0F1A] mb-3">Most Common Issues</h2>
+              <div className="space-y-2">
+                {qualitySummary.topIssues.map((issue: any) => (
+                  <div key={issue.code} className="flex items-center justify-between py-1.5 border-b border-[#0F0F1A]/5 last:border-0">
+                    <span className="text-[12px] font-mono text-[#0F0F1A]/70">{issue.code}</span>
+                    <span className="text-sm font-semibold text-red-500">{issue.count} products</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Grade filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {['', 'D', 'C', 'B', 'A'].map(g => (
+              <button
+                key={g || 'all'}
+                onClick={() => { setQualityGradeFilter(g); setQualityPage(1); }}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  qualityGradeFilter === g
+                    ? 'bg-[#0F0F1A] text-white'
+                    : 'bg-[#F8F5F2] text-[#0F0F1A]/60 hover:bg-[#0F0F1A]/10'
+                }`}
+              >
+                {g || 'All'}{g && ` (${qualitySummary?.grades?.[g] ?? 0})`}
+              </button>
+            ))}
+            <span className="text-xs text-[#0F0F1A]/40 ml-2">{qualityTotal} products</span>
+          </div>
+
+          {/* Product quality list */}
+          {qualityLoading && (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 animate-pulse bg-white/55 rounded-2xl border border-[#0F0F1A]/10" />
+              ))}
+            </div>
+          )}
+
+          {!qualityLoading && qualityProducts.length === 0 && (
+            <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-8 text-center">
+              <p className="text-sm text-[#0F0F1A]/40">No products found. Run a search to populate the cache first.</p>
+            </div>
+          )}
+
+          {!qualityLoading && qualityProducts.length > 0 && (
+            <div className="space-y-2">
+              {qualityProducts.map((p: any) => {
+                const gradeColor =
+                  p.grade === 'A' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
+                  p.grade === 'B' ? 'text-blue-700 bg-blue-50 border-blue-200' :
+                  p.grade === 'C' ? 'text-amber-700 bg-amber-50 border-amber-200' :
+                  'text-red-700 bg-red-50 border-red-200';
+
+                const isOpen = qualityExpanded === p.canonicalId;
+
+                return (
+                  <div key={p.canonicalId} className={`bg-white/55 backdrop-blur-sm rounded-2xl border overflow-hidden ${
+                    p.grade === 'D' ? 'border-red-200' : p.grade === 'C' ? 'border-amber-200/60' : 'border-[#0F0F1A]/10'
+                  }`}>
+                    <button
+                      onClick={() => setQualityExpanded(isOpen ? null : p.canonicalId)}
+                      className="w-full flex items-center gap-3 p-4 text-left hover:bg-[#0F0F1A]/[0.02] transition-colors"
+                    >
+                      {/* Product image */}
+                      {p.representativeImage && (
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 flex-shrink-0">
+                          <img
+                            src={p.representativeImage}
+                            alt={p.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Title + platforms */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[#0F0F1A] line-clamp-1">{p.title}</p>
+                        <p className="text-[11px] text-[#0F0F1A]/40">
+                          {p.platforms?.join(' · ')} · {p.offerCount} offer{p.offerCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+
+                      {/* Score bar */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-16 bg-neutral-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              p.grade === 'A' ? 'bg-emerald-400' :
+                              p.grade === 'B' ? 'bg-blue-400' :
+                              p.grade === 'C' ? 'bg-amber-400' :
+                              'bg-red-400'
+                            }`}
+                            style={{ width: `${p.score}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-[#0F0F1A]/60 w-7 text-right tabular-nums">{p.score}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${gradeColor}`}>{p.grade}</span>
+                      </div>
+                    </button>
+
+                    {/* Expanded detail */}
+                    {isOpen && (
+                      <div className="px-4 pb-4 border-t border-[#0F0F1A]/5 pt-3 space-y-3">
+                        {/* Signal breakdown */}
+                        <div>
+                          <p className="text-[10px] font-semibold text-[#0F0F1A]/40 uppercase tracking-wide mb-2">Signal Scores</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {p.signals && Object.entries(p.signals as Record<string, number>).map(([key, val]) => (
+                              <div key={key} className="bg-neutral-50 rounded-lg p-2">
+                                <p className="text-[9px] text-[#0F0F1A]/40 uppercase tracking-wide leading-tight">
+                                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                                </p>
+                                <p className="text-sm font-bold text-[#0F0F1A] tabular-nums">{val as number}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Issues + fixes */}
+                        {p.issues?.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-[#0F0F1A]/40 uppercase tracking-wide mb-2">Issues</p>
+                            <div className="space-y-1.5">
+                              {(p.issues as any[]).map((issue: any) => (
+                                <div key={issue.code} className={`rounded-lg px-3 py-2 text-[12px] flex items-start gap-2 ${
+                                  issue.severity === 'high'   ? 'bg-red-50 border border-red-100' :
+                                  issue.severity === 'medium' ? 'bg-amber-50 border border-amber-100' :
+                                  'bg-neutral-50 border border-neutral-100'
+                                }`}>
+                                  <div className="flex-1">
+                                    <span className={`font-semibold mr-1.5 ${
+                                      issue.severity === 'high' ? 'text-red-700' :
+                                      issue.severity === 'medium' ? 'text-amber-700' :
+                                      'text-neutral-600'
+                                    }`}>
+                                      [{issue.code}]
+                                    </span>
+                                    <span className="text-[#0F0F1A]/70">{issue.message}</span>
+                                  </div>
+                                  {issue.fix && (
+                                    <div className="flex-shrink-0 text-[10px] bg-emerald-50 border border-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium max-w-[140px] truncate" title={issue.fix}>
+                                      Fix: {issue.fix}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {p.issues?.length === 0 && (
+                          <p className="text-[12px] text-emerald-600 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> No issues detected
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  onClick={() => setQualityPage(p => Math.max(1, p - 1))}
+                  disabled={qualityPage <= 1}
+                  className="px-4 py-1.5 text-sm font-medium bg-[#F8F5F2] rounded-full disabled:opacity-40 hover:bg-[#0F0F1A]/10 transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-[#0F0F1A]/40">Page {qualityPage}</span>
+                <button
+                  onClick={() => setQualityPage(p => p + 1)}
+                  disabled={!qualityHasMore}
+                  className="px-4 py-1.5 text-sm font-medium bg-[#F8F5F2] rounded-full disabled:opacity-40 hover:bg-[#0F0F1A]/10 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Catalog Health Tab ─────────────────────────────────────────────── */}
+      {tab === 'catalog' && (
+        <div className="space-y-6">
+          {catalogSummary && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard icon={<ShieldCheck className="w-5 h-5 text-[#0F0F1A]" />} label="Total Catalog" value={catalogSummary.total ?? 0} sub={`Avg ${catalogSummary.avgCompleteness ?? 0}% complete`} />
+              <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />} label="Excellent (80+)" value={catalogSummary.grades?.excellent ?? 0} />
+              <StatCard icon={<AlertTriangle className="w-5 h-5 text-amber-500" />} label="Needs Enrichment" value={catalogSummary.needsEnrichment ?? 0} />
+              <StatCard icon={<XCircle className="w-5 h-5 text-red-500" />} label="Poor (&lt;40)" value={catalogSummary.poorCount ?? 0} sub="Critical" />
+            </div>
+          )}
+
+          {catalogSummary && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
+                <h2 className="font-semibold text-[#0F0F1A] mb-3">Missing Fields</h2>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Missing Image',    count: catalogSummary.missingImage ?? 0 },
+                    { label: 'Missing Brand',    count: catalogSummary.missingBrand ?? 0 },
+                    { label: 'Missing Category', count: catalogSummary.missingCategory ?? 0 },
+                    { label: 'Stale (>48h)',     count: catalogSummary.staleCount ?? 0 },
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center justify-between py-1.5 border-b border-[#0F0F1A]/5 last:border-0">
+                      <span className="text-sm text-[#0F0F1A]/70">{row.label}</span>
+                      <span className={`text-sm font-semibold ${row.count > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{row.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
+                <h2 className="font-semibold text-[#0F0F1A] mb-3">Completeness Distribution</h2>
+                {catalogSummary.grades && Object.entries(catalogSummary.grades).map(([grade, count]: [string, any]) => {
+                  const total = catalogSummary.total || 1;
+                  const pct = Math.round((count / total) * 100);
+                  const barColor = grade === 'excellent' ? 'bg-emerald-400' : grade === 'good' ? 'bg-blue-400' : grade === 'fair' ? 'bg-amber-400' : 'bg-red-400';
+                  return (
+                    <div key={grade} className="flex items-center gap-3 mb-2">
+                      <span className="w-20 text-xs font-medium text-[#0F0F1A]/60 capitalize">{grade}</span>
+                      <div className="flex-1 bg-neutral-100 rounded-full h-2 overflow-hidden">
+                        <div className={`h-2 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs text-[#0F0F1A]/40 w-8 text-right tabular-nums">{count}</span>
+                    </div>
+                  );
+                })}
+                <button onClick={handleCatalogTrigger} disabled={catalogTriggerLoading}
+                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#0F0F1A] text-white text-sm font-medium rounded-lg hover:bg-[#0F0F1A]/80 transition-colors disabled:opacity-50">
+                  {catalogTriggerLoading ? 'Running enrichment…' : '▶ Trigger Enrichment Now'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {catalogPoor.length > 0 && (
+            <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-5">
+              <h2 className="font-semibold text-[#0F0F1A] mb-4">Poor Quality Products ({catalogPoorTotal})</h2>
+              <div className="space-y-2">
+                {catalogPoor.map((p: any) => (
+                  <div key={p.canonicalId} className="flex items-center gap-3 py-2 border-b border-[#0F0F1A]/5 last:border-0">
+                    {p.imageUrl
+                      ? <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover bg-neutral-100 flex-shrink-0" />
+                      : <div className="w-10 h-10 rounded-lg bg-red-50 border border-red-100 flex-shrink-0 flex items-center justify-center"><XCircle className="w-4 h-4 text-red-400" /></div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#0F0F1A] line-clamp-1">{p.displayTitle}</p>
+                      <p className="text-[11px] text-[#0F0F1A]/40">
+                        {p.platforms?.join(' · ')}
+                        {!p.normalizedBrand && <span className="ml-2 text-amber-500">No brand</span>}
+                        {!p.category && <span className="ml-2 text-amber-500">No category</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="w-12 bg-neutral-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="h-1.5 bg-red-400 rounded-full" style={{ width: `${p.completenessScore}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-red-500 tabular-nums w-6">{p.completenessScore}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between mt-4">
+                <button onClick={() => setCatalogPoorPage(pg => Math.max(1, pg - 1))} disabled={catalogPoorPage <= 1}
+                  className="px-4 py-1.5 text-sm font-medium bg-[#F8F5F2] rounded-full disabled:opacity-40 hover:bg-[#0F0F1A]/10 transition-colors">Previous</button>
+                <span className="text-xs text-[#0F0F1A]/40">Page {catalogPoorPage}</span>
+                <button onClick={() => setCatalogPoorPage(pg => pg + 1)} disabled={!catalogPoorHasMore}
+                  className="px-4 py-1.5 text-sm font-medium bg-[#F8F5F2] rounded-full disabled:opacity-40 hover:bg-[#0F0F1A]/10 transition-colors">Next</button>
+              </div>
+            </div>
+          )}
+
+          {!catalogSummary && (
+            <div className="bg-white/55 backdrop-blur-sm rounded-2xl border border-[#0F0F1A]/10 p-8 text-center">
+              <p className="text-sm text-[#0F0F1A]/40">No catalog data yet. Enrichment runs every 2 hours, or trigger it manually.</p>
+              <button onClick={handleCatalogTrigger} disabled={catalogTriggerLoading}
+                className="mt-4 px-6 py-2 bg-[#0F0F1A] text-white text-sm font-medium rounded-lg hover:bg-[#0F0F1A]/80 transition-colors disabled:opacity-50">
+                {catalogTriggerLoading ? 'Running…' : 'Run Enrichment'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

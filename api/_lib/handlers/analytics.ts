@@ -3,7 +3,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { enqueueEvent, getDashboardMetrics } from '../analytics.js';
 import type { EventName } from '../models/AnalyticsEvent.js';
 import { requireAdmin } from '../adminAuth.js';
-import { requireAdmin } from '../adminAuth.js';
 
 const VALID_EVENTS = new Set<EventName>([
   'search_performed', 'search_result_viewed', 'product_card_clicked',
@@ -79,7 +78,6 @@ async function trackEvent(req: VercelRequest, res: VercelResponse) {
  */
 async function dashboard(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  if (!requireAdmin(req, res)) return;
   if (!requireAdmin(req, res)) return;
 
   const days = Math.min(Math.max(Number(req.query.days) || 7, 1), 90);

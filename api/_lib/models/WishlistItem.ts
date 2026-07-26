@@ -26,4 +26,8 @@ const WishlistItemSchema = new Schema<IWishlistItem>({
   createdAt: { type: Date, default: Date.now },
 });
 
+// ─── Indexes ──────────────────────────────────────────────────────────────────
+// Dedup check on save: findOne({ userId, sourceUrl }) — needs compound index
+WishlistItemSchema.index({ userId: 1, sourceUrl: 1 }, { unique: true });
+
 export const WishlistItem = mongoose.models.WishlistItem || mongoose.model<IWishlistItem>('WishlistItem', WishlistItemSchema);

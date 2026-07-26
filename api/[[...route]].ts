@@ -23,6 +23,11 @@ import { handleUsers } from './_lib/handlers/users.js';
 import { handleAnalytics } from './_lib/handlers/analytics.js';
 import { handleAlerts } from './_lib/handlers/alerts.js';
 import { handleTrending } from './_lib/handlers/trending.js';
+import { handleAiAssistant } from './_lib/handlers/aiAssistant.js';
+import { handlePricePrediction } from './_lib/handlers/pricePrediction.js';
+import { handleProductQuality } from './_lib/handlers/productQuality.js';
+import { handleQueryInterpret } from './_lib/handlers/queryInterpret.js';
+import { handleCatalogHealth } from './_lib/handlers/catalogHealth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { url } = req;
@@ -33,6 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path === 'products/trending' || path.startsWith('products/trending/')) return handleTrending(req, res, path.replace('products/trending', ''));
   if (path.startsWith('products/')) return handleProducts(req, res, path.replace('products/', ''));
   if (path === 'search/autocomplete') return handleAutocomplete(req, res);
+  if (path === 'search/interpret')   return handleQueryInterpret(req, res);
   if (path.startsWith('search/')) return handleSearch(req, res, path.replace('search/', ''));
   if (path.startsWith('collections')) return handleCollections(req, res, path.replace('collections', ''));
   if (path.startsWith('wishlist')) return handleWishlist(req, res, path.replace('wishlist', ''));
@@ -42,11 +48,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (path.startsWith('affiliate/')) return handleAffiliate(req, res, path.replace('affiliate/', ''));
   if (path.startsWith('alerts/')) return handleAlerts(req, res, path.replace('alerts/', ''));
   if (path === 'alerts') return handleAlerts(req, res, '');
-  if (path.startsWith('analytics/')) return res.status(200).json({ ok: true });
+  // analytics/event (POST, no auth) and analytics/dashboard (GET, admin-protected)
+  if (path.startsWith('analytics/')) return handleAnalytics(req, res, path.replace('analytics/', ''));
+  if (path === 'analytics') return handleAnalytics(req, res, '');
   if (path.startsWith('debug/')) return handleDebug(req, res, path.replace('debug/', ''));
   if (path.startsWith('push/')) return handlePush(req, res, path.replace('push/', ''));
   if (path === 'variants') return handleVariants(req, res);
   if (path.startsWith('price-history/')) return handlePriceHistory(req, res, path.replace('price-history/', ''));
+  if (path.startsWith('price-prediction/')) return handlePricePrediction(req, res, path.replace('price-prediction/', ''));
+  if (path.startsWith('admin/product-quality')) return handleProductQuality(req, res, path.replace('admin/product-quality', ''));
+  if (path.startsWith('admin/catalog-health'))  return handleCatalogHealth(req, res, path.replace('admin/catalog-health', ''));
   if (path.startsWith('users/')) return handleUsers(req, res, path.replace('users/', ''));
   if (path.startsWith('product/')) {
     const sub = path.replace('product/', '');
@@ -56,8 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return handleProductDetail(req, res, sub);
   }
   if (path.startsWith('recommendations/')) return handleRecommendations(req, res, path.replace('recommendations/', ''));
-  if (path.startsWith('analytics/')) return handleAnalytics(req, res, path.replace('analytics/', ''));
-  if (path === 'analytics') return handleAnalytics(req, res, '');
+  if (path.startsWith('assistant/')) return handleAiAssistant(req, res, path.replace('assistant/', ''));
 
   return res.status(404).json({ error: 'Not found' });
 }

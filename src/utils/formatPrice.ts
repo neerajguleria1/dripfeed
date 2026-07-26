@@ -10,12 +10,29 @@ export function formatPrice(amount: number): string {
 }
 
 /**
+ * Alias for formatPrice — maintains backward compatibility with callers
+ * that import formatINR from this module or from utils/format.
+ */
+export const formatINR = formatPrice;
+
+/**
  * Calculate discount percentage between originalPrice and currentPrice.
  * Returns 0 if original is not greater than current.
  */
 export function calculateDiscount(originalPrice: number, currentPrice: number): number {
   if (originalPrice <= 0 || currentPrice < 0 || originalPrice <= currentPrice) return 0;
   return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+}
+
+/**
+ * Alias for calculateDiscount — maintains backward compatibility with callers
+ * that import discountPercent from utils/format.
+ * Returns null (instead of 0) when there is no discount, matching the
+ * original format.ts contract.
+ */
+export function discountPercent(original: number, current: number): number | null {
+  if (!original || original <= current) return null;
+  return Math.round(((original - current) / original) * 100);
 }
 
 /**

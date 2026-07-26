@@ -7,14 +7,18 @@ import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
 import type { VariantSelection } from '../components/product/AjioVariantPanel';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
+import { InterpretedFiltersBar } from '../components/search/InterpretedFiltersBar';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import Analytics from '../utils/analytics';
 import { useFilterState } from '../hooks/useFilterState';
-import { applyFiltersAndSort, extractFacets } from '../types/filters';
+import { useQueryInterpreter } from '../hooks/useQueryInterpreter';
+import { applyFiltersAndSort, applySort, extractFacets } from '../types/filters';
 import type { FilterState } from '../components/search/SearchFilters';
+import type { InterpretedFilters } from '../types/queryInterpreter';
+import { formatPrice } from '../utils/formatPrice';
 
 // Flat product shape returned by the streaming/blocking search endpoints
 interface ProductData {
@@ -77,18 +81,6 @@ const PLATFORM_COLORS: Record<string, string> = {
   tata: '#6C3D9E',
   tatacliq: '#6C3D9E',
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(price);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Featured Product Card — Premium gold-accented lede card
@@ -460,6 +452,11 @@ function ResultsSkeleton() {
 export default function SearchPage() {
   const navigate = useNavigate();
   const { filters, query, setFilters, resetFilters, setQuery: setUrlQuery } = useFilterState();
+  const { result: interpreterResult, status: interpretStatus, interpret, reset: resetInterpreter } = useQueryInterpreter();
+
+  // Active interpreted filters — user can remove individual ones
+  const [activeChips, setActiveChips] = useState<typeof interpreterResult extends null ? never[] : NonNullable<typeof interpreterResult>['chips']>([]);
+  const [activeInterpretedFilters, setActiveInterpretedFilters] = useState<InterpretedFilters>({});
 
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -643,6 +640,26 @@ export default function SearchPage() {
     }, 2000);
   }, [fetchResultsStreaming, fetchResultsBlocking, fetchThrift]);
 
+  // Sync interpreter results into active state
+  useEffect(() => {
+    if (interpreterResult) {
+      setActiveChips(interpreterResult.chips ?? []);
+      setActiveInterpretedFilters(interpreterResult.filters ?? {});
+    }
+  }, [interpreterResult]);
+
+  // Trigger interpreter whenever query changes
+  useEffect(() => {
+    if (query && query.trim().length >= 3) {
+      interpret(query.trim());
+    } else {
+      resetInterpreter();
+      setActiveChips([]);
+      setActiveInterpretedFilters({});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
   // Fetch real trending products for landing page
   useEffect(() => {
     if (query) return; // only on landing
@@ -687,6 +704,26 @@ export default function SearchPage() {
     setFilters(newFilters);
   }
 
+  function handleRemoveInterpretedFilter(key: keyof InterpretedFilters) {
+    setActiveInterpretedFilters(prev => {
+      const next = { ...prev };
+      delete next[key];
+      // Also remove maxPrice when removing minPrice (they're shown as one chip)
+      if (key === 'minPrice') delete next.maxPrice;
+      if (key === 'maxPrice') delete next.minPrice;
+      return next;
+    });
+    setActiveChips(prev => prev.filter(c => {
+      if (key === 'minPrice') return c.key !== 'minPrice' && c.key !== 'maxPrice';
+      return c.key !== key;
+    }));
+  }
+
+  function handleClearAllInterpretedFilters() {
+    setActiveChips([]);
+    setActiveInterpretedFilters({});
+  }
+
   function handleLoadMore() {
     // Pagination — future implementation
   }
@@ -703,10 +740,33 @@ export default function SearchPage() {
 
   const facets = useMemo(() => extractFacets(products), [products]);
 
-  const filteredProducts = useMemo(
-    () => applyFiltersAndSort(products, filters),
-    [products, filters],
-  );
+  const filteredProducts = useMemo(() => {
+    let base = applyFiltersAndSort(products, filters);
+
+    // Apply interpreted filters on top of manual filters
+    const iF = activeInterpretedFilters;
+    if (iF.minPrice) base = base.filter(p => p.price >= iF.minPrice!);
+    if (iF.maxPrice) base = base.filter(p => p.price <= iF.maxPrice!);
+    if (iF.minDiscount) base = base.filter(p => (p.discount ?? 0) >= iF.minDiscount!);
+    if (iF.brand) {
+      const b = iF.brand.toLowerCase();
+      base = base.filter(p => (p.brand ?? '').toLowerCase().includes(b));
+    }
+    if (iF.color) {
+      const c = iF.color.toLowerCase();
+      base = base.filter(p => (p.color ?? '').toLowerCase().includes(c) || p.title.toLowerCase().includes(c));
+    }
+    if (iF.retailer) {
+      const r = iF.retailer.toLowerCase();
+      base = base.filter(p => p.platform.toLowerCase().includes(r));
+    }
+    if (iF.sort && iF.sort !== 'relevance' && filters.sort === 'relevance') {
+      // Only apply interpreted sort if user hasn't overridden
+      base = applySort(base, iF.sort);
+    }
+
+    return base;
+  }, [products, filters, activeInterpretedFilters]);
 
   const platformsSearched = useMemo(() => {
     const unique = new Set(products.map((p) => p.platform));
@@ -826,7 +886,7 @@ export default function SearchPage() {
       {/* ── Sticky Filter Bar ────────────────────────────────────────────────── */}
       {query && (
         <section className="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-2">
             <SearchFilters
                 filters={filters}
                 onFilterChange={handleFilterChange}
@@ -834,6 +894,17 @@ export default function SearchPage() {
                 facets={facets}
                 resultCount={filteredProducts.length}
               />
+            {/* AI interpreted filter chips */}
+            {(activeChips.length > 0 || interpretStatus === 'loading') && (
+              <InterpretedFiltersBar
+                chips={activeChips}
+                confidence={interpreterResult?.confidence ?? 0}
+                provider={interpreterResult?.provider ?? 'rules'}
+                onRemoveFilter={handleRemoveInterpretedFilter}
+                onClearAll={handleClearAllInterpretedFilters}
+                loading={interpretStatus === 'loading'}
+              />
+            )}
           </div>
         </section>
       )}

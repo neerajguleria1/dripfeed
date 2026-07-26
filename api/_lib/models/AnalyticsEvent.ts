@@ -74,6 +74,9 @@ schema.index({ ts: 1 }, { expireAfterSeconds: RETENTION_DAYS * 86400 });
 schema.index({ event: 1, ts: -1 });
 schema.index({ query: 1, event: 1 });
 schema.index({ platform: 1, event: 1 });
+// Trending engine aggregation: $match { event, ts, canonicalId: { $exists: true } }
+// This compound index covers the trending engine's aggregation pipeline filter.
+schema.index({ canonicalId: 1, event: 1, ts: -1 }, { sparse: true });
 
 const AnalyticsEvent =
   (mongoose.models.AnalyticsEvent as mongoose.Model<IAnalyticsEvent>) ||

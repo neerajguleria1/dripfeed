@@ -304,8 +304,17 @@ async function deals(req: VercelRequest, res: VercelResponse) {
       { dropPercentage: -1 };
 
     const [dealsList, total] = await Promise.all([
-      Deal.find(filter).sort(sortOption).skip(skip).limit(limit).lean(),
-      Deal.countDocuments(filter),
+      Deal.find(filter)
+        .select('productTitle brand imageUrl platform currentPrice previousPrice dropPercentage url detectedAt trackersCount')
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      // Use estimatedDocumentCount for the unfiltered active=true case (much faster on M0)
+      // Fall back to countDocuments when additional filters narrow the result set.
+      Object.keys(filter).length === 1
+        ? Deal.estimatedDocumentCount()
+        : Deal.countDocuments(filter),
     ]);
 
     return res.json({
