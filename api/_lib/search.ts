@@ -857,7 +857,7 @@ async function fetchTataCliq(query: string): Promise<SearchProduct[]> {
 
   try {
     const targetUrl = `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(query)}`;
-    const scraped = scraperUrl(targetUrl, { render: true, wait_for_selector: '.ProductModule__base' });
+    const scraped = scraperUrl(targetUrl, { render: true });
     const { data: html } = await withScraperSlot(() => axios.get(scraped, {
       responseType: 'text',
       timeout: 70000,
