@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal, ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp } from 'lucide-react';
+import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp } from 'lucide-react';
 import { useAjioVariants } from '../hooks/useAjioVariants';
 import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
 import type { VariantSelection } from '../components/product/AjioVariantPanel';
@@ -12,6 +12,8 @@ import { SEOHead } from '../components/common/SEOHead';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import Analytics from '../utils/analytics';
+import { useFilterState } from '../hooks/useFilterState';
+import { applyFiltersAndSort, extractFacets } from '../types/filters';
 import type { FilterState } from '../components/search/SearchFilters';
 
 // Flat product shape returned by the streaming/blocking search endpoints
@@ -42,14 +44,6 @@ interface ThriftResult {
 }
 
 
-const DEFAULT_FILTERS: FilterState = {
-  platforms: [],
-  priceRange: 'all',
-  category: 'all',
-  minDiscount: 0,
-  sort: 'price-asc',
-};
-
 const TRENDING_SEARCHES = [
   'kurta set',
   'sneakers',
@@ -70,13 +64,6 @@ const CATEGORIES = [
   { name: 'Activewear', slug: 'activewear', count: '1,200+' },
 ];
 
-const SORT_OPTIONS: { value: FilterState['sort']; label: string }[] = [
-  { value: 'price-asc', label: 'Lowest Price' },
-  { value: 'discount-desc', label: 'Highest Discount' },
-  { value: 'newest', label: 'Newest First' },
-  { value: 'platform', label: 'By Platform' },
-];
-
 // Platform color mapping
 const PLATFORM_COLORS: Record<string, string> = {
   myntra: '#FF3F6C',
@@ -94,31 +81,6 @@ const PLATFORM_COLORS: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
-function matchesPriceRange(price: number, range: string): boolean {
-  switch (range) {
-    case 'under500': return price < 500;
-    case '500-1000': return price >= 500 && price <= 1000;
-    case '1000-2000': return price >= 1000 && price <= 2000;
-    case '2000-5000': return price >= 2000 && price <= 5000;
-    case '5000+': return price >= 5000;
-    case 'all':
-    default: return true;
-  }
-}
-
-function sortProducts(products: ProductData[], sort: FilterState['sort']): ProductData[] {
-  const sorted = [...products];
-  const cheapest = (c: ProductData) => c.price;
-  const bestDiscount = (c: ProductData) => c.discount ?? 0;
-  switch (sort) {
-    case 'price-asc':     return sorted.sort((a, b) => cheapest(a) - cheapest(b));
-    case 'discount-desc': return sorted.sort((a, b) => bestDiscount(b) - bestDiscount(a));
-    case 'newest':        return sorted;
-    case 'platform':      return sorted.sort((a, b) => (a.platform ?? '').localeCompare(b.platform ?? ''));
-    default:              return sorted;
-  }
-}
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -496,15 +458,13 @@ function ResultsSkeleton() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const query = searchParams.get('q') || '';
+  const { filters, query, setFilters, resetFilters, setQuery: setUrlQuery } = useFilterState();
 
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [platformStatus, setPlatformStatus] = useState<Record<string, 'loading' | 'done' | 'empty'>>({});
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [hasMore, setHasMore] = useState(false);
   const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
   const [relatedSections, setRelatedSections] = useState<{ label: string; sections: { query: string; products: ProductData[] }[] } | null>(null);
@@ -719,7 +679,7 @@ export default function SearchPage() {
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
     } else {
-      setSearchParams({ q: trimmed });
+      setUrlQuery(trimmed);
     }
   }
 
@@ -732,7 +692,7 @@ export default function SearchPage() {
   }
 
   function handleTrendingClick(term: string) {
-    setSearchParams({ q: term });
+    setUrlQuery(term);
   }
 
   function handleCategoryClick(slug: string) {
@@ -741,27 +701,12 @@ export default function SearchPage() {
 
   // ── Client-side Filtering ─────────────────────────────────────────────────
 
-  const filteredProducts = useMemo(() => {
-    let result = [...products];
+  const facets = useMemo(() => extractFacets(products), [products]);
 
-    if (filters.platforms.length > 0) {
-      result = result.filter((p) =>
-        filters.platforms.some(
-          (plat) => p.platform.toLowerCase() === plat.toLowerCase()
-        )
-      );
-    }
-
-    if (filters.priceRange !== 'all') {
-      result = result.filter((p) => matchesPriceRange(p.price, filters.priceRange));
-    }
-
-    if (filters.minDiscount > 0) {
-      result = result.filter((p) => (p.discount || 0) >= filters.minDiscount);
-    }
-
-    return sortProducts(result, filters.sort);
-  }, [products, filters]);
+  const filteredProducts = useMemo(
+    () => applyFiltersAndSort(products, filters),
+    [products, filters],
+  );
 
   const platformsSearched = useMemo(() => {
     const unique = new Set(products.map((p) => p.platform));
@@ -882,53 +827,13 @@ export default function SearchPage() {
       {query && (
         <section className="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 text-neutral-400">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="text-[12px] font-medium uppercase tracking-[0.06em]">
-                  Filters
-                </span>
-              </div>
-
-              {/* Pill-style sort with gold accent */}
-              <div className="relative">
-                <select
-                  value={filters.sort}
-                  onChange={(e) =>
-                    handleFilterChange({
-                      ...filters,
-                      sort: e.target.value as FilterState['sort'],
-                    })
-                  }
-                  className="appearance-none bg-white border border-neutral-200 rounded-full
-                    px-4 py-2 sm:py-1.5 pr-8 text-[13px] font-medium text-neutral-600
-                    cursor-pointer hover:border-[#C9A96E]/50
-                    focus:outline-none focus:ring-2 focus:ring-[#C9A96E]/30 focus:border-[#C9A96E]
-                    transition-colors tracking-wide min-h-[44px] sm:min-h-0"
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <svg className="w-3 h-3 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Filter chips — horizontal scroll on mobile */}
-            <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide mt-3">
-              <SearchFilters
+            <SearchFilters
                 filters={filters}
                 onFilterChange={handleFilterChange}
+                onReset={resetFilters}
+                facets={facets}
                 resultCount={filteredProducts.length}
-                platformsSearched={platformsSearched}
               />
-            </div>
           </div>
         </section>
       )}
