@@ -852,6 +852,7 @@ export function parseTataCliqHtml(html: string): SearchProduct[] {
 }
 
 async function fetchTataCliq(query: string): Promise<SearchProduct[]> {
+  if (process.env.ENABLE_TATACLIQ !== 'true') return [];
   if (!SCRAPER_KEYS.length) return [];
   if (isCircuitOpen('tatacliq')) return [];
 
