@@ -15,6 +15,12 @@ import { LRUCache } from './lruCache.js';
 export type { SearchProduct } from './types/searchProduct.js';
 import type { SearchProduct } from './types/searchProduct.js';
 
+// ─── Feature flags ─────────────────────────────────────────────────────────────
+// Set ENABLE_TATACLIQ = true to show Tata CLiQ results to users.
+// Tokens are NEVER consumed when disabled — the fetcher returns immediately.
+// Requires ENABLE_TATACLIQ=true env var as well (double-gated for safety).
+const ENABLE_TATACLIQ = false;
+
 // ─── ScraperAPI concurrency limiter (priority-aware) ──────────────────────────
 // Our ScraperAPI plan caps concurrent requests at 5 (concurrencyLimit=5). When
 // Amazon/Flipkart/Myntra/Ajio all fire in parallel (searchProducts uses
@@ -857,7 +863,7 @@ export function parseTataCliqHtml(html: string): SearchProduct[] {
 }
 
 async function fetchTataCliq(query: string): Promise<SearchProduct[]> {
-  if (process.env.ENABLE_TATACLIQ !== 'true') return [];
+  if (!ENABLE_TATACLIQ || process.env.ENABLE_TATACLIQ !== 'true') return [];
   if (!SCRAPER_KEYS.length) return [];
   if (isCircuitOpen('tatacliq')) return [];
 
