@@ -15,37 +15,42 @@ import { LRUCache } from './lruCache.js';
 export type { SearchProduct } from './types/searchProduct.js';
 import type { SearchProduct } from './types/searchProduct.js';
 
-// ─── ScraperAPI concurrency limiter ──────────────────────────────────────────
+// ─── ScraperAPI concurrency limiter (priority-aware) ──────────────────────────
 // Our ScraperAPI plan caps concurrent requests at 5 (concurrencyLimit=5). When
 // Amazon/Flipkart/Myntra/Ajio all fire in parallel (searchProducts uses
 // Promise.all), it's easy to momentarily exceed that limit — observed as
 // random 403s or connection timeouts on whichever request loses the race,
-// even though every platform works fine when called alone. This is a simple
-// FIFO semaphore so at most MAX_CONCURRENT_SCRAPER_REQUESTS calls to
-// api.scraperapi.com are ever in flight at once; everything else queues and
-// runs as soon as a slot frees up, instead of racing and failing.
-const MAX_CONCURRENT_SCRAPER_REQUESTS = 4; // stay one below the account's hard limit of 5
+// even though every platform works fine when called alone. This is a priority
+// semaphore: fast platforms (Amazon, Flipkart, Myntra, Ajio) use HIGH priority
+// and jump the queue ahead of slow platforms (Meesho, Tata CLiQ) so quick
+// results arrive first and slow scrapes never block fast ones.
+const MAX_CONCURRENT_SCRAPER_REQUESTS = 4;
 let activeScraperRequests = 0;
-const scraperRequestQueue: Array<() => void> = [];
+const highPriorityQueue: Array<() => void> = [];
+const lowPriorityQueue: Array<() => void> = [];
 
-async function acquireScraperSlot(): Promise<void> {
+async function acquireScraperSlot(priority: 'high' | 'low' = 'high'): Promise<void> {
   if (activeScraperRequests < MAX_CONCURRENT_SCRAPER_REQUESTS) {
     activeScraperRequests++;
     return;
   }
-  await new Promise<void>((resolve) => scraperRequestQueue.push(resolve));
+  await new Promise<void>((resolve) => {
+    if (priority === 'high') highPriorityQueue.push(resolve);
+    else lowPriorityQueue.push(resolve);
+  });
   activeScraperRequests++;
 }
 
 function releaseScraperSlot(): void {
   activeScraperRequests--;
-  const next = scraperRequestQueue.shift();
+  // High-priority waiters always run before low-priority ones
+  const next = highPriorityQueue.shift() ?? lowPriorityQueue.shift();
   if (next) next();
 }
 
 /** Runs `fn` with an acquired ScraperAPI concurrency slot, always releasing it afterward. */
-async function withScraperSlot<T>(fn: () => Promise<T>): Promise<T> {
-  await acquireScraperSlot();
+async function withScraperSlot<T>(fn: () => Promise<T>, priority: 'high' | 'low' = 'high'): Promise<T> {
+  await acquireScraperSlot(priority);
   try {
     return await fn();
   } finally {
@@ -67,7 +72,7 @@ import {
 // instances that receive thousands of distinct queries. LRU evicts the
 // least-recently-used entry when the cap is reached, keeping hot queries warm.
 interface MemEntry { data: SearchProduct[]; fetchedAt: Date; }
-const memCache = new LRUCache<string, MemEntry>({ maxSize: 500 });
+const memCache = new LRUCache<string, MemEntry>({ maxSize: 1000 });
 
 function getMemCached(key: string): { data: SearchProduct[]; meta: CacheMeta } | null {
   const entry = memCache.get(key);
@@ -658,9 +663,9 @@ async function fetchMeesho(query: string): Promise<SearchProduct[]> {
   try {
     const url = scraperUrl(`https://www.meesho.com/search?q=${encodeURIComponent(query)}`, { render: true, wait: 8000 });
     const { data: html } = await withScraperSlot(() => axios.get(url, {
-      timeout: 90000,
+      timeout: 30000,
       transformResponse: [(d) => d],
-    }));
+    }), 'low');
 
     if (typeof html !== 'string' || html.length < 500) {
       console.warn('[Meesho] empty response from ScraperAPI');
@@ -861,8 +866,8 @@ async function fetchTataCliq(query: string): Promise<SearchProduct[]> {
     const scraped = scraperUrl(targetUrl, { render: true });
     const { data: html } = await withScraperSlot(() => axios.get(scraped, {
       responseType: 'text',
-      timeout: 70000,
-    }));
+      timeout: 25000,
+    }), 'low');
 
     if (typeof html !== 'string' || html.length < 5000) {
       console.warn('[TataCliq] short/invalid response, length:', typeof html === 'string' ? html.length : 0);
@@ -965,8 +970,8 @@ export function groupSearchResults(products: SearchProduct[]): CanonicalProduct[
 // Exported for diagnostic/testing purposes only (per-platform isolation).
 export const __platformFetchers = { fetchAmazonPage, fetchFlipkart, fetchMyntra, fetchAjio, fetchMeesho, fetchTataCliq };
 
-export async function searchProducts(query: string): Promise<CanonicalProduct[]> {
-  const { canonicals } = await searchProductsWithMeta(query);
+export async function searchProducts(query: string, fastOnly = false): Promise<CanonicalProduct[]> {
+  const { canonicals } = await searchProductsWithMeta(query, false, fastOnly);
   return canonicals;
 }
 
@@ -976,11 +981,16 @@ export async function searchProducts(query: string): Promise<CanonicalProduct[]>
  * the UI), then groups all collected results into CanonicalProduct[] once
  * every platform has settled. Grouping requires seeing all platforms first
  * because a Flipkart result may match an Amazon result that arrived earlier.
+ *
+ * When `fastOnly` is true, slow/expensive platforms (Meesho, Tata CLiQ) are
+ * skipped entirely — used for secondary/related searches where speed matters
+ * more than completeness.
  */
 export async function searchProductsStreaming(
   query: string,
   onPlatform: (platform: string, products: SearchProduct[]) => void,
   skipCacheCheck = false,
+  fastOnly = false,
 ): Promise<{ canonicals: CanonicalProduct[]; meta: CacheMeta }> {
   const cacheKey = normalizeQuery(query);
   const searchTerm = query.toLowerCase().trim();
@@ -1024,14 +1034,20 @@ export async function searchProductsStreaming(
     if (valid.length) onPlatform(platform, valid);
   }
 
-  await Promise.all([
+  const platformPromises: Promise<void>[] = [
     withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS).catch(() => []).then(r => processed('amazon', r)),
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
-    withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []).then(r => processed('meesho', r)),
     withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []).then(r => processed('myntra', r)),
-    withTimeout(fetchTataCliq(searchTerm), 70000).catch(() => []).then(r => processed('tatacliq', r)),
-  ]);
+  ];
+  // Skip slow/expensive platforms for secondary searches (related products etc.)
+  if (!fastOnly) {
+    platformPromises.push(
+      withTimeout(fetchMeesho(searchTerm), 35000).catch(() => []).then(r => processed('meesho', r)),
+      withTimeout(fetchTataCliq(searchTerm), 30000).catch(() => []).then(r => processed('tatacliq', r)),
+    );
+  }
+  await Promise.all(platformPromises);
 
   const fetchedAt = new Date();
   if (collected.length) {
@@ -1058,6 +1074,10 @@ export async function searchProductsStreaming(
       const lowestPrice = c.offers[0]?.price;
       if (lowestPrice) evaluateAlerts(c.id, lowestPrice).catch(() => {});
     }
+
+    // Fire-and-forget: warm trending cache for landing page speed
+    if (!fastOnly) getTrending().catch(() => {});
+
     return { canonicals, meta: liveCacheMeta() };
   }
 
@@ -1075,6 +1095,7 @@ export type { CacheMeta } from './cache/policy.js';
 export async function searchProductsWithMeta(
   query: string,
   bypassCache = false,
+  fastOnly = false,
 ): Promise<{ canonicals: ReturnType<typeof groupSearchResults>; meta: CacheMeta }> {
   const cacheKey = normalizeQuery(query);
   const searchTerm = query.toLowerCase().trim();
@@ -1103,14 +1124,23 @@ export async function searchProductsWithMeta(
   recordCacheMiss(cacheKey);
 
   const scrapePromise = (async (): Promise<{ data: SearchProduct[]; meta: CacheMeta }> => {
-    const [az1, fk, aj, ms, mn, tc] = await Promise.all([
+    const promises: Promise<SearchProduct[]>[] = [
       withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS),
       withRetry(() => fetchFlipkart(searchTerm), 'Flipkart'),
       withRetry(() => fetchAjio(searchTerm), 'Ajio'),
-      withTimeout(fetchMeesho(searchTerm), 60000).catch(() => []),
       withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []),
-      withTimeout(fetchTataCliq(searchTerm), 70000).catch(() => []),
-    ]);
+    ];
+    // Skip slow/expensive platforms for secondary searches
+    if (!fastOnly) {
+      promises.push(
+        withTimeout(fetchMeesho(searchTerm), 35000).catch(() => []),
+        withTimeout(fetchTataCliq(searchTerm), 30000).catch(() => []),
+      );
+    }
+    const settled = await Promise.all(promises);
+    const [az1, fk, aj, mn, ...rest] = settled;
+    const ms = rest[0] ?? [];
+    const tc = rest[1] ?? [];
 
     const seenAsins = new Set<string>();
     const dedupedAmazon = az1.filter(p => {
@@ -1151,6 +1181,9 @@ export async function searchProductsWithMeta(
         if (lowestPrice) evaluateAlerts(c.id, lowestPrice).catch(() => {});
       }
     }
+
+    // Fire-and-forget: warm trending cache for landing page speed
+    if (!fastOnly) getTrending().catch(() => {});
 
     return { data: allResults, meta: liveCacheMeta() };
   })();
@@ -1229,9 +1262,10 @@ export async function getRelatedProducts(query: string): Promise<{ label: string
   const related = findRelated(query);
   if (!related) return { label: 'You may also like', sections: [] };
 
+  const RELATED_TIMEOUT_MS = 12000;
   const sections = await Promise.all(
     related.queries.slice(0, 3).map(async (q) => {
-      const products = await searchProducts(q).catch(() => []);
+      const products = await withTimeout(searchProducts(q, true), RELATED_TIMEOUT_MS).catch(() => []);
       return { query: q, products: products.slice(0, 4) };
     })
   );
@@ -1252,9 +1286,10 @@ export async function getTrending(): Promise<CanonicalProduct[]> {
   if (db) { setMemCache(cacheKey, db.data, new Date(db.meta.fetchedAt)); return groupSearchResults(db.data); }
 
   // Fetch all trending queries, collect flat products, then group once
+  const TRENDING_TIMEOUT_MS = 15000;
   const allFlat = (await Promise.all(
     TRENDING_QUERIES.map(q =>
-      searchProducts(q)
+      withTimeout(searchProducts(q, true), TRENDING_TIMEOUT_MS)
         .then(canonicals => canonicals.flatMap(c => c.offers.map(o => o.originalProduct)))
         .catch(() => [] as SearchProduct[])
     )

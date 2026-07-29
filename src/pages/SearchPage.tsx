@@ -485,10 +485,9 @@ export default function SearchPage() {
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
   // Progressive/streaming search: renders each platform's results the moment
-  // they arrive instead of waiting for the slowest platform (Ajio can take
-  // longer on ScraperAPI escalation, while Amazon/Flipkart often resolve in
-  // a few seconds). Falls back to the original blocking endpoint if the
-  // browser doesn't support EventSource or the stream errors immediately.
+  // they arrive instead of waiting for the slowest platform. Amazon/Flipkart
+  // often resolve in a few seconds, while Meesho/TataCliq can take 30s+.
+  // Falls back to the blocking endpoint if EventSource is unavailable.
   const fetchResultsStreaming = useCallback((searchQuery: string): boolean => {
     if (typeof window === 'undefined' || typeof window.EventSource === 'undefined') return false;
 
@@ -501,10 +500,32 @@ export default function SearchPage() {
     es.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.type === 'canonicals' && Array.isArray(payload.canonicals) && payload.canonicals.length) {
+
+        if (payload.type === 'platform_products' && Array.isArray(payload.products)) {
+          // Progressive: render each platform's products as soon as they arrive
+          setProducts(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const fresh = payload.products
+              .filter((p: any) => !existingIds.has(p.id))
+              .map((p: any) => ({
+                id: p.id,
+                title: p.title,
+                brand: p.brand,
+                imageUrl: p.imageUrl,
+                price: p.price ?? 0,
+                originalPrice: p.originalPrice,
+                discount: p.discount,
+                platform: p.platform ?? '',
+                url: p.url ?? '',
+                color: p.color,
+                size: p.size,
+              }));
+            return [...prev, ...fresh];
+          });
+        } else if (payload.type === 'canonicals' && Array.isArray(payload.canonicals) && payload.canonicals.length) {
           settled = true;
           setLoading(false);
-          // Flatten canonicals → ProductData (cheapest offer per canonical)
+          // Replace progressive products with final grouped/deduplicated canonicals
           const flat: ProductData[] = payload.canonicals.map((c: any) => {
             const o = c.offers?.[0];
             return {
@@ -557,9 +578,6 @@ export default function SearchPage() {
     };
 
     es.onerror = () => {
-      // If we never received any platform data before the stream errored,
-      // let the caller fall back to the blocking endpoint. If we already got
-      // partial results, just end gracefully — the user still sees them.
       es.close();
       if (!settled) fetchResultsBlocking(searchQuery);
       else setLoading(false);

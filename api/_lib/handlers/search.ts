@@ -210,16 +210,38 @@ async function productSearchStream(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Live fetch: onPlatform fires per-platform for the status pills,
-    // then we send the final grouped canonicals once all platforms settle.
+    // Live fetch: per-platform results arrive progressively via onPlatform.
+    // Each platform's products are sent immediately as 'platform_products' so
+    // the client can render them without waiting for slower platforms.
     const { canonicals, meta } = await searchProductsStreaming(
       searchTerm,
       (platform, products) => {
         send({ type: 'platform', platform, count: products.length });
+        if (products.length > 0) {
+          send({
+            type: 'platform_products',
+            platform,
+            products: products.map(p => ({
+              id: p.id,
+              title: p.title,
+              brand: p.brand,
+              price: p.price,
+              originalPrice: p.originalPrice,
+              discount: p.discount,
+              imageUrl: p.imageUrl,
+              platform: p.platform,
+              url: p.affiliateUrl || p.url,
+              color: p.color,
+              size: p.size,
+            })),
+          });
+        }
       },
       true, // skipCacheCheck — already checked above
     );
 
+    // Once all platforms settle, send the final grouped/deduplicated canonicals.
+    // Client replaces intermediate per-platform products with these.
     send({ type: 'canonicals', canonicals: canonicals.map(serializeCanonical), cacheMeta: meta });
     send({ type: 'done', query: searchTerm });
   } catch (e: any) {

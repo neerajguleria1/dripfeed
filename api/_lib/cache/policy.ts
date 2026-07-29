@@ -30,11 +30,12 @@ export interface PlatformCachePolicy {
  * after .toLowerCase().replace(/\s+/g, '').
  */
 export const PLATFORM_CACHE_POLICIES: Readonly<Record<string, PlatformCachePolicy>> = {
-  amazon:   { memTtlMs: 2  * 60 * 60 * 1000, dbTtlMs: 2  * 60 * 60 * 1000, label: 'Amazon'   },
-  flipkart: { memTtlMs: 4  * 60 * 60 * 1000, dbTtlMs: 4  * 60 * 60 * 1000, label: 'Flipkart' },
-  myntra:   { memTtlMs: 12 * 60 * 60 * 1000, dbTtlMs: 12 * 60 * 60 * 1000, label: 'Myntra'   },
-  ajio:     { memTtlMs: 12 * 60 * 60 * 1000, dbTtlMs: 12 * 60 * 60 * 1000, label: 'Ajio'     },
-  meesho:   { memTtlMs: 24 * 60 * 60 * 1000, dbTtlMs: 24 * 60 * 60 * 1000, label: 'Meesho'   },
+  amazon:   { memTtlMs: 2  * 60 * 60 * 1000, dbTtlMs: 2  * 60 * 60 * 1000, label: 'Amazon'    },
+  flipkart: { memTtlMs: 4  * 60 * 60 * 1000, dbTtlMs: 4  * 60 * 60 * 1000, label: 'Flipkart'  },
+  myntra:   { memTtlMs: 12 * 60 * 60 * 1000, dbTtlMs: 12 * 60 * 60 * 1000, label: 'Myntra'    },
+  ajio:     { memTtlMs: 12 * 60 * 60 * 1000, dbTtlMs: 12 * 60 * 60 * 1000, label: 'Ajio'      },
+  meesho:   { memTtlMs: 48 * 60 * 60 * 1000, dbTtlMs: 48 * 60 * 60 * 1000, label: 'Meesho'    },
+  tatacliq: { memTtlMs: 24 * 60 * 60 * 1000, dbTtlMs: 24 * 60 * 60 * 1000, label: 'Tata CLiQ' },
 };
 
 /**
