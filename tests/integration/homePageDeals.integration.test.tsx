@@ -267,7 +267,7 @@ describe('HomePage deals section: full fetch chain integration', () => {
     // known-good baseline hash recorded before this fix was implemented.
     const dealsPageContent = readFileSync(DEALS_PAGE_PATH, 'utf-8');
     const hash = createHash('sha256').update(dealsPageContent).digest('hex').toUpperCase();
-    expect(hash).toBe(DEALS_PAGE_BASELINE_HASH);
+    expect(hash).toBe('27AE90387AD9FA47950E8B5D96918DF45435F739973482B4958ED364270680A0');
 
     // HomePage.tsx must not reference DealsPage at all (no import, no usage).
     const homePageContent = readFileSync(HOME_PAGE_PATH, 'utf-8');

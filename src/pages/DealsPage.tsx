@@ -4,8 +4,11 @@ import { motion } from 'framer-motion';
 import { TrendingDown, ArrowRight } from 'lucide-react';
 import { SEOHead } from '../components/common/SEOHead';
 import { PlatformBadge } from '../components/ui/PlatformBadge';
+import { DealVerdictBadge } from '../components/ui/DealVerdictBadge';
 import { formatINR } from '../utils/format';
 import { staggerChildren } from '../design-system/animations';
+import { usePriceHistory } from '../hooks/usePriceHistory';
+import { analyzeDeal } from '../utils/dealVerdict';
 import api from '../services/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,6 +115,17 @@ function DealCardSkeleton() {
 function DealCard({ deal, index }: { deal: Deal; index: number }) {
   const recent = isRecentDeal(deal.detectedAt);
 
+  // Lazy price history fetch — one call per unique deal._id, cached by the hook
+  const priceHistory = usePriceHistory();
+  useEffect(() => {
+    if (deal._id) priceHistory.fetch(deal._id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deal._id]);
+
+  const verdict = (priceHistory.status === 'success' && priceHistory.stats)
+    ? analyzeDeal(deal.currentPrice, deal.originalPrice, priceHistory.stats, priceHistory.points.length)
+    : null;
+
   return (
     <motion.a
       href={deal.url}
@@ -173,6 +187,12 @@ function DealCard({ deal, index }: { deal: Deal; index: number }) {
               </span>
               <PriceSparkline drop={deal.dropPercent} />
             </div>
+            {/* Deal Verdict Badge — appears asynchronously after price history loads */}
+            {verdict && (
+              <div className="mt-2">
+                <DealVerdictBadge verdict={verdict} />
+              </div>
+            )}
           </div>
         </div>
 

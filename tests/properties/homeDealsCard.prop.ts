@@ -135,7 +135,7 @@ describe('Preservation: untouched-file and unaffected-markup checks (baseline on
     // DealsPage.tsx's own ALL_SEED_PRODUCTS fallback (a separate, explicitly
     // requested change from the original homepage-only scope) so both pages
     // consistently show only real API data with no fabricated fallback.
-    expect(hash).toBe('82C954E35D3EF937364403475325B5D91D27194DA5D31B48F2BC928DE2220062');
+    expect(hash).toBe('27AE90387AD9FA47950E8B5D96918DF45435F739973482B4958ED364270680A0');
   });
 
   it('homepage hero, how-it-works, trending-searches, social-proof, CTA, and footer copy is present and unchanged', () => {

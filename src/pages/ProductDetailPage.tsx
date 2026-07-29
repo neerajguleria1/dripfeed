@@ -6,14 +6,18 @@ import { SEOHead } from '../components/common/SEOHead';
 import { SaveButton } from '../components/product/SaveButton';
 import PlatformBadge from '../components/ui/PlatformBadge';
 import AffiliateButton from '../components/ui/AffiliateButton';
+import { DealVerdictBadge } from '../components/ui/DealVerdictBadge';
 import { RecommendationSection, RecommendationSkeleton } from '../components/product/RecommendationSection';
 import { SimilarProductsSection } from '../components/product/SimilarProductsSection';
 import { RecentlyViewedSection } from '../components/product/RecentlyViewedSection';
 import { useProductDetail } from '../hooks/useProductDetail';
 import { useRecommendations } from '../hooks/useRecommendations';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
+import { usePriceHistory } from '../hooks/usePriceHistory';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/formatPrice';
+import { analyzeDeal } from '../utils/dealVerdict';
+import type { DealVerdict } from '../utils/dealVerdict';
 import Analytics from '../utils/analytics';
 import { PriceAlertModal } from '../components/product/PriceAlertModal';
 import { usePriceAlert } from '../hooks/usePriceAlert';
@@ -102,7 +106,7 @@ function ProductError({ onRetry }: { onRetry: () => void }) {
 
 // ─── Offer Row ────────────────────────────────────────────────────────────────
 
-function OfferRow({ offer, index }: { offer: OfferData; index: number }) {
+function OfferRow({ offer, index, verdict }: { offer: OfferData; index: number; verdict?: DealVerdict | null }) {
   return (
     <motion.div
       variants={staggerItem}
@@ -156,6 +160,11 @@ function OfferRow({ offer, index }: { offer: OfferData; index: number }) {
               <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{offer.discount}% off</span>
             )}
           </div>
+          {verdict && (
+            <div className="mt-2">
+              <DealVerdictBadge verdict={verdict} />
+            </div>
+          )}
         </div>
         <div className="flex-shrink-0">
           <AffiliateButton platform={offer.platform} url={offer.affiliateUrl || offer.productUrl} productTitle={offer.title} />
@@ -252,9 +261,18 @@ export default function ProductDetailPage() {
   const [alertOpen, setAlertOpen] = useState(false);
   const priceAlert = usePriceAlert(canonicalId);
 
+  // Page-level price history for Deal Verdict Badges on offer rows
+  const priceHistory = usePriceHistory();
+
   useEffect(() => {
     if (canonicalId) fetch(canonicalId);
   }, [canonicalId, fetch]);
+
+  // Fetch price history when the history panel opens — also powers verdict badges
+  useEffect(() => {
+    if (historyOpen && canonicalId) priceHistory.fetch(canonicalId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyOpen, canonicalId]);
 
   // Fetch recommendations only after product loads
   useEffect(() => {
@@ -543,7 +561,16 @@ export default function ProductDetailPage() {
               className="space-y-3"
             >
               {sortedOffers.map((offer, i) => (
-                <OfferRow key={offer.platformProductId} offer={offer} index={i} />
+                <OfferRow
+                  key={offer.platformProductId}
+                  offer={offer}
+                  index={i}
+                  verdict={
+                    priceHistory.status === 'success' && priceHistory.stats
+                      ? analyzeDeal(offer.price, offer.originalPrice, priceHistory.stats, priceHistory.points.length)
+                      : null
+                  }
+                />
               ))}
             </motion.div>
           </section>
