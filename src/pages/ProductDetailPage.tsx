@@ -7,6 +7,7 @@ import { SaveButton } from '../components/product/SaveButton';
 import PlatformBadge from '../components/ui/PlatformBadge';
 import AffiliateButton from '../components/ui/AffiliateButton';
 import { DealVerdictBadge } from '../components/ui/DealVerdictBadge';
+import { ShareModal } from '../components/share/ShareModal';
 import { RecommendationSection, RecommendationSkeleton } from '../components/product/RecommendationSection';
 import { SimilarProductsSection } from '../components/product/SimilarProductsSection';
 import { RecentlyViewedSection } from '../components/product/RecentlyViewedSection';
@@ -259,6 +260,7 @@ export default function ProductDetailPage() {
   const [copied, setCopied] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const priceAlert = usePriceAlert(canonicalId);
 
   // Page-level price history for Deal Verdict Badges on offer rows
@@ -328,15 +330,7 @@ export default function ProductDetailPage() {
 
   async function handleShare() {
     Analytics.shareClicked(canonicalId ?? '', product?.title ?? '');
-    const url = `${SITE_URL}/product/${canonicalId}`;
-    const title = product?.title ?? 'Check this product on TagCheck';
-    if (navigator.share) {
-      try { await navigator.share({ title, url }); } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    setShareModalOpen(true);
   }
 
   // ── SEO data ──────────────────────────────────────────────────────────────
@@ -673,6 +667,15 @@ export default function ProductDetailPage() {
             imageUrl={displayImage}
           />
         )}
+
+        {/* Share Modal */}
+        <ShareModal
+          open={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          title={product.title}
+          url={`${SITE_URL}/product/${canonicalId}`}
+          savings={savings > 0 ? savings : undefined}
+        />
 
         {/* Mobile sticky CTA */}
         {lowest && (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp } from 'lucide-react';
+import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp, Share2 } from 'lucide-react';
 import { useAjioVariants } from '../hooks/useAjioVariants';
 import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
 import type { VariantSelection } from '../components/product/AjioVariantPanel';
@@ -10,6 +10,7 @@ import { SearchFilters } from '../components/search/SearchFilters';
 import { InterpretedFiltersBar } from '../components/search/InterpretedFiltersBar';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
+import { ShareModal } from '../components/share/ShareModal';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import Analytics from '../utils/analytics';
@@ -470,6 +471,7 @@ export default function SearchPage() {
   const [savedIds, setSavedIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('df_saved') || '[]')); } catch { return new Set(); }
   });
+  const [shareOpen, setShareOpen] = useState(false);
 
   function handleSave(product: ProductData) {
     setSavedIds(prev => {
@@ -880,6 +882,24 @@ export default function SearchPage() {
               )}
             </motion.div>
           )}
+
+          {/* Share this comparison — appears when results are loaded */}
+          {query && !loading && products.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex justify-center mt-4"
+            >
+              <button
+                onClick={() => setShareOpen(true)}
+                className="inline-flex items-center gap-2 text-[13px] font-medium text-[#C9A96E] hover:text-[#B8964F] border border-[#C9A96E]/30 hover:border-[#C9A96E] px-4 py-2 rounded-full transition-all min-h-[40px]"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share this comparison
+              </button>
+            </motion.div>
+          )}
         </div>
       </section>
 
@@ -1230,6 +1250,14 @@ export default function SearchPage() {
           </p>
         </div>
       </footer>
+
+      {/* Share Comparison Modal */}
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        title={query ? `${query} — price comparison on TagCheck` : 'Price comparison on TagCheck'}
+        url={`${typeof window !== 'undefined' ? window.location.origin : 'https://dripfeed-v21.vercel.app'}/search?q=${encodeURIComponent(query ?? '')}`}
+      />
     </div>
   );
 }
