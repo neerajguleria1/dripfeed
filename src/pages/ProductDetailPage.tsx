@@ -257,7 +257,7 @@ export default function ProductDetailPage() {
   const { items: recentItems, trackView } = useRecentlyViewed(!!user);
 
   const [activeOfferId, setActiveOfferId] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copied] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
