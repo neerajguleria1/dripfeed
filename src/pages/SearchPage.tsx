@@ -525,23 +525,23 @@ export default function SearchPage() {
         } else if (payload.type === 'canonicals' && Array.isArray(payload.canonicals) && payload.canonicals.length) {
           settled = true;
           setLoading(false);
-          // Replace progressive products with final grouped/deduplicated canonicals
-          const flat: ProductData[] = payload.canonicals.map((c: any) => {
-            const o = c.offers?.[0];
-            return {
-              id: c.id,
+          // Flatten ALL offers from all canonicals so each platform's offer
+          // appears as a separate result — user sees every available option.
+          const flat: ProductData[] = payload.canonicals.flatMap((c: any) =>
+            (c.offers || []).map((o: any) => ({
+              id: `${c.id}__${o.platform ?? ''}`.replace(/\s+/g, '_'),
               title: c.title,
               brand: c.brand,
-              imageUrl: o?.imageUrl,
-              price: o?.price ?? 0,
-              originalPrice: o?.originalPrice,
-              discount: o?.discount,
-              platform: o?.platform ?? '',
-              url: o?.affiliateUrl || o?.productUrl || '',
-              color: o?.color,
-              size: o?.size,
-            };
-          });
+              imageUrl: o.imageUrl || c.imageUrl,
+              price: o.price ?? 0,
+              originalPrice: o.originalPrice,
+              discount: o.discount,
+              platform: o.platform ?? '',
+              url: o.affiliateUrl || o.productUrl || '',
+              color: o.color,
+              size: o.size,
+            }))
+          );
           setProducts(flat);
         } else if (payload.type === 'platform') {
           if (payload.count > 0) {
@@ -591,22 +591,21 @@ export default function SearchPage() {
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
       const canonicals: any[] = data.products || [];
-      const fetched: ProductData[] = canonicals.map((c: any) => {
-        const o = c.offers?.[0];
-        return {
-          id: c.id,
+      const fetched: ProductData[] = canonicals.flatMap((c: any) =>
+        (c.offers || []).map((o: any) => ({
+          id: `${c.id}__${o.platform ?? ''}`.replace(/\s+/g, '_'),
           title: c.title,
           brand: c.brand,
-          imageUrl: o?.imageUrl,
-          price: o?.price ?? 0,
-          originalPrice: o?.originalPrice,
-          discount: o?.discount,
-          platform: o?.platform ?? '',
-          url: o?.affiliateUrl || o?.productUrl || '',
-          color: o?.color,
-          size: o?.size,
-        };
-      });
+          imageUrl: o.imageUrl || c.imageUrl,
+          price: o.price ?? 0,
+          originalPrice: o.originalPrice,
+          discount: o.discount,
+          platform: o.platform ?? '',
+          url: o.affiliateUrl || o.productUrl || '',
+          color: o.color,
+          size: o.size,
+        }))
+      );
       setProducts(fetched);
       setHasMore(false);
     } catch {

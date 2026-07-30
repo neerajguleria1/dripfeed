@@ -197,22 +197,21 @@ export default function ComparePage() {
         } else if (payload.type === 'canonicals' && Array.isArray(payload.canonicals)) {
           settled = true;
           setLoading(false);
-          const flat: ProductData[] = payload.canonicals.map((c: any) => {
-            const o = c.offers?.[0] || {};
-            return {
-              id: c.id,
+          const flat: ProductData[] = payload.canonicals.flatMap((c: any) =>
+            (c.offers || []).map((o: any) => ({
+              id: `${c.id}__${o.platform ?? ''}`.replace(/\s+/g, '_'),
               title: c.title,
               brand: c.brand,
-              imageUrl: o.imageUrl || '',
+              imageUrl: o.imageUrl || c.imageUrl,
               price: o.price ?? 0,
               originalPrice: o.originalPrice,
               discount: o.discount,
-              platform: o.platform || '',
+              platform: o.platform ?? '',
               url: o.affiliateUrl || o.productUrl || '',
               color: o.color,
               size: o.size,
-            };
-          }).filter((p: any) => p.platform);
+            }))
+          );
           setPlatforms(flat);
         } else if (payload.type === 'done') {
           setLoading(false);
@@ -247,22 +246,21 @@ export default function ComparePage() {
     try {
       const { data } = await api.post('/search/product', { query: searchQ });
       const raw: any[] = data?.products || data?.results || data?.platforms || [];
-      const flat = raw.map((c: any) => {
-        const o = c.offers?.[0] || {};
-        return {
-          id: c.id,
+      const flat = raw.flatMap((c: any) =>
+        (c.offers || []).map((o: any) => ({
+          id: `${c.id}__${o.platform ?? ''}`.replace(/\s+/g, '_'),
           title: c.title,
           brand: c.brand,
-          imageUrl: o.imageUrl || '',
+          imageUrl: o.imageUrl || c.imageUrl,
           price: o.price ?? 0,
           originalPrice: o.originalPrice,
           discount: o.discount,
-          platform: o.platform || '',
+          platform: o.platform ?? '',
           url: o.affiliateUrl || o.productUrl || '',
           color: o.color,
           size: o.size,
-        };
-      }).filter((p: any) => p.platform);
+        }))
+      );
       const final = flat.length > 0 ? flat : searchSeedProducts(searchQ);
       final.sort((a, b) => a.price - b.price);
       setPlatforms(final);
