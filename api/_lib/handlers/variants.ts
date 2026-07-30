@@ -1,9 +1,7 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { fetchPlatformVariants } from '../variantFetcher.js';
+import { fetchAjioVariants } from '../variantFetcher.js';
 import { getVariantCache, setVariantCache, getVariantCacheDb, setVariantCacheDb } from '../cache/variantCache.js';
-
-const SUPPORTED_PLATFORMS = new Set(['ajio', 'amazon india', 'amazon', 'flipkart', 'myntra', 'meesho', 'tata cliq', 'tata_cliq']);
 
 export async function handleVariants(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
@@ -19,40 +17,29 @@ export async function handleVariants(req: VercelRequest, res: VercelResponse): P
     return;
   }
 
-  if (!SUPPORTED_PLATFORMS.has(platform)) {
-    res.status(400).json({ error: `Platform not supported. Supported: ${[...SUPPORTED_PLATFORMS].join(', ')}` });
+  if (platform !== 'ajio') {
+    res.status(400).json({ error: `Platform not supported yet` });
     return;
   }
 
-  const cacheKey = `${platform}::${productId}`;
-
   // L1 — in-memory
-  try {
-    const memHit = getVariantCache(cacheKey);
-    if (memHit) { res.status(200).json(memHit); return; }
-  } catch { /* */ }
+  const memHit = getVariantCache(productId);
+  if (memHit) { res.status(200).json(memHit); return; }
 
   // L2 — MongoDB
-  try {
-    const dbHit = await getVariantCacheDb(cacheKey);
-    if (dbHit) { setVariantCache(cacheKey, dbHit); res.status(200).json(dbHit); return; }
-  } catch { /* */ }
+  const dbHit = await getVariantCacheDb(productId);
+  if (dbHit) { setVariantCache(productId, dbHit); res.status(200).json(dbHit); return; }
 
   try {
-    console.log(`[Variants] fetching platform=${platform} productId=${productId.slice(0, 60)}...`);
-    const variants = await fetchPlatformVariants(platform, productId);
+    const variants = await fetchAjioVariants(productId);
     if (!variants) {
-      console.warn(`[Variants] null result for platform=${platform}`);
-      res.status(500).json({ error: 'Unable to fetch variants', detail: `fetchPlatformVariants returned null for ${platform}` });
+      res.status(500).json({ error: 'Unable to fetch variants' });
       return;
     }
-    console.log(`[Variants] success platform=${platform} colors=${variants.colors?.length ?? 0} sizes=${variants.sizes?.length ?? 0}`);
-    try { setVariantCache(cacheKey, variants); } catch { /* */ }
-    try { setVariantCacheDb(cacheKey, variants); } catch { /* */ }
+    setVariantCache(productId, variants);
+    setVariantCacheDb(productId, variants);
     res.status(200).json(variants);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message.slice(0, 120) : String(e).slice(0, 120);
-    console.error(`[Variants] exception platform=${platform}:`, msg);
+  } catch {
     res.status(500).json({ error: 'Unable to fetch variants' });
   }
 }
