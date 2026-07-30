@@ -186,7 +186,7 @@ export default function ComparePage() {
     es.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.type === 'platform' && Array.isArray(payload.products) && payload.products.length) {
+        if (payload.type === 'platform_products' && Array.isArray(payload.products) && payload.products.length) {
           settled = true;
           setLoading(false);
           setPlatforms((prev) => {
@@ -194,11 +194,29 @@ export default function ComparePage() {
             const newOnes = (payload.products as ProductData[]).filter((p) => !existingIds.has(p.id));
             return [...prev, ...newOnes].sort((a, b) => a.price - b.price);
           });
+        } else if (payload.type === 'canonicals' && Array.isArray(payload.canonicals)) {
+          settled = true;
+          setLoading(false);
+          const flat: ProductData[] = payload.canonicals.map((c: any) => {
+            const o = c.offers?.[0] || {};
+            return {
+              id: c.id,
+              title: c.title,
+              brand: c.brand,
+              imageUrl: o.imageUrl || '',
+              price: o.price ?? 0,
+              originalPrice: o.originalPrice,
+              discount: o.discount,
+              platform: o.platform || '',
+              url: o.affiliateUrl || o.productUrl || '',
+              color: o.color,
+              size: o.size,
+            };
+          }).filter((p: any) => p.platform);
+          setPlatforms(flat);
         } else if (payload.type === 'done') {
           setLoading(false);
           es.close();
-          // Fire AI advice only after all platforms are in — avoids a mid-stream
-          // call with incomplete data that then gets re-called with full data.
           setPlatforms((prev) => {
             if (prev.length > 0) fetchAiAdvice(prev[0]?.title || searchQ, prev);
             return prev;
@@ -228,8 +246,24 @@ export default function ComparePage() {
   async function fallbackFetch(searchQ: string) {
     try {
       const { data } = await api.post('/search/product', { query: searchQ });
-      const results: ProductData[] = data?.products || data?.results || data?.platforms || [];
-      const final = results.length > 0 ? results : searchSeedProducts(searchQ);
+      const raw: any[] = data?.products || data?.results || data?.platforms || [];
+      const flat = raw.map((c: any) => {
+        const o = c.offers?.[0] || {};
+        return {
+          id: c.id,
+          title: c.title,
+          brand: c.brand,
+          imageUrl: o.imageUrl || '',
+          price: o.price ?? 0,
+          originalPrice: o.originalPrice,
+          discount: o.discount,
+          platform: o.platform || '',
+          url: o.affiliateUrl || o.productUrl || '',
+          color: o.color,
+          size: o.size,
+        };
+      }).filter((p: any) => p.platform);
+      const final = flat.length > 0 ? flat : searchSeedProducts(searchQ);
       final.sort((a, b) => a.price - b.price);
       setPlatforms(final);
       if (final.length > 0) fetchAiAdvice(final[0]?.title || searchQ, final);
