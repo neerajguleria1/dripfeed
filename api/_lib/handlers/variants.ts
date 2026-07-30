@@ -43,7 +43,7 @@ export async function handleVariants(req: VercelRequest, res: VercelResponse): P
     const variants = await fetchPlatformVariants(platform, productId);
     if (!variants) {
       console.warn(`[Variants] null result for platform=${platform}`);
-      res.status(500).json({ error: 'Unable to fetch variants' });
+      res.status(500).json({ error: 'Unable to fetch variants', detail: `fetchPlatformVariants returned null for ${platform}` });
       return;
     }
     console.log(`[Variants] success platform=${platform} colors=${variants.colors?.length ?? 0} sizes=${variants.sizes?.length ?? 0}`);
