@@ -147,6 +147,30 @@ confidence should be a number between 0 and 1 indicating how confident you are i
 // generateComparison removed — was generating fake random data with placeholder images.
 // All comparison data now comes from real scraper results via searchProducts().
 
+/**
+ * Flatten CanonicalProduct[] into flat objects the client expects.
+ * Each canonical's cheapest offer is lifted to top-level fields.
+ */
+function flattenCanonicals(canonicals: any[]): any[] {
+  return canonicals.map(c => {
+    const o = c.offers?.[0] || {};
+    return {
+      id: c.id,
+      title: c.title,
+      brand: c.brand,
+      imageUrl: o.imageUrl || '',
+      price: o.price ?? 0,
+      originalPrice: o.originalPrice,
+      discount: o.discount,
+      platform: o.platform || '',
+      url: o.affiliateUrl || o.productUrl || '',
+      color: o.color,
+      size: o.size,
+      rating: o.rating,
+    };
+  }).filter(p => p.platform);
+}
+
 async function compare(req: VercelRequest, res: VercelResponse) {
   // Support both GET ?q=... and POST { url: ... }
   if (req.method === 'POST') {
@@ -235,11 +259,11 @@ async function compare(req: VercelRequest, res: VercelResponse) {
         }
 
         const results = await searchProducts(cleanedName);
-        const sorted = results.sort((a, b) => a.price - b.price);
+        const flat = flattenCanonicals(results).sort((a, b) => a.price - b.price);
 
         return res.json({
-          platforms: sorted,
-          products: sorted,
+          platforms: flat,
+          products: flat,
           query: cleanedName,
           sourceUrl: url,
         });
@@ -254,7 +278,8 @@ async function compare(req: VercelRequest, res: VercelResponse) {
       if (results.length === 0) {
         return res.json({ platforms: [], products: [], query: searchTerm, message: 'No real product data found. Try a more specific search term.' });
       }
-      return res.json({ platforms: results.sort((a, b) => a.price - b.price), products: results.sort((a, b) => a.price - b.price), query: searchTerm });
+      const flat = flattenCanonicals(results).sort((a, b) => a.price - b.price);
+      return res.json({ platforms: flat, products: flat, query: searchTerm });
     }
 
     return res.status(400).json({ error: 'Provide url or query in request body' });
@@ -268,12 +293,12 @@ async function compare(req: VercelRequest, res: VercelResponse) {
   try {
     const { searchProducts } = await import('../search.js');
     const results = await searchProducts(q.trim());
-    const sorted = results.sort((a, b) => a.price - b.price);
-    const lowest = sorted[0];
-    const highest = sorted[sorted.length - 1];
+    const flat = flattenCanonicals(results).sort((a, b) => a.price - b.price);
+    const lowest = flat[0];
+    const highest = flat[flat.length - 1];
     const savings = highest && lowest ? highest.price - lowest.price : 0;
 
-    res.json({ platforms: sorted, lowest, highest, savings, query: q.trim() });
+    res.json({ platforms: flat, lowest, highest, savings, query: q.trim() });
   } catch (e: any) {
     res.status(500).json({ error: 'Comparison failed', message: e.message });
   }
