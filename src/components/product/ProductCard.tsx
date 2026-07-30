@@ -79,7 +79,7 @@ export function ProductCard({ product, onSave, className = '' }: ProductCardProp
             <img
               src={product.imageUrl}
               alt={product.title}
-              className="w-full h-full object-cover saturate-[0.95] brightness-[1.01]"
+               className="w-full h-full object-cover"
               loading="lazy"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;

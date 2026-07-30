@@ -168,7 +168,7 @@ export function parseMeeshoProducts(html: string, query: string): SearchProduct[
     const priceMatch = inner.match(/₹\s?([0-9,]+(?:\.\d{1,2})?)/i) || inner.match(/\b([0-9,]+(?:\.\d{1,2})?)\b/);
     const price = priceMatch ? parsePrice(priceMatch[1]) : 0;
     const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
-    const imageUrl = toAbsoluteUrl(imgMatch?.[1] || '');
+    const imageUrl = toAbsoluteUrl(imgMatch?.[1] || '').replace(/_\d+(\.\w+)$/, '_1024$1');
 
     // Extract only the title text, stopping before price/rating text so
     // "Adrika Refined Kurtis ₹313 4.1 Star 105 Reviews" doesn't get treated
@@ -467,7 +467,7 @@ async function fetchAmazonPage(query: string, page = 1): Promise<SearchProduct[]
       const price = Math.round(parseFloat(priceWholeM[1].replace(/,/g, '') + (priceFracM ? `.${priceFracM[1]}` : '')));
       if (price <= 0) continue;
       const imgM = card.match(/<img[^>]+src="(https?:\/\/(?:m\.media-amazon\.com|images-na\.ssl-images-amazon\.com|images-eu\.ssl-images-amazon\.com)[^"]+)"/);
-      const imageUrl = toAbsoluteUrl(imgM?.[1] || '');
+      const imageUrl = toAbsoluteUrl(imgM?.[1] || '').replace(/\._([A-Z]{2,})_\d+_\./, '._SL1500_.');
       if (!imageUrl) continue;
       const imgAlt = imgM?.[0].match(/alt="([^"]{15,})"/)?.[1];
       const ariaMatches = [...card.matchAll(/aria-label="([^"]{15,})"/g)].map(m => m[1]);
@@ -535,7 +535,7 @@ function parseFlipkartHtml(html: string, query: string): SearchProduct[] {
     const disc  = info.pricing?.totalDiscount || 0;
     const rawImg = info.media?.images?.[0]?.url || '';
     const imageUrl = rawImg
-      .replace('{@width}', '300').replace('{@height}', '400').replace('{@quality}', '70')
+      .replace('{@width}', '600').replace('{@height}', '800').replace('{@quality}', '100')
       .replace(/^http:\/\//, 'https://');
     const coSubtitle: string = info.titles?.coSubtitle || '';
     const sizeMatch = coSubtitle.match(/^Size:\s*(.+)$/i);
@@ -639,7 +639,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
     return products.slice(0, 20).map((p: any) => {
       const price = p.price || 0;
       const mrp = p.mrp || 0;
-      const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://');
+      const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://').replace(/w_\d+(?=[,\/]|$)/, 'w_800');
       const url = p.landingPageUrl
         ? `https://www.myntra.com/${p.landingPageUrl}`
         : `https://www.myntra.com/${encoded}`;
@@ -695,8 +695,9 @@ async function fetchMeesho(query: string): Promise<SearchProduct[]> {
       if (price <= 0) continue;
 
       const imgMatch = inner.match(/<img[^>]+src=["']([^"']+)["']/i);
-      const imageUrl = imgMatch?.[1] || '';
+      let imageUrl = imgMatch?.[1] || '';
       if (!imageUrl.includes('images.meesho.com')) continue;
+      imageUrl = imageUrl.replace(/_\d+(\.\w+)$/, '_1024$1');
 
       const altMatch = inner.match(/<img[^>]+alt=["']([^"']+)["']/i);
       const pMatch = inner.match(/<p[^>]*>([^<]{5,})<\/p>/i);
@@ -818,7 +819,7 @@ export function parseTataCliqHtml(html: string): SearchProduct[] {
 
     // Image — protocol-relative //img.tatacliq.com/...
     const imgM = chunk.match(/src="(\/\/img\.tatacliq\.com\/[^"]+)"/);
-    const imageUrl = imgM ? `https:${imgM[1]}` : '';
+    const imageUrl = imgM ? `https:${imgM[1]}`.replace(/_\d+x\d+_/, '_1000x1200_') : '';
     if (!imageUrl) continue;
 
     // Brand — first ProductDescription__boldText
