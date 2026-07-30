@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
+import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp, Share2 } from 'lucide-react';
+import { useAjioVariants } from '../hooks/useAjioVariants';
+import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
+import type { VariantSelection } from '../components/product/AjioVariantPanel';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InterpretedFiltersBar } from '../components/search/InterpretedFiltersBar';
@@ -237,15 +240,40 @@ function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave
 function ResultCard({ product, index, onSave, saved }: { product: ProductData; index: number; onSave?: (p: ProductData) => void; saved?: boolean }) {
   const [copied, setCopied] = useState(false);
 
-  // Use search-result color/size data directly — no PDP API call needed
+  // ── Ajio variant picker state ──────────────────────────────────────────
+  const platform = product.platform.toLowerCase().replace(/\s+/g, '');
+  const isAjio = platform.startsWith('ajio');
+  const productId = isAjio ? (product.url.match(/\/p\/([^/?#]+)/)?.[1] || '') : '';
+  const [variantOpen, setVariantOpen] = useState(false);
+  const [activeImage, setActiveImage] = useState(product.imageUrl);
+  const [activePrice, setActivePrice] = useState(product.price);
+  const [activeOriginalPrice, setActiveOriginalPrice] = useState(product.originalPrice);
+  const [activeBuyUrl, setActiveBuyUrl] = useState(product.url);
+  const ajioVariants = useAjioVariants();
+
+  function handleVariantToggle(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    if (!variantOpen && (ajioVariants.status === 'idle' || ajioVariants.status === 'error') && productId) {
+      ajioVariants.fetch(productId);
+    }
+    setVariantOpen(v => !v);
+  }
+
+  function handleVariantSelect(sel: VariantSelection) {
+    setActiveImage(sel.imageUrl);
+    setActivePrice(sel.price);
+    setActiveOriginalPrice(sel.originalPrice);
+    setActiveBuyUrl(sel.buyUrl);
+  }
+
+  // ── Search-result color/size badges (non-Ajio) ──────────────────────────
   const searchColors = product.color ? [{ id: product.color.toLowerCase().replace(/\s+/g, '_'), name: product.color, swatchUrl: '', imageUrl: product.imageUrl || '', price: product.price, originalPrice: product.originalPrice, available: true, buyUrl: product.url }] : [];
   const searchSizes = product.size ? product.size.split('/').map(s => ({ id: s.trim().toLowerCase(), label: s.trim(), price: product.price, available: true, buyUrl: product.url })) : [];
-
   const hasColorsOrSizes = searchColors.length > 0 || searchSizes.length > 0;
 
   async function handleCopy(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    await navigator.clipboard.writeText(product.url);
+    await navigator.clipboard.writeText(activeBuyUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -259,14 +287,14 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
     >
       {/* Image — tappable area opens product */}
       <a
-        href={product.url}
+        href={activeBuyUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: product.url }); }}
+        onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
         className="block overflow-hidden bg-neutral-50 relative"
       >
         <img
-          src={product.imageUrl}
+          src={activeImage}
           alt={product.title}
           className="w-full aspect-[3/4] object-cover"
           loading="lazy"
@@ -291,10 +319,10 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
       <div className="p-3 flex flex-col flex-1">
         <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
         <a
-          href={product.url}
+          href={activeBuyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: product.url }); }}
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
           className="text-[13px] font-medium text-[#0F0F1A] leading-snug mt-0.5 line-clamp-2 min-h-[36px]"
         >
           {product.title}
@@ -319,11 +347,11 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
         <div className="mt-auto pt-2 flex items-center justify-between gap-1">
           <div>
             <span className="text-[15px] font-bold text-[#0F0F1A] tabular-nums">
-              {formatPrice(product.price)}
+              {formatPrice(activePrice)}
             </span>
-            {product.originalPrice && product.originalPrice > product.price && (
+            {activeOriginalPrice && activeOriginalPrice > activePrice && (
               <span className="block text-[11px] text-neutral-400 line-through tabular-nums">
-                {formatPrice(product.originalPrice)}
+                {formatPrice(activeOriginalPrice)}
               </span>
             )}
           </div>
@@ -342,55 +370,76 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
 
         {/* Buy button — full width, prominent on mobile */}
         <a
-          href={product.url}
+          href={activeBuyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: product.url }); }}
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
           className="mt-2.5 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
         >
           Buy on {product.platform.split(' ')[0]}
           <ArrowRight className="w-3 h-3" />
         </a>
 
-          {/* Colors & Sizes from search results — shown when data is available */}
-          {hasColorsOrSizes && (
-            <div className="mt-2.5 space-y-2">
-              {/* Colors */}
-              {searchColors.length > 1 && (
-                <div>
-                  <p className="text-[10px] text-neutral-400 font-medium mb-1.5">Colors</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {searchColors.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        className="w-7 h-7 rounded-full border-2 border-neutral-200 overflow-hidden hover:border-[#C9A96E] transition-colors shrink-0"
-                      >
-                        <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" title={c.name} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        {/* View Colors & Sizes toggle — Ajio only (uses PDP API) */}
+        {isAjio && productId && (
+          <>
+            <button
+              onClick={handleVariantToggle}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#C9A96E] border border-[#C9A96E]/30 hover:border-[#C9A96E] hover:bg-[#C9A96E]/5 py-2 rounded-xl transition-all duration-150"
+            >
+              {variantOpen ? (
+                <><ChevronUp className="w-3 h-3" /> Hide variants</>
+              ) : (
+                <>&#127912; View Colors &amp; Sizes</>
               )}
-              {/* Sizes */}
-              {searchSizes.length > 1 && (
-                <div>
-                  <p className="text-[10px] text-neutral-400 font-medium mb-1.5">Sizes</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {searchSizes.map(s => (
-                      <button
-                        key={s.id}
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        className="px-2.5 py-1 text-[11px] font-medium rounded-md border border-neutral-200 text-neutral-600 hover:border-[#C9A96E] hover:text-[#C9A96E] transition-colors"
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
+            </button>
+            {variantOpen && (
+              <AjioVariantPanel
+                variants={ajioVariants.variants}
+                status={ajioVariants.status}
+                onSelect={handleVariantSelect}
+              />
+            )}
+          </>
+        )}
+
+        {/* Colors & Sizes from search results — non-Ajio platforms */}
+        {!isAjio && hasColorsOrSizes && (
+          <div className="mt-2.5 space-y-2">
+            {searchColors.length > 1 && (
+              <div>
+                <p className="text-[10px] text-neutral-400 font-medium mb-1.5">Colors</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {searchColors.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      className="w-7 h-7 rounded-full border-2 border-neutral-200 overflow-hidden hover:border-[#C9A96E] transition-colors shrink-0"
+                    >
+                      <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" title={c.name} />
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+            {searchSizes.length > 1 && (
+              <div>
+                <p className="text-[10px] text-neutral-400 font-medium mb-1.5">Sizes</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {searchSizes.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      className="px-2.5 py-1 text-[11px] font-medium rounded-md border border-neutral-200 text-neutral-600 hover:border-[#C9A96E] hover:text-[#C9A96E] transition-colors"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
