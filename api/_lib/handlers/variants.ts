@@ -27,23 +27,32 @@ export async function handleVariants(req: VercelRequest, res: VercelResponse): P
   const cacheKey = `${platform}::${productId}`;
 
   // L1 — in-memory
-  const memHit = getVariantCache(cacheKey);
-  if (memHit) { res.status(200).json(memHit); return; }
+  try {
+    const memHit = getVariantCache(cacheKey);
+    if (memHit) { res.status(200).json(memHit); return; }
+  } catch { /* */ }
 
-  // L2 — MongoDB (persists across Vercel instances)
-  const dbHit = await getVariantCacheDb(cacheKey);
-  if (dbHit) { setVariantCache(cacheKey, dbHit); res.status(200).json(dbHit); return; }
+  // L2 — MongoDB
+  try {
+    const dbHit = await getVariantCacheDb(cacheKey);
+    if (dbHit) { setVariantCache(cacheKey, dbHit); res.status(200).json(dbHit); return; }
+  } catch { /* */ }
 
   try {
+    console.log(`[Variants] fetching platform=${platform} productId=${productId.slice(0, 60)}...`);
     const variants = await fetchPlatformVariants(platform, productId);
     if (!variants) {
+      console.warn(`[Variants] null result for platform=${platform}`);
       res.status(500).json({ error: 'Unable to fetch variants' });
       return;
     }
-    setVariantCache(cacheKey, variants);
-    setVariantCacheDb(cacheKey, variants);
+    console.log(`[Variants] success platform=${platform} colors=${variants.colors?.length ?? 0} sizes=${variants.sizes?.length ?? 0}`);
+    try { setVariantCache(cacheKey, variants); } catch { /* */ }
+    try { setVariantCacheDb(cacheKey, variants); } catch { /* */ }
     res.status(200).json(variants);
-  } catch {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message.slice(0, 120) : String(e).slice(0, 120);
+    console.error(`[Variants] exception platform=${platform}:`, msg);
     res.status(500).json({ error: 'Unable to fetch variants' });
   }
 }

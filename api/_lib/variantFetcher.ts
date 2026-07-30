@@ -339,62 +339,79 @@ export async function fetchAjioVariants(colorCode: string): Promise<AjioProductV
 // ─── ScraperAPI helper ────────────────────────────────────────────────────────
 
 function scraperUrl(target: string, opts?: { render?: boolean; wait?: number }): string {
-  const apiKey = SCRAPER_API_KEY || process.env.SCRAPER_API_KEY;
+  const apiKey = SCRAPER_API_KEY || process.env.SCRAPER_API_KEY || '';
   let url = `https://api.scraperapi.com/?api_key=${apiKey}&url=${encodeURIComponent(target)}&country_code=in&device_type=desktop`;
   if (opts?.render) url += '&render=true';
-  if (opts?.wait) url += `&wait_for_selector=.${opts.wait}`;
+  if (opts?.wait) url += `&wait=${opts.wait}`;
   return url;
+}
+
+async function fetchWithScraperFallback(url: string, opts?: { render?: boolean; wait?: number; timeout?: number }): Promise<string | null> {
+  // Try direct first (0 credits)
+  try {
+    const { data } = await axios.get<string>(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      timeout: opts?.timeout ?? 10000,
+      transformResponse: [(r) => r],
+    });
+    const html = typeof data === 'string' ? data : String(data);
+    if (html.length > 2000) return html;
+  } catch { /* fall through to ScraperAPI */ }
+
+  // Fallback: ScraperAPI
+  if (!SCRAPER_API_KEY && !process.env.SCRAPER_API_KEY) return null;
+  try {
+    const scraper = scraperUrl(url, { render: opts?.render, wait: opts?.wait });
+    const { data } = await axios.get<string>(scraper, {
+      timeout: opts?.timeout ?? 25000,
+      transformResponse: [(r) => r],
+    });
+    const html = typeof data === 'string' ? data : String(data);
+    if (html.length > 2000) return html;
+  } catch { /* */ }
+  return null;
 }
 
 // ─── Amazon variant fetcher ───────────────────────────────────────────────────
 
 async function fetchAmazonVariants(productUrl: string): Promise<ProductVariants | null> {
   try {
-    const url = scraperUrl(productUrl, { render: true });
-    const { data: html } = await axios.get<string>(url, {
-      timeout: 25000,
-      transformResponse: [(r) => r],
-    });
-    if (typeof html !== 'string' || html.length < 500) return null;
+    const html = await fetchWithScraperFallback(productUrl, { timeout: 20000 });
+    if (!html) return null;
 
-    const title = html.match(/<span id="productTitle"[^>]*>([^<]+)<\/span>/)?.[1]?.trim() || '';
-    const brand = html.match(/<a id="bylineInfo"[^>]*>([^<]+)<\/a>/)?.[1]?.replace(/^Visit the\s+/i, '').trim() || '';
+    const title = html.match(/<span[^>]*id="productTitle"[^>]*>([^<]+)<\/span>/i)?.[1]?.trim() || '';
+    const brand = html.match(/<a[^>]*id="bylineInfo"[^>]*>([^<]+)<\/a>/i)?.[1]?.replace(/^Visit the\s+/i, '').trim() || '';
 
-    // Color variants
+    // Color variants from variation_color_name section
     const colors: VariantColor[] = [];
     const colorSection = html.match(/<div[^>]*id="variation_color_name"[^>]*>([\s\S]*?)<\/div>/i);
     if (colorSection) {
-      const colorButtons = [...colorSection[1].matchAll(/<img[^>]+src="([^"]+)"[^>]+alt="([^"]+)"[^>]*>/gi)];
-      const processed = new Set<string>();
-      for (const btn of colorButtons) {
-        const name = btn[2]?.trim();
-        if (!name || processed.has(name)) continue;
-        processed.add(name);
+      const seen = new Set<string>();
+      const swatches = [...colorSection[1].matchAll(/<img[^>]+src="([^"]+)"[^>]+alt="([^"]+)"[^>]*>/gi)];
+      for (const m of swatches) {
+        const name = m[2]?.trim();
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
         colors.push({
           id: name.toLowerCase().replace(/\s+/g, '_'),
           name,
-          swatchUrl: btn[1],
-          imageUrl: html.match(/id="landingImage"[^>]+src="([^"]+)"/)?.[1] || btn[1],
+          swatchUrl: m[1],
+          imageUrl: html.match(/id="landingImage"[^>]+src="([^"]+)"/)?.[1] || m[1],
           price: 0,
           available: true,
           buyUrl: productUrl,
         });
       }
-      // Fallback: text-only buttons
       if (colors.length === 0) {
-        const textBtns = [...colorSection[1].matchAll(/class="a-button-text"[^>]*>([^<]+)</gi)];
-        for (const btn of textBtns) {
-          const name = btn[1]?.trim();
-          if (!name || name === '\\u00a0' || processed.has(name)) continue;
-          processed.add(name);
-          colors.push({
-            id: name.toLowerCase().replace(/\s+/g, '_'),
-            name,
-            imageUrl: html.match(/id="landingImage"[^>]+src="([^"]+)"/)?.[1] || '',
-            price: 0,
-            available: true,
-            buyUrl: productUrl,
-          });
+        const texts = [...colorSection[1].matchAll(/class="a-button-text"[^>]*>([^<]+)</gi)];
+        for (const m of texts) {
+          const name = m[1]?.trim();
+          if (!name || name === '\\u00a0' || seen.has(name)) continue;
+          seen.add(name);
+          colors.push({ id: name.toLowerCase().replace(/\s+/g, '_'), name, imageUrl: '', price: 0, available: true, buyUrl: productUrl });
         }
       }
     }
@@ -403,26 +420,22 @@ async function fetchAmazonVariants(productUrl: string): Promise<ProductVariants 
     const sizes: VariantSize[] = [];
     const sizeSection = html.match(/<div[^>]*id="variation_size_name"[^>]*>([\s\S]*?)<\/div>/i);
     if (sizeSection) {
-      const sizeTexts = [...sizeSection[1].matchAll(/class="a-button-text"[^>]*>([^<]+)</gi)];
-      const seenSizes = new Set<string>();
-      for (const st of sizeTexts) {
-        const name = st[1]?.trim();
-        if (!name || name === '\\u00a0' || seenSizes.has(name)) continue;
-        seenSizes.add(name);
-        sizes.push({
-          id: name.toLowerCase().replace(/\s+/g, '_'),
-          label: name,
-          price: 0,
-          available: true,
-          buyUrl: productUrl,
-        });
+      const seen = new Set<string>();
+      const texts = [...sizeSection[1].matchAll(/class="a-button-text"[^>]*>([^<]+)</gi)];
+      for (const m of texts) {
+        const label = m[1]?.trim();
+        if (!label || label === '\\u00a0' || seen.has(label)) continue;
+        seen.add(label);
+        sizes.push({ id: label.toLowerCase().replace(/\s+/g, '_'), label, price: 0, available: true, buyUrl: productUrl });
       }
     }
 
-    return { platform: 'Amazon India', productId: productUrl, title, brand, colors, sizes };
+    const result: ProductVariants = { platform: 'Amazon India', productId: productUrl, title, brand, colors, sizes };
+    console.log(`[AmazonVariants] ${colors.length} colors, ${sizes.length} sizes ${title ? `for "${title.slice(0, 40)}"` : '(no title)'}`);
+    return result;
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 80) : '';
-    console.error('[AmazonVariants] fetch error:', msg);
+    console.error('[AmazonVariants] error:', msg);
     return null;
   }
 }
@@ -431,17 +444,12 @@ async function fetchAmazonVariants(productUrl: string): Promise<ProductVariants 
 
 async function fetchFlipkartVariants(productUrl: string): Promise<ProductVariants | null> {
   try {
-    const { data: html } = await axios.get<string>(productUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html',
-      },
-      timeout: 10000,
-      transformResponse: [(r) => r],
-    });
-    if (typeof html !== 'string' || !html.includes('window.__INITIAL_STATE__')) return null;
+    const html = await fetchWithScraperFallback(productUrl, { timeout: 15000 });
+    if (!html) return null;
 
+    // Parse from __INITIAL_STATE__
     const stateStart = html.indexOf('window.__INITIAL_STATE__');
+    if (stateStart === -1) return null;
     const braceOpen = html.indexOf('{', stateStart);
     if (braceOpen === -1) return null;
     let depth = 0, end = 0;
@@ -452,62 +460,67 @@ async function fetchFlipkartVariants(productUrl: string): Promise<ProductVariant
     if (!end) return null;
     const state = JSON.parse(html.slice(braceOpen, end));
 
+    // Try multiple paths to find product data on the PDP
+    let info: any = null;
     const pageData = state?.pageDataV4?.page?.data || {};
-    const slots: any[] = Object.values(pageData).flat() as any[];
-    let productInfo: any = null;
-    for (const slot of slots) {
-      const p = (slot as any)?.widget?.data?.product;
-      if (p) { productInfo = p; break; }
+    for (const slot of Object.values(pageData).flat() as any[]) {
+      info = (slot as any)?.widget?.data?.product?.productInfo?.value;
+      if (info) break;
+      info = (slot as any)?.widget?.data?.product;
+      if (info) break;
     }
-    if (!productInfo) return null;
+    if (!info) {
+      // Try product detail path (PDP may have different structure)
+      info = state?.product?.productInfo?.value || state?.product;
+    }
+    if (!info) return null;
 
-    const info = productInfo.productInfo?.value || productInfo;
     const title = info.titles?.title || info.titles?.newTitle || '';
     const brand = info.titles?.superTitle || '';
 
-    // Colors from colorVariant section
     const colors: VariantColor[] = [];
-    const colorVariants = info?.variants?.colorVariant || info?.colorVariants || [];
-    const processedColors = new Set<string>();
-    for (const cv of colorVariants) {
+    const rawColors = info?.variants?.colorVariant || info?.colorVariants || [];
+    const seenColors = new Set<string>();
+    for (const cv of rawColors) {
       const name = cv.colorName || cv.color || '';
-      if (!name || processedColors.has(name.toLowerCase())) continue;
-      processedColors.add(name.toLowerCase());
+      if (!name || seenColors.has(name.toLowerCase())) continue;
+      seenColors.add(name.toLowerCase());
+      const img = cv.imageUrl || cv.productImageUrl || '';
       colors.push({
         id: name.toLowerCase().replace(/\s+/g, '_'),
         name,
         swatchUrl: cv.colorImageUrl || cv.swatchUrl || '',
-        imageUrl: cv.imageUrl || cv.productImageUrl || info.media?.images?.[0]?.url?.replace('{@width}', '600').replace('{@height}', '800') || '',
-        price: parsePrice(cv.price || info.pricing?.price || 0),
+        imageUrl: img ? img.replace('{@width}', '600').replace('{@height}', '800') : '',
+        price: parsePrice(cv.price || 0),
         originalPrice: cv.originalPrice ? parsePrice(cv.originalPrice) : undefined,
         available: cv.available ?? true,
         buyUrl: cv.url ? `https://www.flipkart.com${cv.url}` : productUrl,
       });
     }
 
-    // Sizes from sizeVariant section
     const sizes: VariantSize[] = [];
-    const sizeVariants = info?.variants?.sizeVariant || info?.sizeVariants || [];
-    const processedSizes = new Set<string>();
-    for (const sv of sizeVariants) {
+    const rawSizes = info?.variants?.sizeVariant || info?.sizeVariants || [];
+    const seenSizes = new Set<string>();
+    for (const sv of rawSizes) {
       const label = sv.sizeLabel || sv.value || sv.size || '';
-      if (!label || processedSizes.has(label)) continue;
-      processedSizes.add(label);
+      if (!label || seenSizes.has(label)) continue;
+      seenSizes.add(label);
       sizes.push({
         id: label.toLowerCase().replace(/\s+/g, '_'),
         label,
         format: sv.sizeUnit || sv.sizeType || '',
-        price: parsePrice(sv.price || info.pricing?.price || 0),
+        price: parsePrice(sv.price || 0),
         originalPrice: sv.originalPrice ? parsePrice(sv.originalPrice) : undefined,
         available: sv.available ?? true,
         buyUrl: sv.url ? `https://www.flipkart.com${sv.url}` : productUrl,
       });
     }
 
+    console.log(`[FlipkartVariants] ${colors.length} colors, ${sizes.length} sizes`);
     return { platform: 'Flipkart', productId: productUrl, title, brand, colors, sizes };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 80) : '';
-    console.error('[FlipkartVariants] fetch error:', msg);
+    console.error('[FlipkartVariants] error:', msg);
     return null;
   }
 }
@@ -516,28 +529,24 @@ async function fetchFlipkartVariants(productUrl: string): Promise<ProductVariant
 
 async function fetchMyntraVariants(productUrl: string): Promise<ProductVariants | null> {
   try {
-    const url = scraperUrl(productUrl);
-    const { data: html } = await axios.get<string>(url, {
-      timeout: 20000,
-      transformResponse: [(r) => r],
-    });
-    if (typeof html !== 'string' || html.length < 500) return null;
+    const html = await fetchWithScraperFallback(productUrl, { timeout: 20000 });
+    if (!html) return null;
 
     // Try embedded JSON
     const scriptMatch = html.match(/window\.__myx\s*=\s*(\{[\s\S]*?\});/);
     const data = scriptMatch ? JSON.parse(scriptMatch[1]) : null;
     const productData = data?.pdpData?.product || data?.productData || {};
 
-    const title = productData.productName || productData.name || html.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1]?.trim() || '';
-    const brand = productData.brand?.name || productData.brand || html.match(/class="pdp-brand"[^>]*>([^<]+)</i)?.[1]?.trim() || '';
+    const title = productData.productName || productData.name || '';
+    const brand = productData.brand?.name || productData.brand || '';
 
     const colors: VariantColor[] = [];
     const rawColors = productData.colors || productData.colorVariants || [];
-    const processedColors = new Set<string>();
+    const seenColors = new Set<string>();
     for (const c of rawColors) {
       const name = c.colorName || c.color || '';
-      if (!name || processedColors.has(name.toLowerCase())) continue;
-      processedColors.add(name.toLowerCase());
+      if (!name || seenColors.has(name.toLowerCase())) continue;
+      seenColors.add(name.toLowerCase());
       colors.push({
         id: name.toLowerCase().replace(/\s+/g, '_'),
         name,
@@ -552,11 +561,11 @@ async function fetchMyntraVariants(productUrl: string): Promise<ProductVariants 
 
     const sizes: VariantSize[] = [];
     const rawSizes = productData.sizes || productData.sizeVariants || [];
-    const processedSizes = new Set<string>();
+    const seenSizes = new Set<string>();
     for (const s of rawSizes) {
       const label = s.sizeLabel || s.label || s.size || '';
-      if (!label || processedSizes.has(label)) continue;
-      processedSizes.add(label);
+      if (!label || seenSizes.has(label)) continue;
+      seenSizes.add(label);
       sizes.push({
         id: label.toLowerCase().replace(/\s+/g, '_'),
         label,
@@ -568,10 +577,11 @@ async function fetchMyntraVariants(productUrl: string): Promise<ProductVariants 
       });
     }
 
+    console.log(`[MyntraVariants] ${colors.length} colors, ${sizes.length} sizes`);
     return { platform: 'Myntra', productId: productUrl, title, brand, colors, sizes };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 80) : '';
-    console.error('[MyntraVariants] fetch error:', msg);
+    console.error('[MyntraVariants] error:', msg);
     return null;
   }
 }
@@ -580,56 +590,37 @@ async function fetchMyntraVariants(productUrl: string): Promise<ProductVariants 
 
 async function fetchMeeshoVariants(productUrl: string): Promise<ProductVariants | null> {
   try {
-    const url = scraperUrl(productUrl, { render: true, wait: 8000 });
-    const { data: html } = await axios.get<string>(url, {
-      timeout: 30000,
-      transformResponse: [(r) => r],
-    });
-    if (typeof html !== 'string' || html.length < 500) return null;
+    const html = await fetchWithScraperFallback(productUrl, { render: true, wait: 8000, timeout: 30000 });
+    if (!html) return null;
 
-    const title = html.match(/class="ProductTitle__product-name"[^>]*>([^<]+)</i)?.[1]?.trim()
+    const title = html.match(/class="[^"]*product-title[^"]*"[^>]*>([^<]+)</i)?.[1]?.trim()
       || html.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1]?.trim() || '';
 
-    // Color swatches
     const colors: VariantColor[] = [];
-    const swatches = [...html.matchAll(/<img[^>]+alt=["']([A-Za-z][^"']{1,20})["'][^>]*src=["']([^"']+)["']/gi)];
-    const seenColors = new Set<string>();
+    const swatches = [...html.matchAll(/<img[^>]+alt="([A-Za-z][^"]{1,20})"[^>]*src="([^"]+)"/gi)];
+    const seen = new Set<string>();
     for (const sw of swatches) {
       const name = sw[1].trim();
-      if (!name || seenColors.has(name)) continue;
-      seenColors.add(name);
-      colors.push({
-        id: name.toLowerCase().replace(/\s+/g, '_'),
-        name,
-        swatchUrl: sw[2],
-        imageUrl: html.match(/class="ProductImage__image"[^>]+src="([^"]+)"/i)?.[1] || sw[2],
-        price: 0,
-        available: true,
-        buyUrl: productUrl,
-      });
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      colors.push({ id: name.toLowerCase().replace(/\s+/g, '_'), name, swatchUrl: sw[2], imageUrl: sw[2], price: 0, available: true, buyUrl: productUrl });
     }
 
-    // Size pills
     const sizes: VariantSize[] = [];
-    const sizePills = [...html.matchAll(/>\s*([A-Z0-9]{1,5})\s*</g)];
+    const pills = [...html.matchAll(/>\s*([A-Z0-9]{1,5})\s*</g)];
     const seenSizes = new Set<string>();
-    for (const sp of sizePills) {
+    for (const sp of pills) {
       const label = sp[1].trim();
       if (!/^(XS|S|M|L|XL|XXL|XXXL|[0-9]{2,3})$/.test(label) || seenSizes.has(label)) continue;
       seenSizes.add(label);
-      sizes.push({
-        id: label,
-        label,
-        price: 0,
-        available: true,
-        buyUrl: productUrl,
-      });
+      sizes.push({ id: label, label, price: 0, available: true, buyUrl: productUrl });
     }
 
+    console.log(`[MeeshoVariants] ${colors.length} colors, ${sizes.length} sizes`);
     return { platform: 'Meesho', productId: productUrl, title, colors, sizes };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 80) : '';
-    console.error('[MeeshoVariants] fetch error:', msg);
+    console.error('[MeeshoVariants] error:', msg);
     return null;
   }
 }
@@ -638,58 +629,39 @@ async function fetchMeeshoVariants(productUrl: string): Promise<ProductVariants 
 
 async function fetchTataCliqVariants(productUrl: string): Promise<ProductVariants | null> {
   try {
-    const url = scraperUrl(productUrl, { render: true });
-    const { data: html } = await axios.get<string>(url, {
-      timeout: 25000,
-      transformResponse: [(r) => r],
-    });
-    if (typeof html !== 'string' || html.length < 500) return null;
+    const html = await fetchWithScraperFallback(productUrl, { render: true, timeout: 25000 });
+    if (!html) return null;
 
     const title = html.match(/<h1[^>]*>([^<]+)<\/h1>/)?.[1]?.trim()
       || html.match(/class="[^"]*product-title[^"]*"[^>]*>([^<]+)</i)?.[1]?.trim() || '';
     const brand = html.match(/class="[^"]*brand-name[^"]*"[^>]*>([^<]+)</i)?.[1]?.trim()
       || html.match(/class="[^"]*brand[^"]*"[^>]*>([^<]+)</i)?.[1]?.trim() || '';
 
-    // Color and size from rendered HTML
     const colors: VariantColor[] = [];
-    const sizes: VariantSize[] = [];
-
-    // Look for color variant buttons
+    const seen = new Set<string>();
     const colorBtns = [...html.matchAll(/data-variant-type=["']color["'][^>]*data-variant-value=["']([^"']+)["'][^>]*>/gi)];
-    const seenColors = new Set<string>();
     for (const btn of colorBtns) {
       const name = btn[1].trim();
-      if (!name || seenColors.has(name)) continue;
-      seenColors.add(name);
-      colors.push({
-        id: name.toLowerCase().replace(/\s+/g, '_'),
-        name,
-        imageUrl: '',
-        price: 0,
-        available: true,
-        buyUrl: productUrl,
-      });
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      colors.push({ id: name.toLowerCase().replace(/\s+/g, '_'), name, imageUrl: '', price: 0, available: true, buyUrl: productUrl });
     }
 
-    const sizeBtns = [...html.matchAll(/data-variant-type=["']size["'][^>]*data-variant-value=["']([^"']+)["'][^>]*>/gi)];
+    const sizes: VariantSize[] = [];
     const seenSizes = new Set<string>();
+    const sizeBtns = [...html.matchAll(/data-variant-type=["']size["'][^>]*data-variant-value=["']([^"']+)["'][^>]*>/gi)];
     for (const btn of sizeBtns) {
       const label = btn[1].trim();
       if (!label || seenSizes.has(label)) continue;
       seenSizes.add(label);
-      sizes.push({
-        id: label.toLowerCase().replace(/\s+/g, '_'),
-        label,
-        price: 0,
-        available: true,
-        buyUrl: productUrl,
-      });
+      sizes.push({ id: label.toLowerCase().replace(/\s+/g, '_'), label, price: 0, available: true, buyUrl: productUrl });
     }
 
+    console.log(`[TataCliqVariants] ${colors.length} colors, ${sizes.length} sizes`);
     return { platform: 'Tata CLiQ', productId: productUrl, title, brand, colors, sizes };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message.slice(0, 80) : '';
-    console.error('[TataCliqVariants] fetch error:', msg);
+    console.error('[TataCliqVariants] error:', msg);
     return null;
   }
 }

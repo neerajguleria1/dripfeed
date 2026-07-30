@@ -256,11 +256,7 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
   const productId = useMemo(() => {
     const u = product.url;
     if (platform.startsWith('ajio')) return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
-    if (platform === 'amazon india' || platform === 'amazon') return u.match(/\/dp\/([A-Z0-9]{10})/)?.[1] || '';
-    if (platform === 'flipkart') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
-    if (platform === 'myntra') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
-    if (platform === 'meesho') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
-    if (platform === 'tata cliq' || platform === 'tata_cliq') return u.match(/\/p-([A-Z0-9]+)/)?.[1] || '';
+    // For non-Ajio platforms, pass the full URL — backend fetchers use it directly
     return u;
   }, [product.url, platform]);
 
