@@ -1,7 +1,9 @@
 // @ts-nocheck
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { fetchAjioVariants } from '../variantFetcher.js';
+import { fetchPlatformVariants } from '../variantFetcher.js';
 import { getVariantCache, setVariantCache, getVariantCacheDb, setVariantCacheDb } from '../cache/variantCache.js';
+
+const SUPPORTED_PLATFORMS = new Set(['ajio', 'amazon india', 'amazon', 'flipkart', 'myntra', 'meesho', 'tata cliq', 'tata_cliq']);
 
 export async function handleVariants(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
@@ -17,27 +19,29 @@ export async function handleVariants(req: VercelRequest, res: VercelResponse): P
     return;
   }
 
-  if (platform !== 'ajio') {
-    res.status(400).json({ error: 'Platform not supported yet' });
+  if (!SUPPORTED_PLATFORMS.has(platform)) {
+    res.status(400).json({ error: `Platform not supported. Supported: ${[...SUPPORTED_PLATFORMS].join(', ')}` });
     return;
   }
 
+  const cacheKey = `${platform}::${productId}`;
+
   // L1 — in-memory
-  const memHit = getVariantCache(productId);
+  const memHit = getVariantCache(cacheKey);
   if (memHit) { res.status(200).json(memHit); return; }
 
   // L2 — MongoDB (persists across Vercel instances)
-  const dbHit = await getVariantCacheDb(productId);
-  if (dbHit) { setVariantCache(productId, dbHit); res.status(200).json(dbHit); return; }
+  const dbHit = await getVariantCacheDb(cacheKey);
+  if (dbHit) { setVariantCache(cacheKey, dbHit); res.status(200).json(dbHit); return; }
 
   try {
-    const variants = await fetchAjioVariants(productId);
+    const variants = await fetchPlatformVariants(platform, productId);
     if (!variants) {
       res.status(500).json({ error: 'Unable to fetch variants' });
       return;
     }
-    setVariantCache(productId, variants);
-    setVariantCacheDb(productId, variants);
+    setVariantCache(cacheKey, variants);
+    setVariantCacheDb(cacheKey, variants);
     res.status(200).json(variants);
   } catch {
     res.status(500).json({ error: 'Unable to fetch variants' });

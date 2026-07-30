@@ -58,6 +58,38 @@
  *     .imageUrl                     ← product image (same as parent color's image)
  */
 
+// ─── Generic (platform-agnostic) types ─────────────────────────────────────────
+
+export interface VariantColor {
+  id: string;
+  name: string;
+  swatchUrl?: string;
+  imageUrl: string;
+  price: number;
+  originalPrice?: number;
+  available: boolean;
+  buyUrl: string;
+}
+
+export interface VariantSize {
+  id: string;
+  label: string;
+  format?: string;
+  price: number;
+  originalPrice?: number;
+  available: boolean;
+  buyUrl: string;
+}
+
+export interface ProductVariants {
+  platform: string;
+  productId: string;
+  title?: string;
+  brand?: string;
+  colors: VariantColor[];
+  sizes: VariantSize[];
+}
+
 /** One color option for a product — from baseOptions[0].options[] */
 export interface AjioColorVariant {
   /** colorCode e.g. "460886329_white" — use as input to /api/p/{colorCode} */

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
-import type { AjioProductVariants, AjioColorVariant, AjioSizeVariant } from '../../../api/_lib/types/productVariant';
+import type { ProductVariants, VariantColor, VariantSize } from '../../../api/_lib/types/productVariant';
 
 export interface VariantSelection {
   imageUrl: string;
@@ -10,23 +10,21 @@ export interface VariantSelection {
 }
 
 interface Props {
-  variants: AjioProductVariants | null;
+  variants: ProductVariants | null;
   status: 'idle' | 'loading' | 'done' | 'error';
   onSelect: (selection: VariantSelection) => void;
 }
 
-export function AjioVariantPanel({ variants, status, onSelect }: Props) {
-  const [selectedColor, setSelectedColor] = useState<AjioColorVariant | null>(null);
-  const [selectedSize, setSelectedSize] = useState<AjioSizeVariant | null>(null);
+export function VariantPanel({ variants, status, onSelect }: Props) {
+  const [selectedColor, setSelectedColor] = useState<VariantColor | null>(null);
+  const [selectedSize, setSelectedSize] = useState<VariantSize | null>(null);
 
-  // Auto-select first color when variants load
   useEffect(() => {
     if (variants && variants.colors.length > 0 && !selectedColor) {
       setSelectedColor(variants.colors[0]);
     }
   }, [variants, selectedColor]);
 
-  // Notify parent whenever color or size selection changes
   useEffect(() => {
     if (!selectedColor) return;
     const base: VariantSelection = {
@@ -37,15 +35,14 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
     };
     if (selectedSize) {
       onSelect({
-        imageUrl:      selectedSize.imageUrl || selectedColor.imageUrl,
-        price:         selectedSize.price,
-        originalPrice: selectedSize.originalPrice,
-        buyUrl:        selectedSize.buyUrl,
+        imageUrl:      selectedSize.buyUrl ? selectedColor.imageUrl : selectedColor.imageUrl,
+        price:         selectedSize.price || selectedColor.price,
+        originalPrice: selectedSize.originalPrice || selectedColor.originalPrice,
+        buyUrl:        selectedSize.buyUrl || selectedColor.buyUrl,
       });
     } else {
       onSelect(base);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, selectedSize]);
 
   if (status === 'loading') {
@@ -68,14 +65,13 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
 
   if (status !== 'done' || !variants) return null;
 
-  function handleColorClick(color: AjioColorVariant) {
+  function handleColorClick(color: VariantColor) {
     setSelectedColor(color);
-    setSelectedSize(null); // reset size when color changes
+    setSelectedSize(null);
   }
 
   return (
     <div className="mt-3 pt-3 border-t border-neutral-100 space-y-3">
-      {/* Colors */}
       {variants.colors.length > 0 && (
         <div>
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-[0.08em] mb-2">
@@ -83,13 +79,13 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {variants.colors.map((color) => {
-              const isSelected = selectedColor?.colorCode === color.colorCode;
+              const isSelected = selectedColor?.id === color.id;
               return (
                 <button
-                  key={color.colorCode}
+                  key={color.id}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleColorClick(color); }}
-                  title={color.colorName}
-                  aria-label={color.colorName}
+                  title={color.name}
+                  aria-label={color.name}
                   aria-pressed={isSelected}
                   className={[
                     'relative w-7 h-7 rounded-full border-2 transition-all duration-150 overflow-hidden flex-shrink-0',
@@ -102,7 +98,7 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
                   {color.swatchUrl ? (
                     <img
                       src={color.swatchUrl}
-                      alt={color.colorName}
+                      alt={color.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -110,7 +106,7 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
                     />
                   ) : (
                     <span className="text-[8px] leading-none flex items-center justify-center w-full h-full text-neutral-500 font-medium">
-                      {color.colorName.slice(0, 2)}
+                      {color.name.slice(0, 2)}
                     </span>
                   )}
                   {!color.available && (
@@ -123,23 +119,22 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
             })}
           </div>
           {selectedColor && (
-            <p className="text-[11px] text-neutral-500 mt-1.5 capitalize">{selectedColor.colorName}</p>
+            <p className="text-[11px] text-neutral-500 mt-1.5 capitalize">{selectedColor.name}</p>
           )}
         </div>
       )}
 
-      {/* Sizes — scoped to selected color */}
       {variants.sizes.length > 0 && (
         <div>
           <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-[0.08em] mb-2">
-            Size <span className="normal-case font-normal">({variants.sizes[0]?.sizeFormat})</span>
+            Size {variants.sizes[0]?.format ? <span className="normal-case font-normal">({variants.sizes[0].format})</span> : ''}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {variants.sizes.map((size) => {
-              const isSelected = selectedSize?.skuCode === size.skuCode;
+              const isSelected = selectedSize?.id === size.id;
               return (
                 <button
-                  key={size.skuCode}
+                  key={size.id}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedSize(isSelected ? null : size); }}
                   aria-pressed={isSelected}
                   disabled={!size.available}
@@ -152,7 +147,7 @@ export function AjioVariantPanel({ variants, status, onSelect }: Props) {
                         : 'bg-neutral-50 text-neutral-300 border-neutral-100 cursor-not-allowed line-through',
                   ].join(' ')}
                 >
-                  {size.sizeLabel}
+                  {size.label}
                 </button>
               );
             })}

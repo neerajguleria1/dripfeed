@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp, Share2 } from 'lucide-react';
-import { useAjioVariants } from '../hooks/useAjioVariants';
-import { AjioVariantPanel } from '../components/product/AjioVariantPanel';
-import type { VariantSelection } from '../components/product/AjioVariantPanel';
+import { useProductVariants } from '../hooks/useProductVariants';
+import { VariantPanel } from '../components/product/VariantPanel';
+import type { VariantSelection } from '../components/product/VariantPanel';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
 import { InterpretedFiltersBar } from '../components/search/InterpretedFiltersBar';
@@ -240,24 +240,34 @@ function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave
 function ResultCard({ product, index, onSave, saved }: { product: ProductData; index: number; onSave?: (p: ProductData) => void; saved?: boolean }) {
   const [copied, setCopied] = useState(false);
 
-  // ── Ajio variant state (isolated per card) ────────────────────────────────
-  const isAjio = product.platform.toLowerCase() === 'ajio';
+  // ── Variant state (isolated per card) ─────────────────────────────────────
+  const platform = product.platform.toLowerCase().replace(/\s+/g, '');
+  const hasVariants = ['ajio', 'amazon india', 'amazon', 'flipkart', 'myntra', 'meesho', 'tata cliq', 'tata_cliq'].some(
+    p => platform === p.toLowerCase().replace(/\s+/g, '')
+  );
   const [variantOpen, setVariantOpen] = useState(false);
   const [activeImage, setActiveImage] = useState(product.imageUrl);
   const [activePrice, setActivePrice] = useState(product.price);
   const [activeOriginalPrice, setActiveOriginalPrice] = useState(product.originalPrice);
   const [activeBuyUrl, setActiveBuyUrl] = useState(product.url);
-  const { variants, status, fetch: fetchVariants } = useAjioVariants();
+  const { variants, status, fetch: fetchVariants } = useProductVariants();
 
-  // Extract Ajio productId from the product URL: segment after /p/
-  const ajioProductId = isAjio
-    ? (() => { const m = product.url.match(/\/p\/([^/?#]+)/); return m ? m[1] : ''; })()
-    : '';
+  // Extract productId from the product URL based on platform
+  const productId = useMemo(() => {
+    const u = product.url;
+    if (platform.startsWith('ajio')) return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'amazon india' || platform === 'amazon') return u.match(/\/dp\/([A-Z0-9]{10})/)?.[1] || '';
+    if (platform === 'flipkart') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'myntra') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'meesho') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'tata cliq' || platform === 'tata_cliq') return u.match(/\/p-([A-Z0-9]+)/)?.[1] || '';
+    return u;
+  }, [product.url, platform]);
 
   function handleVariantToggle(e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation();
-    if (!variantOpen && (status === 'idle' || status === 'error') && ajioProductId) {
-      fetchVariants(ajioProductId);
+    if (!variantOpen && (status === 'idle' || status === 'error') && productId) {
+      fetchVariants(product.platform, productId);
     }
     setVariantOpen(v => !v);
   }
@@ -378,8 +388,8 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
           <ArrowRight className="w-3 h-3" />
         </a>
 
-        {/* Ajio-only: View Colors & Sizes toggle */}
-        {isAjio && ajioProductId && (
+        {/* View Colors & Sizes toggle — all platforms */}
+        {hasVariants && productId && (
           <>
             <button
               onClick={handleVariantToggle}
@@ -392,7 +402,7 @@ function ResultCard({ product, index, onSave, saved }: { product: ProductData; i
               )}
             </button>
             {variantOpen && (
-              <AjioVariantPanel
+              <VariantPanel
                 variants={variants}
                 status={status}
                 onSelect={handleVariantSelect}
