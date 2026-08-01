@@ -4,8 +4,13 @@ import { SEED_PRODUCTS } from '../../api/_lib/seed-data';
 import { mapSeedToHomeFeed } from '../../api/_lib/mappers/homeFeed';
 import type { HomeFeedProduct, HomeFeedResponse } from '../types/homeFeed';
 
-/** Timeout in ms before showing error state (increased for live scraper which can take 10-15s) */
-const FEED_TIMEOUT_MS = 20_000;
+/** Timeout in ms — Vercel functions can take up to 10s on hobby plan */
+const FEED_TIMEOUT_MS = 15_000;
+
+/** Popular queries to cycle through for homepage content */
+const TRENDING_QUERIES = [
+  'kurta set', 'sneakers', 'jeans', 'saree', 'hoodie', 'dress', 'ethnic wear', 'lehenga',
+];
 
 export interface UseHomeFeedResult {
   products: HomeFeedProduct[];
@@ -20,14 +25,36 @@ function getSeedFallback(): HomeFeedProduct[] {
   return SEED_PRODUCTS.map(mapSeedToHomeFeed);
 }
 
+/** Pick a random trending query */
+function getRandomQuery(): string {
+  return TRENDING_QUERIES[Math.floor(Math.random() * TRENDING_QUERIES.length)];
+}
+
+/** Map search API results to HomeFeedProduct[] */
+function mapSearchResults(results: any[]): HomeFeedProduct[] {
+  return results.slice(0, 12).map((p: any) => ({
+    id: p.id || `search_${Math.random().toString(36).slice(2, 8)}`,
+    title: p.title || '',
+    brand: p.brand,
+    imageUrl: p.imageUrl,
+    price: p.price || 0,
+    originalPrice: p.originalPrice,
+    discount: p.discount || (p.originalPrice && p.originalPrice > p.price
+      ? Math.round((p.originalPrice - p.price) / p.originalPrice * 100)
+      : 0),
+    savings: p.originalPrice && p.originalPrice - p.price > 200
+      ? p.originalPrice - p.price : undefined,
+    platform: p.platform || 'Unknown',
+    url: p.url,
+  })).filter((p: HomeFeedProduct) => p.price > 0 && p.title);
+}
+
 /**
- * Hook to fetch the home feed products for a given category.
- * Falls back to seed products on error or if the request takes longer than 5 seconds.
- *
- * @param category - Category filter string (e.g. "trending", "kurta-sets", or "" for all)
- * @returns Object with products, loading state, source indicator, error, and geo info
- *
- * Requirements validated: 2.4, 2.5, 2.6, 5.6, 8.2
+ * Hook to fetch the home feed products.
+ * Strategy:
+ * 1. Try /api/feed/home (cached, fast)
+ * 2. If it returns seed data or fails → call /api/search/product directly (live scrape)
+ * 3. Final fallback → static seed data
  */
 export function useHomeFeed(category: string): UseHomeFeedResult {
   const [products, setProducts] = useState<HomeFeedProduct[]>([]);
@@ -42,100 +69,82 @@ export function useHomeFeed(category: string): UseHomeFeedResult {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    // Abort any in-flight request from a previous render
     abortRef.current?.abort();
-
     const controller = new AbortController();
     abortRef.current = controller;
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let settled = false;
-
-    const settle = () => {
-      settled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-    };
-
-    const fallbackToSeed = async (errorMsg: string) => {
-      if (settled) return;
-      // Try live search API as client-side fallback before using seed data
-      try {
-        const searchQuery = category || 'trending fashion';
-        const { data } = await api.post('/search/product', { query: searchQuery });
-        const results = data?.results || data?.products || [];
-        if (results.length >= 4) {
-          settle();
-          const mapped: HomeFeedProduct[] = results.slice(0, 12).map((p: any) => ({
-            id: p.id || `search_${Math.random().toString(36).slice(2, 8)}`,
-            title: p.title || '',
-            brand: p.brand,
-            imageUrl: p.imageUrl,
-            price: p.price || 0,
-            originalPrice: p.originalPrice,
-            discount: p.discount || (p.originalPrice && p.originalPrice > p.price
-              ? Math.round((p.originalPrice - p.price) / p.originalPrice * 100)
-              : 0),
-            savings: p.originalPrice && p.originalPrice - p.price > 200
-              ? p.originalPrice - p.price : undefined,
-            platform: p.platform || 'Unknown',
-            url: p.url,
-          }));
-          setProducts(mapped);
-          setSource('trending');
-          setError(null);
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // Fall through to seed
-      }
-      settle();
-      setProducts(getSeedFallback());
-      setSource('seed');
-      setError(errorMsg);
-      setLoading(false);
-    };
-
-    // Start timeout: if request hasn't completed in 5s, use seed fallback
-    timeoutId = setTimeout(() => {
-      if (!settled) {
-        controller.abort();
-        fallbackToSeed('Request timed out');
-      }
-    }, FEED_TIMEOUT_MS);
+    const settle = () => { settled = true; };
 
     setLoading(true);
     setError(null);
 
-    const params: Record<string, string> = {};
-    if (category) params.category = category;
+    async function fetchFeed() {
+      // ─── Step 1: Try the feed API ─────────────────────────────────────────
+      try {
+        const params: Record<string, string> = {};
+        if (category) params.category = category;
 
-    api
-      .get<HomeFeedResponse>('/feed/home', {
-        params,
-        signal: controller.signal,
-      })
-      .then(({ data }) => {
-        if (settled || controller.signal.aborted) return;
-        settle();
-        setProducts(data.products);
-        setSource(data.source);
-        setGeo(data.geo);
-        setLoading(false);
-      })
-      .catch((err) => {
-        // Ignore aborts triggered by cleanup or timeout (already handled)
-        if (err?.name === 'CanceledError' || err?.name === 'AbortError') {
-          if (!settled) fallbackToSeed('Request aborted');
+        const { data } = await api.get<HomeFeedResponse>('/feed/home', {
+          params,
+          signal: controller.signal,
+          timeout: FEED_TIMEOUT_MS,
+        });
+
+        if (controller.signal.aborted || settled) return;
+
+        // If feed returned real data (not seed), use it
+        if (data.source !== 'seed' && data.products.length >= 4) {
+          settle();
+          setProducts(data.products);
+          setSource(data.source);
+          setGeo(data.geo);
+          setLoading(false);
           return;
         }
-        fallbackToSeed(err?.message || 'Failed to fetch home feed');
-      });
 
-    // Cleanup: abort on unmount or category change
+        // Feed returned seed data — try live search instead
+        setGeo(data.geo);
+      } catch {
+        // Feed API failed — continue to search fallback
+      }
+
+      if (controller.signal.aborted || settled) return;
+
+      // ─── Step 2: Call search API directly (live scrape) ────────────────────
+      try {
+        const searchQuery = category || getRandomQuery();
+        const { data } = await api.post('/search/product', 
+          { query: searchQuery },
+          { signal: controller.signal, timeout: FEED_TIMEOUT_MS }
+        );
+
+        if (controller.signal.aborted || settled) return;
+
+        const results = data?.results || data?.products || [];
+        if (results.length >= 4) {
+          settle();
+          setProducts(mapSearchResults(results));
+          setSource('trending');
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Search also failed
+      }
+
+      if (controller.signal.aborted || settled) return;
+
+      // ─── Step 3: Final fallback — seed data ───────────────────────────────
+      settle();
+      setProducts(getSeedFallback());
+      setSource('seed');
+      setError('Using cached product data');
+      setLoading(false);
+    }
+
+    fetchFeed();
+
     return () => {
       settle();
       controller.abort();
