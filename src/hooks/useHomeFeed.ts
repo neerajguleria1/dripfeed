@@ -4,8 +4,8 @@ import { SEED_PRODUCTS } from '../../api/_lib/seed-data';
 import { mapSeedToHomeFeed } from '../../api/_lib/mappers/homeFeed';
 import type { HomeFeedProduct, HomeFeedResponse } from '../types/homeFeed';
 
-/** Timeout in ms before falling back to seed products */
-const FEED_TIMEOUT_MS = 5_000;
+/** Timeout in ms before showing error state (increased for live scraper which can take 10-15s) */
+const FEED_TIMEOUT_MS = 20_000;
 
 export interface UseHomeFeedResult {
   products: HomeFeedProduct[];
@@ -59,8 +59,39 @@ export function useHomeFeed(category: string): UseHomeFeedResult {
       }
     };
 
-    const fallbackToSeed = (errorMsg: string) => {
+    const fallbackToSeed = async (errorMsg: string) => {
       if (settled) return;
+      // Try live search API as client-side fallback before using seed data
+      try {
+        const searchQuery = category || 'trending fashion';
+        const { data } = await api.post('/search/product', { query: searchQuery });
+        const results = data?.results || data?.products || [];
+        if (results.length >= 4) {
+          settle();
+          const mapped: HomeFeedProduct[] = results.slice(0, 12).map((p: any) => ({
+            id: p.id || `search_${Math.random().toString(36).slice(2, 8)}`,
+            title: p.title || '',
+            brand: p.brand,
+            imageUrl: p.imageUrl,
+            price: p.price || 0,
+            originalPrice: p.originalPrice,
+            discount: p.discount || (p.originalPrice && p.originalPrice > p.price
+              ? Math.round((p.originalPrice - p.price) / p.originalPrice * 100)
+              : 0),
+            savings: p.originalPrice && p.originalPrice - p.price > 200
+              ? p.originalPrice - p.price : undefined,
+            platform: p.platform || 'Unknown',
+            url: p.url,
+          }));
+          setProducts(mapped);
+          setSource('trending');
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Fall through to seed
+      }
       settle();
       setProducts(getSeedFallback());
       setSource('seed');
