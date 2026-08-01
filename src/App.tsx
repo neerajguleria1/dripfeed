@@ -97,7 +97,7 @@ function App() {
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/register" element={<AuthLayout><RegisterPage /></AuthLayout>} />
 
-        {/* Marketing — no app header (uses SiteNav inside) */}
+        {/* Marketing — no app header (HomePage uses StickyHeader; others use SiteNav) */}
         <Route path="/" element={<div className="relative"><HomePage /></div>} />
         <Route path="/how-it-works" element={<div className="relative"><HowItWorksPage /></div>} />
         <Route path="/brands" element={<div className="relative"><BrandsPage /></div>} />
