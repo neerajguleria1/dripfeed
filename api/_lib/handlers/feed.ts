@@ -185,6 +185,51 @@ async function fetchHomeFeedData(category: string): Promise<{ products: HomeFeed
     // Fall through to seed
   }
 
+  // ─── Fallback 3: Live scrape from platforms ──────────────────────────────────
+  // If DB has no products, scrape Flipkart (free, no ScraperAPI credits needed)
+  // for the category or a trending query. Cache result so subsequent requests
+  // don't re-scrape.
+  try {
+    const { searchProducts } = await import('../search.js');
+    const scrapeQuery = category && category !== 'all' ? category : 'trending fashion';
+    const canonicals = await searchProducts(scrapeQuery, true /* fastOnly */);
+
+    if (canonicals.length > 0) {
+      // Map CanonicalProduct[] to HomeFeedProduct[]
+      const products: HomeFeedProduct[] = canonicals.slice(0, HOME_FEED_MAX_PRODUCTS).map((c: any) => {
+        const cheapest = c.platforms?.[0] || c;
+        const originalPrice = cheapest.originalPrice || cheapest.mrp || 0;
+        const price = cheapest.price || c.price || 0;
+        const discount = originalPrice > price
+          ? Math.round((originalPrice - price) / originalPrice * 100)
+          : (cheapest.discount || 0);
+        const savings = originalPrice - price;
+
+        return {
+          id: c.id || c.canonicalId || `live_${Math.random().toString(36).slice(2, 10)}`,
+          title: c.title || cheapest.title || '',
+          brand: c.brand || cheapest.brand,
+          imageUrl: c.imageUrl || cheapest.imageUrl,
+          price,
+          originalPrice: originalPrice > price ? originalPrice : undefined,
+          discount,
+          savings: savings > 200 ? savings : undefined,
+          platform: cheapest.platform || 'Unknown',
+          url: cheapest.url || c.url,
+          category: category || undefined,
+        };
+      }).filter(p => p.price > 0 && p.title);
+
+      if (products.length >= HOME_FEED_MIN_PRODUCTS) {
+        products.sort((a, b) => b.discount - a.discount);
+        return { products, source: 'trending' as const };
+      }
+    }
+  } catch (e: any) {
+    console.warn('[HomeFeed] Live scrape fallback failed:', e?.message?.slice(0, 80));
+    // Fall through to seed
+  }
+
   // ─── Final fallback: seed products ──────────────────────────────────────────
   const seedProducts = SEED_PRODUCTS
     .map(mapSeedToHomeFeed)
