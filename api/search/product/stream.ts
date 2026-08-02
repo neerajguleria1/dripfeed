@@ -25,8 +25,6 @@ import {
   getMemCached,
 } from '../../_lib/search.js';
 import type { SearchProduct } from '../../_lib/types/searchProduct.js';
-import { validateProduct } from '../../../src/utils/validateProduct.js';
-import type { ValidatedProduct } from '../../../src/utils/validateProduct.js';
 
 export const config = { maxDuration: 60, regions: ['bom1'] };
 
@@ -39,7 +37,13 @@ const MIN_QUERY_LENGTH = 2;
 // ─── SSE helpers ──────────────────────────────────────────────────────────────
 
 function sendSSE(res: VercelResponse, event: string, data: unknown): void {
-  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  // Use plain data-only messages (no "event:" prefix) so the client's
+  // `onmessage` handler fires. Include a `type` field in the payload
+  // for the client to dispatch on.
+  const payload = typeof data === 'object' && data !== null
+    ? { type: event, ...(data as Record<string, unknown>) }
+    : { type: event, data };
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
 function sendError(res: VercelResponse, message: string): void {
@@ -51,34 +55,59 @@ function sendError(res: VercelResponse, message: string): void {
 // ─── Product transformation ───────────────────────────────────────────────────
 
 /**
- * Converts raw SearchProduct[] into ValidatedProduct[] grouped by platform.
- * Each product is validated through validateProduct() — invalid products are dropped.
+ * Converts raw SearchProduct[] into flat product objects matching the
+ * shape expected by the SearchPage client: { id, title, brand, imageUrl, price, originalPrice, discount, platform, url }.
+ * Each product is validated — invalid products (unsplash images, bare domain URLs, zero prices) are dropped.
  */
-function toValidatedProducts(products: SearchProduct[]): ValidatedProduct[] {
-  const validated: ValidatedProduct[] = [];
+function toFlatProducts(products: SearchProduct[]): Array<{
+  id: string;
+  title: string;
+  brand?: string;
+  imageUrl?: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  platform: string;
+  url: string;
+}> {
+  const results: Array<{
+    id: string;
+    title: string;
+    brand?: string;
+    imageUrl?: string;
+    price: number;
+    originalPrice?: number;
+    discount?: number;
+    platform: string;
+    url: string;
+  }> = [];
 
   for (const p of products) {
-    // Transform SearchProduct into the shape validateProduct() expects
-    const raw = {
-      id: p.id,
+    const platformName = mapPlatformName(p.platform);
+
+    // Basic validation — skip unsplash images and invalid URLs
+    if (p.imageUrl && p.imageUrl.includes('images.unsplash.com')) continue;
+    if (!p.price || p.price <= 0) continue;
+    if (!p.title || p.title.trim().length < 5) continue;
+
+    const discount = p.originalPrice && p.originalPrice > p.price
+      ? Math.floor(((p.originalPrice - p.price) / p.originalPrice) * 100)
+      : undefined;
+
+    results.push({
+      id: p.id || `${platformName}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       title: p.title,
       brand: p.brand,
       imageUrl: p.imageUrl,
-      offers: [{
-        platform: mapPlatformName(p.platform),
-        price: p.price,
-        originalPrice: p.originalPrice,
-        url: p.url,
-        affiliateUrl: p.affiliateUrl,
-        imageUrl: p.imageUrl,
-      }],
-    };
-
-    const result = validateProduct(raw);
-    if (result) validated.push(result);
+      price: p.price,
+      originalPrice: p.originalPrice,
+      discount,
+      platform: platformName,
+      url: p.url || p.affiliateUrl || '',
+    });
   }
 
-  return validated;
+  return results;
 }
 
 /**
@@ -193,11 +222,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ─── Fresh cache hit (< 30 min) ───────────────────────────────────────
     if (status === 'fresh' && entry) {
-      const validated = toValidatedProducts(entry.data);
-      if (validated.length > 0) {
+      const flat = toFlatProducts(entry.data);
+      if (flat.length > 0) {
         sendSSE(res, 'platform_products', {
           platform: 'cache',
-          products: validated,
+          products: flat,
         });
       }
       sendSSE(res, 'done', {});
@@ -208,11 +237,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ─── Stale cache (30 min – 7 days) ────────────────────────────────────
     if (status === 'stale' && entry) {
       // Emit cached results immediately
-      const validated = toValidatedProducts(entry.data);
-      if (validated.length > 0) {
+      const flat = toFlatProducts(entry.data);
+      if (flat.length > 0) {
         sendSSE(res, 'platform_products', {
           platform: 'cache',
-          products: validated,
+          products: flat,
         });
       }
 
@@ -235,11 +264,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       q,
       (platform: string, products: SearchProduct[]) => {
         const platformName = getPlatformDisplayName(platform);
-        const validated = toValidatedProducts(products);
-        if (validated.length > 0) {
+        const flat = toFlatProducts(products);
+        if (flat.length > 0) {
           sendSSE(res, 'platform_products', {
             platform: platformName,
-            products: validated,
+            products: flat,
           });
         }
       },
