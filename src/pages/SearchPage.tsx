@@ -10,19 +10,11 @@ import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
 import type { ProductData } from '../types/product';
-import type { FilterState } from '../components/search/SearchFilters';
+import { DEFAULT_FILTERS, extractFacets, type FilterState, type Facets } from '../types/filters';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-
-const DEFAULT_FILTERS: FilterState = {
-  platforms: [],
-  priceRange: 'all',
-  category: 'all',
-  minDiscount: 0,
-  sort: 'price-asc',
-};
 
 const TRENDING_SEARCHES = [
   'kurta set',
@@ -48,7 +40,7 @@ const SORT_OPTIONS: { value: FilterState['sort']; label: string }[] = [
   { value: 'price-asc', label: 'Lowest Price' },
   { value: 'discount-desc', label: 'Highest Discount' },
   { value: 'newest', label: 'Newest First' },
-  { value: 'platform', label: 'By Platform' },
+  { value: 'relevance', label: 'Relevance' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,9 +63,9 @@ function sortProducts(products: ProductData[], sort: FilterState['sort']): Produ
   const sorted = [...products];
   switch (sort) {
     case 'price-asc': return sorted.sort((a, b) => a.price - b.price);
+    case 'price-desc': return sorted.sort((a, b) => b.price - a.price);
     case 'discount-desc': return sorted.sort((a, b) => (b.discount || 0) - (a.discount || 0));
     case 'newest': return sorted;
-    case 'platform': return sorted.sort((a, b) => a.platform.localeCompare(b.platform));
     default: return sorted;
   }
 }
@@ -327,8 +319,8 @@ export default function SearchPage() {
       );
     }
 
-    if (filters.priceRange !== 'all') {
-      result = result.filter((p) => matchesPriceRange(p.price, filters.priceRange));
+    if (filters.pricePreset !== 'all') {
+      result = result.filter((p) => matchesPriceRange(p.price, filters.pricePreset));
     }
 
     if (filters.minDiscount > 0) {
@@ -456,8 +448,17 @@ export default function SearchPage() {
               <SearchFilters
                 filters={filters}
                 onFilterChange={handleFilterChange}
+                onReset={() => setFilters(DEFAULT_FILTERS)}
+                facets={extractFacets(products.map(p => ({
+                  id: p.id,
+                  title: p.title,
+                  brand: p.brand,
+                  price: p.price,
+                  originalPrice: p.originalPrice,
+                  discount: p.discount,
+                  platform: p.platform,
+                })))}
                 resultCount={filteredProducts.length}
-                platformsSearched={platformsSearched}
               />
             </div>
           </div>
