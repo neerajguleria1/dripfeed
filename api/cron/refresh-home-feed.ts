@@ -56,10 +56,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         console.log(`[Cron:refresh-home-feed] Scraping "${query}" for category "${category}"...`);
         
-        const canonicals = await searchProducts(query, true /* fastOnly */);
+        const canonicals = await searchProducts(query, false /* include all platforms */);
         
+        console.log(`[Cron:refresh-home-feed] Got ${canonicals?.length || 0} canonicals for "${category}"`);
+
         if (!canonicals || canonicals.length === 0) {
-          results.push({ category, count: 0, error: 'No results' });
+          results.push({ category, count: 0, error: 'No results from scraper' });
           continue;
         }
 
