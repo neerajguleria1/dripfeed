@@ -1,15 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { SEED_PRODUCTS } from '../../api/_lib/seed-data';
-import { mapSeedToHomeFeed } from '../../api/_lib/mappers/homeFeed';
-import type { HomeFeedProduct, HomeFeedResponse } from '../types/homeFeed';
+import type { HomeFeedProduct } from '../types/homeFeed';
 
-/** Timeout in ms — Vercel functions can take up to 10s on hobby plan */
-const FEED_TIMEOUT_MS = 15_000;
-
-/** Popular queries to cycle through for homepage content */
+/** Popular queries to show on homepage — rotated randomly */
 const TRENDING_QUERIES = [
-  'kurta set', 'sneakers', 'jeans', 'saree', 'hoodie', 'dress', 'ethnic wear', 'lehenga',
+  'kurta set', 'sneakers', 'jeans', 'saree', 'hoodie', 'dress', 'lehenga', 'shirt',
 ];
 
 export interface UseHomeFeedResult {
@@ -20,48 +15,24 @@ export interface UseHomeFeedResult {
   geo: { country: string; isIndia: boolean };
 }
 
-/** Maps seed products to HomeFeedProduct[] for client-side fallback */
-function getSeedFallback(): HomeFeedProduct[] {
-  return SEED_PRODUCTS.map(mapSeedToHomeFeed);
-}
-
 /** Pick a random trending query */
 function getRandomQuery(): string {
   return TRENDING_QUERIES[Math.floor(Math.random() * TRENDING_QUERIES.length)];
 }
 
-/** Map search API results to HomeFeedProduct[] */
-function mapSearchResults(results: any[]): HomeFeedProduct[] {
-  return results.slice(0, 12).map((p: any) => ({
-    id: p.id || `search_${Math.random().toString(36).slice(2, 8)}`,
-    title: p.title || '',
-    brand: p.brand,
-    imageUrl: p.imageUrl,
-    price: p.price || 0,
-    originalPrice: p.originalPrice,
-    discount: p.discount || (p.originalPrice && p.originalPrice > p.price
-      ? Math.round((p.originalPrice - p.price) / p.originalPrice * 100)
-      : 0),
-    savings: p.originalPrice && p.originalPrice - p.price > 200
-      ? p.originalPrice - p.price : undefined,
-    platform: p.platform || 'Unknown',
-    url: p.url,
-  })).filter((p: HomeFeedProduct) => p.price > 0 && p.title);
-}
-
 /**
- * Hook to fetch the home feed products.
- * Strategy:
- * 1. Try /api/feed/home (cached, fast)
- * 2. If it returns seed data or fails → call /api/search/product directly (live scrape)
- * 3. Final fallback → static seed data
+ * Hook to fetch real products for the homepage.
+ * 
+ * Strategy: Directly calls POST /api/search/product (which scrapes live or returns cached results).
+ * This is the SAME endpoint that works when users search manually.
+ * No intermediate feed API, no cron dependency, no seed data.
  */
 export function useHomeFeed(category: string): UseHomeFeedResult {
   const [products, setProducts] = useState<HomeFeedProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState<'deals' | 'trending' | 'seed'>('seed');
+  const [source, setSource] = useState<'deals' | 'trending' | 'seed'>('trending');
   const [error, setError] = useState<string | null>(null);
-  const [geo, setGeo] = useState<{ country: string; isIndia: boolean }>({
+  const [geo] = useState<{ country: string; isIndia: boolean }>({
     country: 'IN',
     isIndia: true,
   });
@@ -73,82 +44,88 @@ export function useHomeFeed(category: string): UseHomeFeedResult {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    let settled = false;
-    const settle = () => { settled = true; };
-
     setLoading(true);
     setError(null);
 
-    async function fetchFeed() {
-      // ─── Step 1: Try the feed API ─────────────────────────────────────────
-      try {
-        const params: Record<string, string> = {};
-        if (category) params.category = category;
+    // Use category as search query, or pick a random trending term
+    const searchQuery = category || getRandomQuery();
 
-        const { data } = await api.get<HomeFeedResponse>('/feed/home', {
-          params,
-          signal: controller.signal,
-          timeout: FEED_TIMEOUT_MS,
-        });
+    api.post('/search/product', 
+      { query: searchQuery },
+      { signal: controller.signal, timeout: 30000 }
+    )
+    .then(({ data }) => {
+      if (controller.signal.aborted) return;
 
-        if (controller.signal.aborted || settled) return;
-
-        // If feed returned real data (not seed), use it
-        if (data.source !== 'seed' && data.products.length >= 4) {
-          settle();
-          setProducts(data.products);
-          setSource(data.source);
-          setGeo(data.geo);
-          setLoading(false);
-          return;
-        }
-
-        // Feed returned seed data — try live search instead
-        setGeo(data.geo);
-      } catch {
-        // Feed API failed — continue to search fallback
+      // The search API returns results in various shapes depending on version
+      const rawResults = data?.results || data?.products || data?.canonicals || [];
+      
+      if (rawResults.length === 0) {
+        setProducts([]);
+        setSource('seed');
+        setError('No products found');
+        setLoading(false);
+        return;
       }
 
-      if (controller.signal.aborted || settled) return;
-
-      // ─── Step 2: Call search API directly (live scrape) ────────────────────
-      try {
-        const searchQuery = category || getRandomQuery();
-        const { data } = await api.post('/search/product', 
-          { query: searchQuery },
-          { signal: controller.signal, timeout: FEED_TIMEOUT_MS }
-        );
-
-        if (controller.signal.aborted || settled) return;
-
-        const results = data?.results || data?.products || [];
-        if (results.length >= 4) {
-          settle();
-          setProducts(mapSearchResults(results));
-          setSource('trending');
-          setLoading(false);
-          return;
+      // Map search results to HomeFeedProduct format
+      // Handle both flat SearchProduct[] and CanonicalProduct[] (with .offers)
+      const mapped: HomeFeedProduct[] = rawResults.slice(0, 24).map((item: any, i: number) => {
+        // If it's a CanonicalProduct (has .offers array)
+        if (item.offers && item.offers.length > 0) {
+          const cheapest = item.offers.reduce((min: any, o: any) => 
+            (o.price > 0 && o.price < (min.price || Infinity)) ? o : min, item.offers[0]);
+          const price = cheapest.price || 0;
+          const originalPrice = cheapest.originalPrice || 0;
+          const discount = originalPrice > price
+            ? Math.round((originalPrice - price) / originalPrice * 100)
+            : (cheapest.discount || 0);
+          return {
+            id: item.id || `hp_${i}`,
+            title: item.title || cheapest.title || '',
+            brand: item.brand || undefined,
+            imageUrl: cheapest.imageUrl || '',
+            price,
+            originalPrice: originalPrice > price ? originalPrice : undefined,
+            discount,
+            savings: originalPrice - price > 200 ? originalPrice - price : undefined,
+            platform: cheapest.platform || 'Unknown',
+            url: cheapest.affiliateUrl || cheapest.productUrl || '',
+          };
         }
-      } catch {
-        // Search also failed
-      }
 
-      if (controller.signal.aborted || settled) return;
+        // If it's a flat SearchProduct (direct fields)
+        const price = item.price || 0;
+        const originalPrice = item.originalPrice || 0;
+        const discount = item.discount || (originalPrice > price
+          ? Math.round((originalPrice - price) / originalPrice * 100) : 0);
+        return {
+          id: item.id || `hp_${i}`,
+          title: item.title || '',
+          brand: item.brand || undefined,
+          imageUrl: item.imageUrl || '',
+          price,
+          originalPrice: originalPrice > price ? originalPrice : undefined,
+          discount,
+          savings: originalPrice - price > 200 ? originalPrice - price : undefined,
+          platform: item.platform || 'Unknown',
+          url: item.url || '',
+        };
+      }).filter((p: HomeFeedProduct) => p.price > 0 && p.title && p.imageUrl);
 
-      // ─── Step 3: Final fallback — seed data ───────────────────────────────
-      settle();
-      setProducts(getSeedFallback());
-      setSource('seed');
-      setError('Using cached product data');
+      setProducts(mapped);
+      setSource('trending');
       setLoading(false);
-    }
+    })
+    .catch((err) => {
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
+      setProducts([]);
+      setSource('seed');
+      setError(err?.message || 'Failed to load');
+      setLoading(false);
+    });
 
-    fetchFeed();
-
-    return () => {
-      settle();
-      controller.abort();
-    };
+    return () => { controller.abort(); };
   }, [category]);
 
   return { products, loading, source, error, geo };
