@@ -1,20 +1,53 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, ArrowRight, TrendingUp } from 'lucide-react';
+import { ArrowRight, TrendingUp, Sparkles, Recycle, Check, Link2, Bookmark, BookmarkCheck, ChevronUp, Share2 } from 'lucide-react';
+import { useProductVariants } from '../hooks/useProductVariants';
+import { VariantPanel } from '../components/product/VariantPanel';
+import type { VariantSelection } from '../components/product/VariantPanel';
 import { SearchBar } from '../components/search/SearchBar';
 import { SearchFilters } from '../components/search/SearchFilters';
+import { InterpretedFiltersBar } from '../components/search/InterpretedFiltersBar';
 import { InfiniteScroll } from '../components/common/InfiniteScroll';
 import { SEOHead } from '../components/common/SEOHead';
+import { ShareModal } from '../components/share/ShareModal';
 import api from '../services/api';
 import { staggerChildren, staggerItem } from '../design-system/animations';
-import { ALL_SEED_PRODUCTS } from '../../api/_lib/seed-data';
-import type { ProductData } from '../types/product';
-import { DEFAULT_FILTERS, extractFacets, type FilterState, type Facets } from '../types/filters';
+import Analytics from '../utils/analytics';
+import { useFilterState } from '../hooks/useFilterState';
+import { useQueryInterpreter } from '../hooks/useQueryInterpreter';
+import { applyFiltersAndSort, applySort, extractFacets } from '../types/filters';
+import type { FilterState } from '../components/search/SearchFilters';
+import type { InterpretedFilters } from '../types/queryInterpreter';
+import { formatPrice } from '../utils/formatPrice';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
+// Flat product shape returned by the streaming/blocking search endpoints
+interface ProductData {
+  id: string;
+  title: string;
+  brand?: string;
+  imageUrl?: string;
+  price: number;
+  originalPrice?: number;
+  discount?: number;
+  platform: string;
+  url: string;
+  color?: string;
+  size?: string;
+}
+
+interface ThriftResult {
+  _id: string;
+  title: string;
+  brand?: string;
+  price: number;
+  images: string[];
+  condition: string;
+  size: string;
+  city: string;
+  whatsappNumber: string;
+}
+
 
 const TRENDING_SEARCHES = [
   'kurta set',
@@ -36,202 +69,386 @@ const CATEGORIES = [
   { name: 'Activewear', slug: 'activewear', count: '1,200+' },
 ];
 
-const SORT_OPTIONS: { value: FilterState['sort']; label: string }[] = [
-  { value: 'price-asc', label: 'Lowest Price' },
-  { value: 'discount-desc', label: 'Highest Discount' },
-  { value: 'newest', label: 'Newest First' },
-  { value: 'relevance', label: 'Relevance' },
-];
+// Platform color mapping
+const PLATFORM_COLORS: Record<string, string> = {
+  myntra: '#FF3F6C',
+  ajio: '#1A1A1A',
+  amazon: '#FF9900',
+  amazonia: '#FF9900',
+  flipkart: '#2874F0',
+  meesho: '#570741',
+  nykaa: '#FC2779',
+  nykaafashion: '#FC2779',
+  tata: '#6C3D9E',
+  tatacliq: '#6C3D9E',
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
+// Featured Product Card — Premium gold-accented lede card
 // ─────────────────────────────────────────────────────────────────────────────
 
-function matchesPriceRange(price: number, range: string): boolean {
-  switch (range) {
-    case 'under500': return price < 500;
-    case '500-1000': return price >= 500 && price <= 1000;
-    case '1000-2000': return price >= 1000 && price <= 2000;
-    case '2000-5000': return price >= 2000 && price <= 5000;
-    case '5000+': return price >= 5000;
-    case 'all':
-    default: return true;
+function gtagEvent(name: string, params: Record<string, unknown>) {
+  if (typeof (window as any).gtag === 'function') (window as any).gtag('event', name, params);
+}
+
+async function trackAndOpen(offer: ProductData) {
+  gtagEvent('select_item', {
+    item_list_name: 'search_results',
+    items: [{ item_name: offer.title, item_category: offer.platform, price: offer.price }],
+  });
+  try {
+    const res = await fetch('/api/affiliate/redirect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: offer.platform,
+        productUrl: offer.url,
+        productName: offer.title,
+        device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'web',
+        sessionId: sessionStorage.getItem('df_sid') || (() => {
+          const id = Math.random().toString(36).slice(2);
+          sessionStorage.setItem('df_sid', id);
+          return id;
+        })(),
+      }),
+    });
+    const { affiliateUrl } = await res.json();
+    window.open(affiliateUrl || offer.url, '_blank', 'noopener,noreferrer');
+  } catch {
+    window.open(offer.url, '_blank', 'noopener,noreferrer');
   }
 }
 
-function sortProducts(products: ProductData[], sort: FilterState['sort']): ProductData[] {
-  const sorted = [...products];
-  switch (sort) {
-    case 'price-asc': return sorted.sort((a, b) => a.price - b.price);
-    case 'price-desc': return sorted.sort((a, b) => b.price - a.price);
-    case 'discount-desc': return sorted.sort((a, b) => (b.discount || 0) - (a.discount || 0));
-    case 'newest': return sorted;
-    default: return sorted;
+function FeaturedCard({ product, onSave, saved }: { product: ProductData; onSave?: (p: ProductData) => void; saved?: boolean }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    await navigator.clipboard.writeText(product.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
-}
 
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(price);
-}
+  const savings = product.originalPrice && product.originalPrice > product.price
+    ? product.originalPrice - product.price
+    : 0;
 
-// Derive trending products from seed data for landing state
-const TRENDING_PRODUCTS: ProductData[] = ALL_SEED_PRODUCTS.slice(0, 9).map((sp, i) => {
-  const cheapest = sp.platforms.reduce((a, b) => (a.price < b.price ? a : b));
-  return {
-    id: `trending-${i}`,
-    title: sp.title,
-    brand: sp.brand,
-    price: cheapest.price,
-    originalPrice: cheapest.originalPrice,
-    discount: Math.round(
-      ((cheapest.originalPrice - cheapest.price) / cheapest.originalPrice) * 100
-    ),
-    platform: cheapest.platform,
-    url: cheapest.url,
-    imageUrl: sp.imageUrl,
-  };
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Featured Product Card (lede — larger, no shadow, separated by whitespace)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function FeaturedCard({ product }: { product: ProductData }) {
   return (
-    <motion.a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      initial={{ opacity: 0, y: 16 }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="group col-span-full lg:col-span-2 flex flex-col sm:flex-row gap-5 sm:gap-8 pb-8 sm:pb-12 mb-8 sm:mb-12 border-b border-neutral-100"
+      className="col-span-full flex gap-3 bg-white rounded-2xl border border-neutral-100 overflow-hidden mb-4 relative active:scale-[0.99] transition-transform"
     >
-      {/* Image — full width on mobile, fixed on larger */}
-      <div className="w-full sm:w-[320px] flex-shrink-0 overflow-hidden rounded-xl bg-neutral-50">
+      {/* Best Match badge */}
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-1
+        bg-[#C9A96E] text-white text-[10px] font-semibold uppercase tracking-[0.06em]
+        px-2.5 py-1 rounded-full shadow-sm">
+        <Sparkles className="w-2.5 h-2.5" />
+        Best
+      </div>
+
+      {/* Image — fixed width on mobile */}
+      <a
+        href={product.url} target="_blank" rel="noopener noreferrer"
+        onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+        className="w-[140px] sm:w-[200px] flex-shrink-0 overflow-hidden bg-neutral-50"
+      >
         <img
           src={product.imageUrl}
           alt={product.title}
-          className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+          className="w-full h-full object-cover"
           loading="eager"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
         />
-      </div>
+      </a>
 
       {/* Details */}
-      <div className="flex flex-col justify-center py-2">
-        <span className="text-[13px] sm:text-[11px] uppercase tracking-[0.08em] text-neutral-500 font-medium">
-          {product.brand}
-        </span>
-        <h2 className="text-[18px] sm:text-[24px] font-medium text-neutral-900 leading-snug mt-2 mb-1 tracking-[-0.01em]">
-          {product.title}
-        </h2>
-        {/* Hand-crafted thin rule */}
-        <div className="w-12 h-px bg-neutral-200 my-3 sm:my-4" />
-        <div className="flex items-baseline gap-3">
-          <span className="text-[16px] sm:text-[18px] font-semibold text-neutral-900 tabular-nums">
-            {formatPrice(product.price)}
+      <div className="flex flex-col justify-between py-4 pr-4 flex-1 min-w-0">
+        <div>
+          <span
+            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize mb-2"
+            style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || '#6b7280' }}
+          >
+            {product.platform}
           </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[13px] sm:text-[14px] text-neutral-400 line-through tabular-nums">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
-          {product.discount && product.discount > 0 && (
-            <span className="text-[13px] font-medium text-emerald-600">
-              {product.discount}% off
-            </span>
+          <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
+          <h2 className="text-[14px] sm:text-[16px] font-bold text-[#0F0F1A] leading-snug mt-1 line-clamp-3">
+            {product.title}
+          </h2>
+
+          {/* Variant metadata — display only */}
+          {(product.color || product.size) && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {product.color && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                  <span>&#127912;</span> <span className="capitalize">{product.color}</span>
+                </span>
+              )}
+              {product.size && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                  <span>&#128207;</span> {product.size}
+                </span>
+              )}
+            </div>
           )}
         </div>
-        <span className="text-[13px] sm:text-[12px] text-neutral-400 mt-3 capitalize">
-          via {product.platform}
-        </span>
+
+        <div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-[18px] font-bold text-[#0F0F1A] tabular-nums">
+              {formatPrice(product.price)}
+            </span>
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="text-[12px] text-neutral-400 line-through tabular-nums">
+                {formatPrice(product.originalPrice)}
+              </span>
+            )}
+          </div>
+          {savings > 0 && (
+            <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+              Save {formatPrice(savings)}
+            </span>
+          )}
+          <div className="mt-3 flex items-center gap-2">
+            <a
+              href={product.url} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => { e.preventDefault(); trackAndOpen(product); }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
+            >
+              Buy now <ArrowRight className="w-3 h-3" />
+            </a>
+            <button onClick={handleCopy} aria-label="Copy link"
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors flex-shrink-0">
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Link2 className="w-3.5 h-3.5 text-neutral-400" />}
+            </button>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSave?.(product); }} aria-label="Save product"
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors flex-shrink-0">
+              {saved ? <BookmarkCheck className="w-3.5 h-3.5 text-[#C9A96E]" /> : <Bookmark className="w-3.5 h-3.5 text-neutral-400" />}
+            </button>
+          </div>
+        </div>
       </div>
-    </motion.a>
+    </motion.div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Standard Result Card (shadow, restrained type)
+// Standard Result Card — White card with subtle border, premium styling
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ResultCard({ product, index }: { product: ProductData; index: number }) {
+function ResultCard({ product, index, onSave, saved }: { product: ProductData; index: number; onSave?: (p: ProductData) => void; saved?: boolean }) {
+  const [copied, setCopied] = useState(false);
+
+  // ── Variant state (isolated per card) ─────────────────────────────────────
+  const platform = product.platform.toLowerCase().replace(/\s+/g, '');
+  const hasVariants = ['ajio', 'amazon india', 'amazon', 'flipkart', 'myntra', 'meesho', 'tata cliq', 'tata_cliq'].some(
+    p => platform === p.toLowerCase().replace(/\s+/g, '')
+  );
+  const [variantOpen, setVariantOpen] = useState(false);
+  const [activeImage, setActiveImage] = useState(product.imageUrl);
+  const [activePrice, setActivePrice] = useState(product.price);
+  const [activeOriginalPrice, setActiveOriginalPrice] = useState(product.originalPrice);
+  const [activeBuyUrl, setActiveBuyUrl] = useState(product.url);
+  const { variants, status, fetch: fetchVariants } = useProductVariants();
+
+  // Extract productId from the product URL based on platform
+  const productId = useMemo(() => {
+    const u = product.url;
+    if (platform.startsWith('ajio')) return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'amazon india' || platform === 'amazon') return u.match(/\/dp\/([A-Z0-9]{10})/)?.[1] || '';
+    if (platform === 'flipkart') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'myntra') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'meesho') return u.match(/\/p\/([^/?#]+)/)?.[1] || '';
+    if (platform === 'tata cliq' || platform === 'tata_cliq') return u.match(/\/p-([A-Z0-9]+)/)?.[1] || '';
+    return u;
+  }, [product.url, platform]);
+
+  function handleVariantToggle(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    if (!variantOpen && (status === 'idle' || status === 'error') && productId) {
+      fetchVariants(product.platform, productId);
+    }
+    setVariantOpen(v => !v);
+  }
+
+  function handleVariantSelect(sel: VariantSelection) {
+    setActiveImage(sel.imageUrl);
+    setActivePrice(sel.price);
+    setActiveOriginalPrice(sel.originalPrice);
+    setActiveBuyUrl(sel.buyUrl);
+  }
+
+  async function handleCopy(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    await navigator.clipboard.writeText(activeBuyUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
-    <motion.a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      initial={{ opacity: 0, y: 12 }}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
-      className="group flex flex-col bg-white rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(0,0,0,0.06)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06),0_16px_32px_-8px_rgba(0,0,0,0.1)] transition-shadow duration-300 min-h-[44px]"
+      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.4, 0, 0.2, 1] }}
+      className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-neutral-100 active:scale-[0.98] transition-all duration-200"
     >
-      <div className="overflow-hidden bg-neutral-50">
+      {/* Image — tappable area opens product */}
+      <a
+        href={activeBuyUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
+        className="block overflow-hidden bg-neutral-50 relative"
+      >
         <img
-          src={product.imageUrl}
+          src={activeImage}
           alt={product.title}
-          className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className="w-full aspect-[3/4] object-cover"
           loading="lazy"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=533&fit=crop'; }}
         />
-      </div>
-      <div className="p-3 sm:p-4 flex flex-col flex-1">
-        <span className="text-[13px] sm:text-[11px] uppercase tracking-[0.08em] text-neutral-500 font-medium">
-          {product.brand}
-        </span>
-        <h3 className="text-[14px] sm:text-[15px] font-medium text-neutral-900 leading-snug mt-1.5 line-clamp-2">
-          {product.title}
-        </h3>
-        <div className="mt-auto pt-3 flex items-baseline gap-2">
-          <span className="text-[14px] sm:text-[15px] font-semibold text-neutral-900 tabular-nums">
-            {formatPrice(product.price)}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="text-[13px] sm:text-[12px] text-neutral-400 line-through tabular-nums">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
-        </div>
-        {product.discount && product.discount > 0 && (
-          <span className="text-[13px] sm:text-[11px] font-medium text-emerald-600 mt-1">
-            {product.discount}% off
-          </span>
-        )}
-        <span className="text-[13px] sm:text-[11px] text-neutral-400 mt-2 capitalize">
+        {/* Platform badge — top left */}
+        <span
+          className="absolute top-2 left-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white capitalize shadow-sm"
+          style={{ backgroundColor: PLATFORM_COLORS[product.platform.toLowerCase().replace(/\s+/g, '')] || '#6b7280' }}
+        >
           {product.platform}
         </span>
+        {/* Discount badge — top right */}
+        {product.discount && product.discount > 0 && (
+          <span className="absolute top-2 right-2 bg-[#171310] text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+            -{Math.round(Number(product.discount))}%
+          </span>
+        )}
+      </a>
+
+      {/* Info */}
+      <div className="p-3 flex flex-col flex-1">
+        <p className="text-[11px] text-neutral-400 font-medium truncate">{product.brand}</p>
+        <a
+          href={activeBuyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
+          className="text-[13px] font-medium text-[#0F0F1A] leading-snug mt-0.5 line-clamp-2 min-h-[36px]"
+        >
+          {product.title}
+        </a>
+
+        {/* Variant metadata — display only, shown when platform provides it */}
+        {(product.color || product.size) && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {product.color && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                <span>&#127912;</span> <span className="capitalize">{product.color}</span>
+              </span>
+            )}
+            {product.size && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2 py-0.5 rounded-full">
+                <span>&#128207;</span> {product.size}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto pt-2 flex items-center justify-between gap-1">
+          <div>
+            <span className="text-[15px] font-bold text-[#0F0F1A] tabular-nums">
+              {formatPrice(activePrice)}
+            </span>
+            {activeOriginalPrice && activeOriginalPrice > activePrice && (
+              <span className="block text-[11px] text-neutral-400 line-through tabular-nums">
+                {formatPrice(activeOriginalPrice)}
+              </span>
+            )}
+          </div>
+          {/* Copy + Save buttons */}
+          <div className="flex items-center gap-1.5">
+            <button onClick={handleCopy} aria-label="Copy link"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors">
+              {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Link2 className="w-3 h-3 text-neutral-400" />}
+            </button>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSave?.(product); }} aria-label="Save product"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 active:bg-neutral-100 transition-colors">
+              {saved ? <BookmarkCheck className="w-3 h-3 text-[#C9A96E]" /> : <Bookmark className="w-3 h-3 text-neutral-400" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Buy button — full width, prominent on mobile */}
+        <a
+          href={activeBuyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => { e.preventDefault(); trackAndOpen({ ...product, url: activeBuyUrl }); }}
+          className="mt-2.5 flex items-center justify-center gap-1.5 bg-[#171310] text-white text-[12px] font-semibold py-2.5 rounded-xl active:bg-[#C9A96E] transition-colors"
+        >
+          Buy on {product.platform.split(' ')[0]}
+          <ArrowRight className="w-3 h-3" />
+        </a>
+
+        {/* View Colors & Sizes toggle — all platforms */}
+        {hasVariants && productId && (
+          <>
+            <button
+              onClick={handleVariantToggle}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#C9A96E] border border-[#C9A96E]/30 hover:border-[#C9A96E] hover:bg-[#C9A96E]/5 py-2 rounded-xl transition-all duration-150"
+            >
+              {variantOpen ? (
+                <><ChevronUp className="w-3 h-3" /> Hide variants</>
+              ) : (
+                <>&#127912; View Colors &amp; Sizes</>
+              )}
+            </button>
+            {variantOpen && (
+              <VariantPanel
+                variants={variants}
+                status={status}
+                onSelect={handleVariantSelect}
+              />
+            )}
+          </>
+        )}
       </div>
-    </motion.a>
+    </motion.div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Skeleton Loader
+// Skeleton Loader — Premium shimmer
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ResultsSkeleton() {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+      {/* Searching message */}
+      <div className="text-center mb-10">
+        <p className="text-[13px] text-neutral-400 animate-pulse">
+          Searching Amazon, Flipkart, Ajio &amp; more…
+        </p>
+        <p className="text-[11px] text-neutral-300 mt-1">Results appear as each platform responds</p>
+      </div>
       {/* Featured skeleton */}
-      <div className="flex flex-col sm:flex-row gap-8 pb-12 mb-12 border-b border-neutral-100 animate-pulse">
-        <div className="w-full sm:w-[320px] flex-shrink-0 bg-neutral-100 rounded-xl aspect-[3/4]" />
-        <div className="flex flex-col justify-center gap-3 flex-1">
+      <div className="flex flex-col md:flex-row gap-8 bg-white rounded-2xl border border-neutral-100 overflow-hidden mb-8 animate-pulse">
+        <div className="w-full md:w-[320px] flex-shrink-0 bg-neutral-100 aspect-[3/4]" />
+        <div className="flex flex-col justify-center gap-3 flex-1 p-8">
           <div className="h-3 bg-neutral-100 rounded-full w-20" />
-          <div className="h-5 bg-neutral-100 rounded-full w-3/4" />
-          <div className="h-px bg-neutral-100 w-12 my-2" />
-          <div className="h-4 bg-neutral-100 rounded-full w-24" />
+          <div className="h-6 bg-neutral-100 rounded-full w-3/4" />
+          <div className="h-px bg-[#C9A96E]/20 w-10 my-2" />
+          <div className="h-5 bg-neutral-100 rounded-full w-28" />
         </div>
       </div>
       {/* Grid skeleton */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="bg-neutral-100 rounded-xl aspect-[3/4] mb-4" />
-            <div className="h-2.5 bg-neutral-100 rounded-full w-16 mb-2" />
-            <div className="h-3 bg-neutral-100 rounded-full w-3/4 mb-2" />
-            <div className="h-3 bg-neutral-100 rounded-full w-1/3" />
+          <div key={i} className="animate-pulse bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+            <div className="bg-neutral-100 aspect-[3/4]" />
+            <div className="p-4 space-y-2">
+              <div className="h-2 bg-neutral-100 rounded-full w-12" />
+              <div className="h-3 bg-neutral-100 rounded-full w-3/4" />
+              <div className="h-3.5 bg-neutral-100 rounded-full w-1/3" />
+            </div>
           </div>
         ))}
       </div>
@@ -244,26 +461,161 @@ function ResultsSkeleton() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const query = searchParams.get('q') || '';
+  const { filters, query, setFilters, resetFilters, setQuery: setUrlQuery } = useFilterState();
+  const { result: interpreterResult, status: interpretStatus, interpret, reset: resetInterpreter } = useQueryInterpreter();
+
+  // Active interpreted filters — user can remove individual ones
+  const [activeChips, setActiveChips] = useState<typeof interpreterResult extends null ? never[] : NonNullable<typeof interpreterResult>['chips']>([]);
+  const [activeInterpretedFilters, setActiveInterpretedFilters] = useState<InterpretedFilters>({});
 
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [searchError, setSearchError] = useState('');
+  const [platformStatus, setPlatformStatus] = useState<Record<string, 'loading' | 'done' | 'empty'>>({});
   const [hasMore, setHasMore] = useState(false);
+  const [trendingProducts, setTrendingProducts] = useState<ProductData[]>([]);
+  const [relatedSections, setRelatedSections] = useState<{ label: string; sections: { query: string; products: ProductData[] }[] } | null>(null);
+
+  const [thriftResults, setThriftResults] = useState<ThriftResult[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('df_saved') || '[]')); } catch { return new Set(); }
+  });
+  const [shareOpen, setShareOpen] = useState(false);
+
+  function handleSave(product: ProductData) {
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+      localStorage.setItem('df_saved', JSON.stringify([...next]));
+      return next;
+    });
+  }
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
 
-  const fetchResults = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      setProducts([]);
-      return;
-    }
+  // Progressive/streaming search: renders each platform's results the moment
+  // they arrive instead of waiting for the slowest platform. Amazon/Flipkart
+  // often resolve in a few seconds, while Meesho/TataCliq can take 30s+.
+  // Falls back to the blocking endpoint if EventSource is unavailable.
+  const fetchResultsStreaming = useCallback((searchQuery: string): boolean => {
+    if (typeof window === 'undefined' || typeof window.EventSource === 'undefined') return false;
+
+    const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+    const url = `${base}/search/product/stream?q=${encodeURIComponent(searchQuery)}`;
+
+    let settled = false;
+    const es = new EventSource(url);
+
+    es.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+
+        if (payload.type === 'platform_products' && Array.isArray(payload.products)) {
+          // Progressive: render each platform's products as soon as they arrive
+          setProducts(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const fresh = payload.products
+              .filter((p: any) => !existingIds.has(p.id))
+              .map((p: any) => ({
+                id: p.id,
+                title: p.title,
+                brand: p.brand,
+                imageUrl: p.imageUrl,
+                price: p.price ?? 0,
+                originalPrice: p.originalPrice,
+                discount: p.discount,
+                platform: p.platform ?? '',
+                url: p.url ?? '',
+                color: p.color,
+                size: p.size,
+              }));
+            return [...prev, ...fresh];
+          });
+        } else if (payload.type === 'canonicals' && Array.isArray(payload.canonicals) && payload.canonicals.length) {
+          settled = true;
+          setLoading(false);
+          // Flatten ALL offers from all canonicals so each platform's offer
+          // appears as a separate result — user sees every available option.
+          const flat: ProductData[] = payload.canonicals.flatMap((c: any) =>
+            (c.offers || []).map((o: any) => ({
+              id: `${c.id}__${o.platform ?? ''}`.replace(/\s+/g, '_'),
+              title: c.title,
+              brand: c.brand,
+              imageUrl: o.imageUrl || c.imageUrl,
+              price: o.price ?? 0,
+              originalPrice: o.originalPrice,
+              discount: o.discount,
+              platform: o.platform ?? '',
+              url: o.affiliateUrl || o.productUrl || '',
+              color: o.color,
+              size: o.size,
+            }))
+          );
+          setProducts(flat);
+        } else if (payload.type === 'platform') {
+          if (payload.count > 0) {
+            setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'done' }));
+          } else {
+            setPlatformStatus(prev => ({ ...prev, [payload.platform]: 'empty' }));
+          }
+        } else if (payload.type === 'done') {
+          setLoading(false);
+          setHasMore(false);
+          setProducts(prev => {
+            if (prev.length === 0) Analytics.noResultsSearch(searchQuery);
+            else Analytics.searchResultViewed(searchQuery, prev.length);
+            return prev;
+          });
+          setPlatformStatus(prev => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach(k => { if (updated[k] === 'loading') updated[k] = 'empty'; });
+            return updated;
+          });
+          es.close();
+        } else if (payload.type === 'error') {
+          setLoading(false);
+          es.close();
+          if (payload.message === 'no_keys') {
+            setSearchError('Live prices are temporarily unavailable. Please try again in a few minutes.');
+          } else if (!settled) {
+            fetchResultsBlocking(searchQuery);
+          }
+        }
+      } catch {
+        // ignore malformed SSE frames
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      if (!settled) fetchResultsBlocking(searchQuery);
+      else setLoading(false);
+    };
+
+    return true;
+  }, []);
+
+  const fetchResultsBlocking = useCallback(async (searchQuery: string) => {
     setLoading(true);
     try {
       const { data } = await api.post('/search/product', { query: searchQuery });
-      const fetched: ProductData[] = data.products || [];
+      const canonicals: any[] = data.products || [];
+      const fetched: ProductData[] = canonicals.flatMap((c: any) =>
+        (c.offers || []).map((o: any) => ({
+          id: `${c.id}__${o.platform ?? ''}`.replace(/\s+/g, '_'),
+          title: c.title,
+          brand: c.brand,
+          imageUrl: o.imageUrl || c.imageUrl,
+          price: o.price ?? 0,
+          originalPrice: o.originalPrice,
+          discount: o.discount,
+          platform: o.platform ?? '',
+          url: o.affiliateUrl || o.productUrl || '',
+          color: o.color,
+          size: o.size,
+        }))
+      );
       setProducts(fetched);
       setHasMore(false);
     } catch {
@@ -273,20 +625,107 @@ export default function SearchPage() {
     }
   }, []);
 
+  const fetchThrift = useCallback(async (searchQuery: string) => {
+    try {
+      const { data } = await api.get('/thrift', { params: { q: searchQuery, limit: '4' } });
+      setThriftResults(data.listings || []);
+    } catch { setThriftResults([]); }
+  }, []);
+
+  const fetchResults = useCallback((searchQuery: string) => {
+    if (!searchQuery.trim()) { setProducts([]); return; }
+    setLoading(true);
+    setProducts([]);
+    setSearchError('');
+    setPlatformStatus({ amazon: 'loading', flipkart: 'loading', ajio: 'loading', myntra: 'loading', meesho: 'loading' });
+    setRelatedSections(null);
+
+    Analytics.searchPerformed(searchQuery);
+    const streamed = fetchResultsStreaming(searchQuery);
+    if (!streamed) fetchResultsBlocking(searchQuery);
+
+    // Defer secondary calls by 2s so they don't compete with the main search
+    // for network/DB resources during the critical first-results window.
+    setTimeout(() => {
+      fetchThrift(searchQuery);
+      api.get(`/search/related?q=${encodeURIComponent(searchQuery)}`)
+        .then(({ data: rel }) => {
+          if (rel?.sections?.length) {
+            const mapped = {
+              ...rel,
+              sections: rel.sections.map((s: any) => ({
+                ...s,
+                products: (s.products || []).map((c: any) => {
+                  const o = c.offers?.[0];
+                  if (!o) return null;
+                  return { id: c.id, title: c.title, brand: c.brand, imageUrl: o.imageUrl, price: o.price ?? 0, originalPrice: o.originalPrice, discount: o.discount, platform: o.platform ?? '', url: o.affiliateUrl || o.productUrl || '', color: o.color, size: o.size };
+                }).filter(Boolean),
+              })),
+            };
+            setRelatedSections(mapped);
+          }
+        })
+        .catch(() => {});
+    }, 2000);
+  }, [fetchResultsStreaming, fetchResultsBlocking, fetchThrift]);
+
+  // Sync interpreter results into active state
+  useEffect(() => {
+    if (interpreterResult) {
+      setActiveChips(interpreterResult.chips ?? []);
+      setActiveInterpretedFilters(interpreterResult.filters ?? {});
+    }
+  }, [interpreterResult]);
+
+  // Trigger interpreter whenever query changes
+  useEffect(() => {
+    if (query && query.trim().length >= 3) {
+      interpret(query.trim());
+    } else {
+      resetInterpreter();
+      setActiveChips([]);
+      setActiveInterpretedFilters({});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  // Fetch real trending products for landing page
+  useEffect(() => {
+    if (query) return; // only on landing
+    api.get('/search/trending').then(({ data }) => {
+      const canonicals: any[] = (data.products || data || []).slice(0, 9);
+      const items: ProductData[] = canonicals.map((c: any) => {
+        const o = c.offers?.[0];
+        if (!o) return null;
+        return { id: c.id, title: c.title, brand: c.brand, imageUrl: o.imageUrl, price: o.price ?? 0, originalPrice: o.originalPrice, discount: o.discount, platform: o.platform ?? '', url: o.affiliateUrl || o.productUrl || '', color: o.color, size: o.size };
+      }).filter(Boolean) as ProductData[];
+      if (items.length) setTrendingProducts(items);
+    }).catch(() => {});
+  }, [query]);
+
   useEffect(() => {
     if (query) {
+      if (query.startsWith('http://') || query.startsWith('https://')) {
+        navigate(`/compare?url=${encodeURIComponent(query)}`, { replace: true });
+        return;
+      }
       fetchResults(query);
     } else {
       setProducts([]);
     }
-  }, [query, fetchResults]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   function handleSearch(newQuery: string) {
     const trimmed = newQuery.trim();
-    if (trimmed) {
-      setSearchParams({ q: trimmed });
+    if (!trimmed) return;
+    gtagEvent('search', { search_term: trimmed });
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      navigate(`/compare?url=${encodeURIComponent(trimmed)}`);
+    } else {
+      setUrlQuery(trimmed);
     }
   }
 
@@ -294,12 +733,32 @@ export default function SearchPage() {
     setFilters(newFilters);
   }
 
+  function handleRemoveInterpretedFilter(key: keyof InterpretedFilters) {
+    setActiveInterpretedFilters(prev => {
+      const next = { ...prev };
+      delete next[key];
+      // Also remove maxPrice when removing minPrice (they're shown as one chip)
+      if (key === 'minPrice') delete next.maxPrice;
+      if (key === 'maxPrice') delete next.minPrice;
+      return next;
+    });
+    setActiveChips(prev => prev.filter(c => {
+      if (key === 'minPrice') return c.key !== 'minPrice' && c.key !== 'maxPrice';
+      return c.key !== key;
+    }));
+  }
+
+  function handleClearAllInterpretedFilters() {
+    setActiveChips([]);
+    setActiveInterpretedFilters({});
+  }
+
   function handleLoadMore() {
     // Pagination — future implementation
   }
 
   function handleTrendingClick(term: string) {
-    setSearchParams({ q: term });
+    setUrlQuery(term);
   }
 
   function handleCategoryClick(slug: string) {
@@ -308,27 +767,35 @@ export default function SearchPage() {
 
   // ── Client-side Filtering ─────────────────────────────────────────────────
 
+  const facets = useMemo(() => extractFacets(products), [products]);
+
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let base = applyFiltersAndSort(products, filters);
 
-    if (filters.platforms.length > 0) {
-      result = result.filter((p) =>
-        filters.platforms.some(
-          (plat) => p.platform.toLowerCase() === plat.toLowerCase()
-        )
-      );
+    // Apply interpreted filters on top of manual filters
+    const iF = activeInterpretedFilters;
+    if (iF.minPrice) base = base.filter(p => p.price >= iF.minPrice!);
+    if (iF.maxPrice) base = base.filter(p => p.price <= iF.maxPrice!);
+    if (iF.minDiscount) base = base.filter(p => (p.discount ?? 0) >= iF.minDiscount!);
+    if (iF.brand) {
+      const b = iF.brand.toLowerCase();
+      base = base.filter(p => (p.brand ?? '').toLowerCase().includes(b));
+    }
+    if (iF.color) {
+      const c = iF.color.toLowerCase();
+      base = base.filter(p => (p.color ?? '').toLowerCase().includes(c) || p.title.toLowerCase().includes(c));
+    }
+    if (iF.retailer) {
+      const r = iF.retailer.toLowerCase();
+      base = base.filter(p => p.platform.toLowerCase().includes(r));
+    }
+    if (iF.sort && iF.sort !== 'relevance' && filters.sort === 'relevance') {
+      // Only apply interpreted sort if user hasn't overridden
+      base = applySort(base, iF.sort);
     }
 
-    if (filters.pricePreset !== 'all') {
-      result = result.filter((p) => matchesPriceRange(p.price, filters.pricePreset));
-    }
-
-    if (filters.minDiscount > 0) {
-      result = result.filter((p) => (p.discount || 0) >= filters.minDiscount);
-    }
-
-    return sortProducts(result, filters.sort);
-  }, [products, filters]);
+    return base;
+  }, [products, filters, activeInterpretedFilters]);
 
   const platformsSearched = useMemo(() => {
     const unique = new Set(products.map((p) => p.platform));
@@ -337,7 +804,6 @@ export default function SearchPage() {
 
   // ── Derived State ─────────────────────────────────────────────────────────
 
-  const featuredProduct = filteredProducts[0] || null;
   const gridProducts = filteredProducts.slice(1);
   const showEmpty = !loading && query && filteredProducts.length === 0;
   const showResults = !loading && filteredProducts.length > 0;
@@ -351,24 +817,25 @@ export default function SearchPage() {
         title={
           query
             ? `${query} — Best Prices Across Platforms`
-            : 'Search Fashion Deals — DripFeed India'
+            : 'Search Fashion Deals — TagCheck India'
         }
         description={
           query
-            ? `Compare prices for "${query}" across Myntra, Ajio, Amazon, Meesho & more.`
-            : 'Search and compare fashion prices across 7+ Indian platforms. Find the best deals instantly.'
+            ? `Compare prices for "${query}" across Ajio, Amazon & Flipkart.`
+            : 'Search and compare fashion prices across 3+ Indian platforms. Find the best deals instantly.'
         }
       />
 
       {/* ── Hero Search ──────────────────────────────────────────────────────── */}
-      <section className="pt-6 pb-8 sm:pt-10 sm:pb-12 bg-white border-b border-neutral-100">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+      <section className="pb-8 sm:pb-10 bg-white border-b border-neutral-100">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
           {!query && (
             <motion.h1
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-              className="text-[26px] sm:text-[40px] lg:text-[48px] font-bold text-neutral-900 text-center mb-6 sm:mb-8 leading-[1.12] sm:leading-[1.08] tracking-[-0.02em]"
+              className="text-[24px] sm:text-[36px] lg:text-[40px] font-bold text-[#0F0F1A]
+                text-center mb-6 sm:mb-8 leading-[1.15] tracking-[-0.02em]"
             >
               What are you looking for?
             </motion.h1>
@@ -384,108 +851,215 @@ export default function SearchPage() {
             </motion.p>
           )}
 
-          <SearchBar size="hero" initialQuery={query} onSearch={handleSearch} />
+          {/* Search bar */}
+          <SearchBar size="lg" initialQuery={query} onSearch={handleSearch} />
 
-          {/* Results summary */}
+          {/* Live platform status — shows while streaming */}
+          {query && loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-wrap items-center justify-center gap-2 mt-4"
+            >
+              {Object.entries(platformStatus).map(([platform, status]) => (
+                <span key={platform} className={[
+                  'inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all duration-300',
+                  status === 'done' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                  status === 'empty' ? 'bg-neutral-50 border-neutral-200 text-neutral-400' :
+                  'bg-white border-neutral-200 text-neutral-500'
+                ].join(' ')}>
+                  {status === 'loading' && <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] animate-pulse" />}
+                  {status === 'done' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                  {status === 'empty' && <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />}
+                  <span className="capitalize">{platform}</span>
+                </span>
+              ))}
+            </motion.div>
+          )}
+
+          {/* Results summary with platform badges */}
           {query && !loading && products.length > 0 && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="text-[13px] text-neutral-500 text-center mt-5"
+              className="flex flex-wrap items-center justify-center gap-2 mt-5"
             >
-              {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''}{' '}
+              <span className="text-[13px] text-neutral-500">
+                {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''}
+              </span>
               {platformsSearched.length > 0 && (
-                <span className="text-neutral-400">
-                  across {platformsSearched.join(', ')}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] text-neutral-400">across</span>
+                  {platformsSearched.map((platform) => (
+                    <span
+                      key={platform}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium
+                        text-neutral-600 bg-neutral-50 border border-neutral-100
+                        px-2 py-0.5 rounded-full capitalize"
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: PLATFORM_COLORS[platform.toLowerCase()] || '#6b7280' }}
+                      />
+                      {platform}
+                    </span>
+                  ))}
+                </div>
               )}
-            </motion.p>
+            </motion.div>
+          )}
+
+          {/* Share this comparison — appears when results are loaded */}
+          {query && !loading && products.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex justify-center mt-4"
+            >
+              <button
+                onClick={() => setShareOpen(true)}
+                className="inline-flex items-center gap-2 text-[13px] font-medium text-[#C9A96E] hover:text-[#B8964F] border border-[#C9A96E]/30 hover:border-[#C9A96E] px-4 py-2 rounded-full transition-all min-h-[40px]"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share this comparison
+              </button>
+            </motion.div>
           )}
         </div>
       </section>
 
       {/* ── Sticky Filter Bar ────────────────────────────────────────────────── */}
       {query && (
-        <section className="bg-white/95 backdrop-blur-sm border-b border-neutral-100 sticky top-0 z-30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 text-neutral-400">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="text-[13px] sm:text-[11px] font-medium uppercase tracking-[0.08em]">
-                  Filters
-                </span>
-              </div>
-
-              {/* Pill-style sort */}
-              <div className="relative">
-                <select
-                  value={filters.sort}
-                  onChange={(e) =>
-                    handleFilterChange({
-                      ...filters,
-                      sort: e.target.value as FilterState['sort'],
-                    })
-                  }
-                  className="appearance-none bg-white border border-neutral-200 rounded-full px-4 py-2 sm:py-1.5 pr-8 text-[13px] sm:text-[11px] font-medium text-neutral-600 cursor-pointer hover:border-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-900/5 transition-colors tracking-wide min-h-[44px] sm:min-h-0"
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <svg className="w-3 h-3 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Filter chips with clay accent on active */}
-            <div className="mt-3">
-              <SearchFilters
+        <section className="bg-white/90 backdrop-blur-md border-b border-neutral-100 sticky top-0 z-30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-2">
+            <SearchFilters
                 filters={filters}
                 onFilterChange={handleFilterChange}
-                onReset={() => setFilters(DEFAULT_FILTERS)}
-                facets={extractFacets(products.map(p => ({
-                  id: p.id,
-                  title: p.title,
-                  brand: p.brand,
-                  price: p.price,
-                  originalPrice: p.originalPrice,
-                  discount: p.discount,
-                  platform: p.platform,
-                })))}
+                onReset={resetFilters}
+                facets={facets}
                 resultCount={filteredProducts.length}
               />
-            </div>
+            {/* AI interpreted filter chips */}
+            {(activeChips.length > 0 || interpretStatus === 'loading') && (
+              <InterpretedFiltersBar
+                chips={activeChips}
+                confidence={interpreterResult?.confidence ?? 0}
+                provider={interpreterResult?.provider ?? 'rules'}
+                onRemoveFilter={handleRemoveInterpretedFilter}
+                onClearAll={handleClearAllInterpretedFilters}
+                loading={interpretStatus === 'loading'}
+              />
+            )}
           </div>
         </section>
       )}
 
-      {/* ── Editorial Results Grid ───────────────────────────────────────────── */}
+      {/* ── Results Grid ─────────────────────────────────────────────────────── */}
       {showResults && (
         <section className="bg-[#FAFAFA]">
-          <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
             <InfiniteScroll
               hasMore={hasMore}
               loading={loading}
               onLoadMore={handleLoadMore}
             >
-              {/* Featured lede — first result, larger */}
-              {featuredProduct && <FeaturedCard product={featuredProduct} />}
-
-              {/* Standard grid — single column on mobile, 2 on small, 3-4 on larger */}
-              {gridProducts.length > 0 && (
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
-                  {gridProducts.map((product, i) => (
-                    <ResultCard key={product.id || i} product={product} index={i} />
-                  ))}
-                </div>
-              )}
+              {filteredProducts[0] && <FeaturedCard product={filteredProducts[0]} onSave={handleSave} saved={savedIds.has(filteredProducts[0].id)} />}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                {gridProducts.map((product, i) => (
+                  <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
+                ))}
+              </div>
             </InfiniteScroll>
+          </div>
+        </section>
+      )}
+
+      {/* ── Thrift Section ───────────────────────────────────────────────── */}
+      {showResults && thriftResults.length > 0 && (
+        <section className="bg-white border-t border-neutral-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2.5">
+                <Recycle className="w-4 h-4 text-emerald-600" />
+                <h2 className="text-[12px] font-semibold text-emerald-600 uppercase tracking-[0.08em]">
+                  Found cheaper secondhand
+                </h2>
+              </div>
+              <button onClick={() => navigate('/thrift')} className="text-[12px] text-[#C9A96E] font-medium hover:underline flex items-center gap-1">
+                See all <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {thriftResults.map((t) => {
+                const wa = `https://wa.me/${t.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi! I'm interested in "${t.title}" listed on TagCheck.`)}`;
+                return (
+                  <a key={t._id} href={wa} target="_blank" rel="noopener noreferrer"
+                    className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:border-emerald-200 hover:shadow-[0_4px_20px_-4px_rgba(16,185,129,0.1)] transition-all duration-300">
+                    <div className="overflow-hidden bg-neutral-50">
+                      {t.images[0]
+                        ? <img src={t.images[0]} alt={t.title} className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-[1.03]" loading="lazy" />
+                        : <div className="w-full aspect-[3/4] flex items-center justify-center text-3xl">👗</div>}
+                    </div>
+                    <div className="p-3 flex flex-col gap-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 w-fit capitalize">{t.condition.replace('-', ' ')}</span>
+                      {t.brand && <p className="text-[11px] text-neutral-400 uppercase tracking-wide">{t.brand}</p>}
+                      <p className="text-[13px] font-medium text-[#0F0F1A] line-clamp-2">{t.title}</p>
+                      <p className="text-[11px] text-neutral-400">{t.city} · Size {t.size}</p>
+                      <p className="text-[15px] font-bold text-[#0F0F1A] font-serif tabular-nums mt-1">₹{t.price.toLocaleString('en-IN')}</p>
+                      <span className="text-[11px] text-emerald-600 font-medium mt-0.5">WhatsApp Seller →</span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Complete the Look ─────────────────────────────────────────────── */}
+      {showResults && relatedSections && relatedSections.sections.length > 0 && (
+        <section className="bg-white border-t border-neutral-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+            <div className="flex items-center gap-2.5 mb-8">
+              <Sparkles className="w-4 h-4 text-[#C9A96E]" />
+              <h2 className="text-[12px] font-semibold text-[#C9A96E] uppercase tracking-[0.08em]">
+                {relatedSections.label}
+              </h2>
+            </div>
+            <div className="space-y-10">
+              {relatedSections.sections.map((section) => (
+                <div key={section.query}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[16px] font-semibold text-[#0F0F1A] capitalize">
+                      {section.query}
+                    </h3>
+                    <button
+                      onClick={() => handleTrendingClick(section.query)}
+                      className="text-[12px] text-[#C9A96E] font-medium hover:underline flex items-center gap-1"
+                    >
+                      See all <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {section.products.map((product, i) => (
+                      <ResultCard key={product.id || i} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Error State ──────────────────────────────────────────────────────── */}
+      {searchError && (
+        <section className="bg-[#FAFAFA]">
+          <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+            <p className="text-4xl mb-4">⚠️</p>
+            <p className="text-[15px] text-neutral-600 font-medium">{searchError}</p>
           </div>
         </section>
       )}
@@ -500,28 +1074,33 @@ export default function SearchPage() {
       {/* ── Empty State ──────────────────────────────────────────────────────── */}
       {showEmpty && (
         <section className="bg-[#FAFAFA]">
-          <div className="max-w-2xl mx-auto px-6 py-24 text-center">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <Search className="w-8 h-8 text-neutral-300 mx-auto mb-6" />
-              <h2 className="text-[24px] font-bold text-neutral-900 mb-3 tracking-[-0.01em]">
+              {/* Friendly emoji illustration */}
+              <div className="text-[48px] mb-6">🔍</div>
+
+              <h2 className="text-[22px] sm:text-[26px] font-bold text-[#0F0F1A] mb-3 tracking-[-0.01em]">
                 No results for &ldquo;{query}&rdquo;
               </h2>
-              <p className="text-[14px] text-neutral-500 mb-12 leading-relaxed max-w-sm mx-auto">
-                We couldn&apos;t find matching products. Try a broader term or browse our categories below.
+              <p className="text-[14px] text-neutral-500 mb-10 leading-relaxed max-w-sm mx-auto">
+                We couldn&apos;t find matching products. Try a broader term or explore these suggestions.
               </p>
 
-              {/* Suggestion pills */}
-              <div className="flex flex-wrap justify-center gap-2.5 mb-14">
+              {/* Suggestion pills with gold accent */}
+              <div className="flex flex-wrap justify-center gap-2.5 mb-12">
                 {TRENDING_SEARCHES.slice(0, 5).map((term) => (
                   <button
                     key={term}
                     type="button"
                     onClick={() => handleTrendingClick(term)}
-                    className="px-5 py-2.5 rounded-full text-[13px] font-medium bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-900 hover:text-neutral-900 transition-colors capitalize"
+                    className="px-5 py-2.5 rounded-full text-[13px] font-medium
+                      bg-white text-neutral-600 border border-neutral-200
+                      hover:border-[#C9A96E] hover:text-[#8B7340] hover:bg-[#C9A96E]/5
+                      transition-all duration-200 capitalize min-h-[44px]"
                   >
                     {term}
                   </button>
@@ -531,13 +1110,18 @@ export default function SearchPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
                   onClick={() => navigate('/deals')}
-                  className="inline-flex items-center gap-2 bg-neutral-900 text-white font-medium px-7 py-3 rounded-full text-[13px] hover:bg-neutral-800 transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#0F0F1A] text-white
+                    font-medium px-7 py-3.5 rounded-full text-[13px]
+                    hover:bg-[#1A1A2E] transition-colors min-h-[44px]"
                 >
                   Browse Deals <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => navigate('/category/western')}
-                  className="inline-flex items-center gap-2 bg-white text-neutral-700 font-medium px-7 py-3 rounded-full text-[13px] border border-neutral-200 hover:border-neutral-300 transition-colors"
+                  className="inline-flex items-center gap-2 bg-white text-neutral-700
+                    font-medium px-7 py-3.5 rounded-full text-[13px]
+                    border border-neutral-200 hover:border-[#C9A96E]/50
+                    transition-colors min-h-[44px]"
                 >
                   Shop Categories
                 </button>
@@ -550,18 +1134,18 @@ export default function SearchPage() {
       {/* ── Landing State ────────────────────────────────────────────────────── */}
       {showLanding && (
         <section className="bg-[#FAFAFA]">
-          <div className="max-w-5xl mx-auto px-6 pt-14 pb-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-20">
 
-            {/* Trending Searches */}
+            {/* Trending Searches — gold accent pills */}
             <motion.div
               variants={staggerChildren}
               initial="hidden"
               animate="visible"
-              className="mb-20"
+              className="mb-16 sm:mb-20"
             >
-              <div className="flex items-center gap-2.5 mb-6">
-                <TrendingUp className="w-4 h-4 text-neutral-400" />
-                <h2 className="text-[11px] font-medium text-neutral-400 uppercase tracking-[0.08em]">
+              <div className="flex items-center gap-2.5 mb-5">
+                <TrendingUp className="w-4 h-4 text-[#C9A96E]" />
+                <h2 className="text-[12px] font-semibold text-[#C9A96E] uppercase tracking-[0.08em]">
                   Trending now
                 </h2>
               </div>
@@ -572,7 +1156,11 @@ export default function SearchPage() {
                     variants={staggerItem}
                     type="button"
                     onClick={() => handleTrendingClick(term)}
-                    className="px-5 py-2.5 rounded-full text-[13px] font-medium bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-900 hover:text-white hover:border-neutral-900 transition-all duration-200 capitalize shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+                    className="px-5 py-2.5 rounded-full text-[13px] font-medium
+                      bg-white text-neutral-600 border border-neutral-200
+                      hover:bg-[#C9A96E]/5 hover:border-[#C9A96E] hover:text-[#8B7340]
+                      transition-all duration-200 capitalize
+                      shadow-[0_1px_3px_rgba(0,0,0,0.02)] min-h-[44px]"
                   >
                     {term}
                   </motion.button>
@@ -580,14 +1168,14 @@ export default function SearchPage() {
               </div>
             </motion.div>
 
-            {/* Category Tiles */}
+            {/* Category Tiles — hover gold border */}
             <motion.div
               variants={staggerChildren}
               initial="hidden"
               animate="visible"
-              className="mb-20"
+              className="mb-16 sm:mb-20"
             >
-              <h2 className="text-[22px] sm:text-[26px] font-bold text-neutral-900 tracking-[-0.01em] mb-8">
+              <h2 className="text-[22px] sm:text-[28px] font-bold text-[#0F0F1A] tracking-[-0.02em] mb-6 sm:mb-8">
                 Browse by Category
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -596,43 +1184,47 @@ export default function SearchPage() {
                     key={cat.slug}
                     variants={staggerItem}
                     onClick={() => handleCategoryClick(cat.slug)}
-                    className="bg-white rounded-2xl p-5 sm:p-8 text-left hover:shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_-8px_rgba(0,0,0,0.08)] transition-shadow duration-300 border border-neutral-100 group min-h-[44px]"
+                    className="bg-white rounded-2xl p-5 sm:p-7 text-left
+                      border border-neutral-100 hover:border-[#C9A96E]
+                      hover:shadow-[0_4px_16px_-4px_rgba(201,169,110,0.12)]
+                      transition-all duration-300 group min-h-[44px]"
                   >
-                    <span className="text-[14px] sm:text-[15px] font-medium text-neutral-900 group-hover:text-neutral-900 transition-colors leading-snug">
+                    <span className="text-[14px] sm:text-[15px] font-semibold text-[#0F0F1A]
+                      group-hover:text-[#8B7340] transition-colors leading-snug">
                       {cat.name}
                     </span>
-                    <span className="block text-[13px] sm:text-[11px] text-neutral-400 mt-1.5 tracking-wide">
-                      {cat.count} products across 7+ platforms
+                    <span className="block text-[12px] text-neutral-400 mt-1.5 tracking-wide">
+                      {cat.count} products
                     </span>
                   </motion.button>
                 ))}
               </div>
             </motion.div>
 
-            {/* Popular Products — editorial grid with featured lede */}
+            {/* Popular Products — editorial grid */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-[22px] sm:text-[26px] font-bold text-neutral-900 tracking-[-0.01em]">
+                <h2 className="text-[22px] sm:text-[28px] font-bold text-[#0F0F1A] tracking-[-0.02em]">
                   Popular right now
                 </h2>
-                <span className="text-[11px] text-neutral-400 font-medium tracking-wide">
+                <span className="text-[11px] text-[#C9A96E] font-semibold tracking-wide uppercase">
                   Updated hourly
                 </span>
               </div>
 
               {/* Featured first product */}
-              {TRENDING_PRODUCTS[0] && (
-                <FeaturedCard product={TRENDING_PRODUCTS[0]} />
+              {trendingProducts[0] && (
+                <FeaturedCard product={trendingProducts[0]} onSave={handleSave} saved={savedIds.has(trendingProducts[0].id)} />
               )}
 
-              {/* Remaining in asymmetric grid */}
-              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
-                {TRENDING_PRODUCTS.slice(1).map((product, i) => (
-                  <ResultCard key={product.id} product={product} index={i} />
+              {/* Remaining products grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                {trendingProducts.slice(1).map((product, i) => (
+                  <ResultCard key={product.id} product={product} index={i} onSave={handleSave} saved={savedIds.has(product.id)} />
                 ))}
               </div>
             </motion.div>
@@ -642,36 +1234,57 @@ export default function SearchPage() {
       )}
 
       {/* ── Affiliate Disclosure Footer ──────────────────────────────────────── */}
-      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-24 sm:pb-10 border-t border-neutral-100 bg-white">
+      {/* Mobile sticky compare bar */}
+      {showResults && query && (
+        <div className="fixed bottom-[64px] left-0 right-0 sm:hidden z-30 px-4 pb-2">
+          <button
+            onClick={() => navigate(`/compare?q=${encodeURIComponent(query)}`)}
+            className="w-full flex items-center justify-center gap-2 bg-[#C9A96E] text-[#171310] font-bold text-[14px] py-3.5 rounded-2xl shadow-[0_4px_20px_rgba(201,169,110,0.4)] active:scale-[0.98] transition-transform"
+          >
+            <Sparkles className="w-4 h-4" />
+            Compare all prices
+          </button>
+        </div>
+      )}
+
+      <footer className="px-4 sm:px-8 lg:px-16 py-10 pb-36 sm:pb-10 border-t border-neutral-100 bg-white">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[13px] sm:text-[12px] text-neutral-400">
-            &copy; 2026 DripFeed India
+          <p className="text-[13px] text-neutral-600">
+            &copy; 2026 TagCheck India
           </p>
-          <div className="flex gap-5 text-[13px] sm:text-[12px] text-neutral-400">
+          <div className="flex gap-5 text-[13px] text-neutral-600">
             <button
               onClick={() => navigate('/privacy')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Privacy
             </button>
             <button
               onClick={() => navigate('/terms')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Terms
             </button>
             <button
               onClick={() => navigate('/affiliate-disclosure')}
-              className="hover:text-neutral-700 transition-colors min-h-[44px] flex items-center"
+              className="hover:text-[#C9A96E] transition-colors min-h-[44px] flex items-center"
             >
               Affiliate Disclosure
             </button>
           </div>
-          <p className="text-[13px] sm:text-[10px] text-neutral-300">
-            #Ad: DripFeed earns commission on purchases through our links.
+          <p className="text-[11px] text-neutral-500">
+            #Ad: TagCheck earns commission on purchases through our links.
           </p>
         </div>
       </footer>
+
+      {/* Share Comparison Modal */}
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        title={query ? `${query} — price comparison on TagCheck` : 'Price comparison on TagCheck'}
+        url={`${typeof window !== 'undefined' ? window.location.origin : 'https://dripfeed-v21.vercel.app'}/search?q=${encodeURIComponent(query ?? '')}`}
+      />
     </div>
   );
 }
