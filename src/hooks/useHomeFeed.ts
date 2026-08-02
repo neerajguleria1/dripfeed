@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import type { HomeFeedProduct } from '../types/homeFeed';
 
-/** Popular queries to show on homepage — rotated randomly */
+/** Popular queries to show on homepage — more variety for more products */
 const TRENDING_QUERIES = [
-  'kurta set', 'sneakers', 'jeans', 'saree', 'hoodie', 'dress', 'lehenga', 'shirt',
+  'kurta set women', 'sneakers men', 'jeans', 'saree silk', 'hoodie', 
+  'dress women', 'lehenga', 'shirt men', 'palazzo pants', 'crop top',
+  'ethnic wear', 'shorts men', 'kurti women', 'trackpants', 'maxi dress',
 ];
 
 export interface UseHomeFeedResult {
