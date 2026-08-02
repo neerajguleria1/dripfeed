@@ -217,28 +217,31 @@ async function fetchHomeFeedData(category: string): Promise<{ products: HomeFeed
     if (canonicals.length > 0) {
       // Map CanonicalProduct[] to HomeFeedProduct[]
       const products: HomeFeedProduct[] = canonicals.slice(0, HOME_FEED_MAX_PRODUCTS).map((c: any) => {
-        const cheapest = c.platforms?.[0] || c;
-        const originalPrice = cheapest.originalPrice || cheapest.mrp || 0;
-        const price = cheapest.price || c.price || 0;
+        const offers = c.offers || [];
+        if (offers.length === 0) return null;
+        const cheapest = offers.reduce((min: any, o: any) => 
+          (o.price > 0 && o.price < (min.price || Infinity)) ? o : min, offers[0]);
+        const price = cheapest.price || 0;
+        const originalPrice = cheapest.originalPrice || 0;
         const discount = originalPrice > price
           ? Math.round((originalPrice - price) / originalPrice * 100)
           : (cheapest.discount || 0);
         const savings = originalPrice - price;
 
         return {
-          id: c.id || c.canonicalId || `live_${Math.random().toString(36).slice(2, 10)}`,
+          id: c.id || `live_${Math.random().toString(36).slice(2, 10)}`,
           title: c.title || cheapest.title || '',
-          brand: c.brand || cheapest.brand,
-          imageUrl: c.imageUrl || cheapest.imageUrl,
+          brand: c.brand,
+          imageUrl: cheapest.imageUrl,
           price,
           originalPrice: originalPrice > price ? originalPrice : undefined,
           discount,
           savings: savings > 200 ? savings : undefined,
           platform: cheapest.platform || 'Unknown',
-          url: cheapest.url || c.url,
+          url: cheapest.affiliateUrl || cheapest.productUrl,
           category: category || undefined,
         };
-      }).filter(p => p.price > 0 && p.title);
+      }).filter((p: any) => p && p.price > 0 && p.title);
 
       if (products.length >= HOME_FEED_MIN_PRODUCTS) {
         products.sort((a, b) => b.discount - a.discount);
