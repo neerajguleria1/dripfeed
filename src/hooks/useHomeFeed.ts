@@ -69,7 +69,6 @@ export function useHomeFeed(category: string): UseHomeFeedResult {
       }
 
       // Map search results to HomeFeedProduct format
-      // Handle both flat SearchProduct[] and CanonicalProduct[] (with .offers)
       const mapped: HomeFeedProduct[] = rawResults.slice(0, 24).map((item: any, i: number) => {
         // If it's a CanonicalProduct (has .offers array)
         if (item.offers && item.offers.length > 0) {
@@ -80,17 +79,32 @@ export function useHomeFeed(category: string): UseHomeFeedResult {
           const discount = originalPrice > price
             ? Math.round((originalPrice - price) / originalPrice * 100)
             : (cheapest.discount || 0);
+          
+          // Pass ALL offers so the card can show multi-platform prices
+          const offers = item.offers
+            .filter((o: any) => o.price > 0)
+            .map((o: any) => ({
+              platform: o.platform || 'Unknown',
+              price: o.price,
+              originalPrice: o.originalPrice,
+              imageUrl: o.imageUrl,
+              url: o.affiliateUrl || o.productUrl || '',
+              affiliateUrl: o.affiliateUrl,
+            }))
+            .sort((a: any, b: any) => a.price - b.price); // Sort by cheapest first
+
           return {
             id: item.id || `hp_${i}`,
             title: item.title || cheapest.title || '',
             brand: item.brand || undefined,
-            imageUrl: cheapest.imageUrl || '',
+            imageUrl: cheapest.imageUrl || item.offers[0]?.imageUrl || '',
             price,
             originalPrice: originalPrice > price ? originalPrice : undefined,
             discount,
             savings: originalPrice - price > 200 ? originalPrice - price : undefined,
             platform: cheapest.platform || 'Unknown',
             url: cheapest.affiliateUrl || cheapest.productUrl || '',
+            offers, // ALL platform prices
           };
         }
 
@@ -110,6 +124,12 @@ export function useHomeFeed(category: string): UseHomeFeedResult {
           savings: originalPrice - price > 200 ? originalPrice - price : undefined,
           platform: item.platform || 'Unknown',
           url: item.url || '',
+          offers: [{
+            platform: item.platform || 'Unknown',
+            price,
+            originalPrice: originalPrice > price ? originalPrice : undefined,
+            url: item.url || '',
+          }],
         };
       }).filter((p: HomeFeedProduct) => p.price > 0 && p.title && p.imageUrl);
 

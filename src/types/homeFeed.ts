@@ -18,6 +18,18 @@ export interface HomeFeedProduct {
   platform: string;
   url?: string;
   category?: string;
+  /** All platform offers for this product (for multi-platform display) */
+  offers?: HomeFeedOffer[];
+}
+
+/** A single platform's offer for a product */
+export interface HomeFeedOffer {
+  platform: string;
+  price: number;
+  originalPrice?: number;
+  imageUrl?: string;
+  url?: string;
+  affiliateUrl?: string;
 }
 
 /** Response shape from GET /api/feed/home */
