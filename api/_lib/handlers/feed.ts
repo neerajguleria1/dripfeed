@@ -5,6 +5,7 @@ import { getUserFromRequest } from '../auth.js';
 import UserPreferences from '../models/UserPreferences.js';
 import Product from '../models/Product.js';
 import Deal from '../models/Deal.js';
+import HomeFeedCache from '../models/HomeFeedCache.js';
 import {
   scoreAndSortProducts,
   productToProductData,
@@ -117,7 +118,26 @@ async function home(req: VercelRequest, res: VercelResponse) {
 async function fetchHomeFeedData(category: string): Promise<{ products: HomeFeedProduct[]; source: 'deals' | 'trending' | 'seed' }> {
   await connectDB();
 
-  // ─── Try deals first ────────────────────────────────────────────────────────
+  // ─── Priority 1: HomeFeedCache (pre-scraped by cron, always real data) ──────
+  try {
+    const cacheCategory = category && category !== 'all' ? category : 'all';
+    const cached = await HomeFeedCache.findOne({ category: cacheCategory }).lean();
+    
+    if (cached && cached.products && cached.products.length >= HOME_FEED_MIN_PRODUCTS) {
+      // Check if data is fresh (less than 48 hours old)
+      const scrapedAt = new Date(cached.scrapedAt).getTime();
+      const age = Date.now() - scrapedAt;
+      if (age < 48 * 60 * 60 * 1000) { // 48 hours
+        const products = cached.products.slice(0, HOME_FEED_MAX_PRODUCTS) as HomeFeedProduct[];
+        products.sort((a: any, b: any) => (b.discount || 0) - (a.discount || 0));
+        return { products, source: 'trending' };
+      }
+    }
+  } catch {
+    // Fall through to deals
+  }
+
+  // ─── Priority 2: Try deals from DB ─────────────────────────────────────────
   try {
     const dealFilter: Record<string, unknown> = { active: true };
     if (category && category !== 'all') {
