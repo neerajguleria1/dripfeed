@@ -1,154 +1,129 @@
-import { useState, useEffect, useRef } from 'react';
-import api from '../services/api';
-import type { HomeFeedProduct } from '../types/homeFeed';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { validateProduct } from '../utils/validateProduct';
+import type { ValidatedProduct } from '../utils/validateProduct';
 
-/** Popular queries to show on homepage — more variety for more products */
-const TRENDING_QUERIES = [
-  'kurta set women', 'sneakers men', 'jeans', 'saree silk', 'hoodie', 
-  'dress women', 'lehenga', 'shirt men', 'palazzo pants', 'crop top',
-  'ethnic wear', 'shorts men', 'kurti women', 'trackpants', 'maxi dress',
-];
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const FEED_ENDPOINT = '/api/home/feed';
+const TIMEOUT_MS = 10_000;
+const EMPTY_STATE_MESSAGE =
+  'No products available for this category. Results are being indexed.';
+
+// ─── Interface ───────────────────────────────────────────────────────────────
 
 export interface UseHomeFeedResult {
-  products: HomeFeedProduct[];
+  products: ValidatedProduct[];
   loading: boolean;
-  source: 'deals' | 'trending' | 'seed';
   error: string | null;
-  geo: { country: string; isIndia: boolean };
 }
 
-/** Pick a random trending query */
-function getRandomQuery(): string {
-  return TRENDING_QUERIES[Math.floor(Math.random() * TRENDING_QUERIES.length)];
-}
+// ─── Hook ────────────────────────────────────────────────────────────────────
 
 /**
- * Hook to fetch real products for the homepage.
- * 
- * Strategy: Directly calls POST /api/search/product (which scrapes live or returns cached results).
- * This is the SAME endpoint that works when users search manually.
- * No intermediate feed API, no cron dependency, no seed data.
+ * Fetches validated products from `/api/home/feed` for the given category.
+ *
+ * Guarantees:
+ * - Every product in the returned array passes `validateProduct()` (no seed data)
+ * - Loading state is capped at 10 seconds; after timeout, products are set to []
+ *   and error is set to the empty-state message
+ * - Request is cancelled on category change or unmount via AbortController
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.7
  */
 export function useHomeFeed(category: string): UseHomeFeedResult {
-  const [products, setProducts] = useState<HomeFeedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState<'deals' | 'trending' | 'seed'>('trending');
+  const [products, setProducts] = useState<ValidatedProduct[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [geo] = useState<{ country: string; isIndia: boolean }>({
-    country: 'IN',
-    isIndia: true,
-  });
 
   const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timeoutRef.current !== null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
+    // Abort any in-flight request from a previous category
     abortRef.current?.abort();
+    clearTimer();
+
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // Reset state for new fetch
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional state reset when category changes
     setLoading(true);
+    setProducts([]);
     setError(null);
 
-    // Use category as search query, or pick a random trending term
-    const searchQuery = category || getRandomQuery();
+    let settled = false;
 
-    api.post('/search/product', 
-      { query: searchQuery },
-      { signal: controller.signal, timeout: 30000 }
-    )
-    .then(({ data }) => {
-      if (controller.signal.aborted) return;
-
-      // The search API returns results in various shapes depending on version
-      const rawResults = data?.results || data?.products || data?.canonicals || [];
-      
-      if (rawResults.length === 0) {
+    // ── 10-second timeout ──────────────────────────────────────────────────
+    timeoutRef.current = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        controller.abort();
         setProducts([]);
-        setSource('seed');
-        setError('No products found');
         setLoading(false);
-        return;
+        setError(EMPTY_STATE_MESSAGE);
       }
+    }, TIMEOUT_MS);
 
-      // Map search results to HomeFeedProduct format
-      const mapped: HomeFeedProduct[] = rawResults.slice(0, 24).map((item: any, i: number) => {
-        // If it's a CanonicalProduct (has .offers array)
-        if (item.offers && item.offers.length > 0) {
-          const cheapest = item.offers.reduce((min: any, o: any) => 
-            (o.price > 0 && o.price < (min.price || Infinity)) ? o : min, item.offers[0]);
-          const price = cheapest.price || 0;
-          const originalPrice = cheapest.originalPrice || 0;
-          const discount = originalPrice > price
-            ? Math.round((originalPrice - price) / originalPrice * 100)
-            : (cheapest.discount || 0);
-          
-          // Pass ALL offers so the card can show multi-platform prices
-          const offers = item.offers
-            .filter((o: any) => o.price > 0)
-            .map((o: any) => ({
-              platform: o.platform || 'Unknown',
-              price: o.price,
-              originalPrice: o.originalPrice,
-              imageUrl: o.imageUrl,
-              url: o.affiliateUrl || o.productUrl || '',
-              affiliateUrl: o.affiliateUrl,
-            }))
-            .sort((a: any, b: any) => a.price - b.price); // Sort by cheapest first
+    // ── Fetch from /api/home/feed ──────────────────────────────────────────
+    const url = `${FEED_ENDPOINT}?category=${encodeURIComponent(category || 'all')}`;
 
-          return {
-            id: item.id || `hp_${i}`,
-            title: item.title || cheapest.title || '',
-            brand: item.brand || undefined,
-            imageUrl: cheapest.imageUrl || item.offers[0]?.imageUrl || '',
-            price,
-            originalPrice: originalPrice > price ? originalPrice : undefined,
-            discount,
-            savings: originalPrice - price > 200 ? originalPrice - price : undefined,
-            platform: cheapest.platform || 'Unknown',
-            url: cheapest.affiliateUrl || cheapest.productUrl || '',
-            offers, // ALL platform prices
-          };
+    fetch(url, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Feed request failed with status ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (settled || controller.signal.aborted) return;
+        settled = true;
+        clearTimer();
+
+        const rawProducts: unknown[] = data?.products ?? [];
+
+        // Apply validateProduct() to every item — guarantees no seed data
+        const validated: ValidatedProduct[] = [];
+        for (const raw of rawProducts) {
+          const product = validateProduct(raw);
+          if (product !== null) {
+            validated.push(product);
+          }
         }
 
-        // If it's a flat SearchProduct (direct fields)
-        const price = item.price || 0;
-        const originalPrice = item.originalPrice || 0;
-        const discount = item.discount || (originalPrice > price
-          ? Math.round((originalPrice - price) / originalPrice * 100) : 0);
-        return {
-          id: item.id || `hp_${i}`,
-          title: item.title || '',
-          brand: item.brand || undefined,
-          imageUrl: item.imageUrl || '',
-          price,
-          originalPrice: originalPrice > price ? originalPrice : undefined,
-          discount,
-          savings: originalPrice - price > 200 ? originalPrice - price : undefined,
-          platform: item.platform || 'Unknown',
-          url: item.url || '',
-          offers: [{
-            platform: item.platform || 'Unknown',
-            price,
-            originalPrice: originalPrice > price ? originalPrice : undefined,
-            url: item.url || '',
-          }],
-        };
-      }).filter((p: HomeFeedProduct) => p.price > 0 && p.title && p.imageUrl);
+        setProducts(validated);
+        setLoading(false);
 
-      setProducts(mapped);
-      setSource('trending');
-      setLoading(false);
-    })
-    .catch((err) => {
-      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
-      setProducts([]);
-      setSource('seed');
-      setError(err?.message || 'Failed to load');
-      setLoading(false);
-    });
+        if (validated.length === 0) {
+          setError(EMPTY_STATE_MESSAGE);
+        }
+      })
+      .catch((err) => {
+        if (settled || controller.signal.aborted) return;
+        settled = true;
+        clearTimer();
 
-    return () => { controller.abort(); };
-  }, [category]);
+        setProducts([]);
+        setLoading(false);
+        setError(
+          err?.message || 'Failed to load products. Please try again later.',
+        );
+      });
 
-  return { products, loading, source, error, geo };
+    // Cleanup on unmount or category change
+    return () => {
+      settled = true;
+      clearTimer();
+      controller.abort();
+    };
+  }, [category, clearTimer]);
+
+  return { products, loading, error };
 }

@@ -1,159 +1,251 @@
-import { useState } from 'react';
-import { Heart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import PlatformBadge from '../ui/PlatformBadge';
-import DiscountBadge from '../ui/DiscountBadge';
-import PriceDisplay from '../ui/PriceDisplay';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
-import type { ProductData } from '../../types/product';
+/**
+ * ProductCard — Premium product card with multi-platform price comparison.
+ * Renders product image at 3:4 aspect ratio, brand/title/price typography,
+ * discount badge, platform badges sorted by price, and hover elevation.
+ *
+ * Handles image loading (shimmer skeleton), image error (neutral placeholder
+ * with ShoppingBag icon), and navigates to ComparePage on tap.
+ *
+ * @validates Requirements 3.1, 3.2, 3.3, 3.5, 3.6, 3.9, 3.10, 4.1, 4.3, 4.5, 4.6, 4.7, 4.8
+ */
 
-export interface ProductCardProps {
-  product: ProductData;
-  onCompare?: () => void;
-  onSave?: () => void;
-  className?: string;
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingBag } from 'lucide-react';
+import { PlatformBadge } from './PlatformBadge';
+import type { ValidatedProduct, PlatformOffer } from '../../utils/validateProduct';
+
+// ─── Legacy type support ───
+// Pre-existing components pass ProductData which has a different shape.
+// We accept both and normalize internally.
+
+/** Loose product shape accepted from legacy components (ProductData, RecentItem, etc.) */
+interface LegacyProduct {
+  id?: string;
+  title: string;
+  brand?: string;
+  imageUrl?: string;
+  price?: number;
+  originalPrice?: number;
+  discount?: number;
+  platform?: string;
+  url?: string;
+  offers?: PlatformOffer[];
+  lowestPrice?: number;
+  highestPrice?: number;
+  highestOriginalPrice?: number;
+  discountPercent?: number;
 }
 
-export function ProductCard({ product, onSave, className = '' }: ProductCardProps) {
-  const { user } = useAuth();
+type ProductInput = ValidatedProduct | LegacyProduct;
+
+// ─── Props ───
+
+export interface ProductCardProps {
+  product: ProductInput;
+  eagerLoad?: boolean;
+  priority?: boolean;
+  onTap?: (product: ValidatedProduct) => void;
+  /** Legacy prop from pre-existing components — fires on compare action */
+  onCompare?: () => void;
+}
+
+/** Normalize any product input to a ValidatedProduct-like shape for rendering */
+function normalizeProduct(input: ProductInput): ValidatedProduct {
+  // Already a ValidatedProduct (has offers array and lowestPrice)
+  if ('offers' in input && Array.isArray(input.offers) && input.offers.length > 0 && 'lowestPrice' in input && typeof input.lowestPrice === 'number') {
+    return input as ValidatedProduct;
+  }
+
+  // Legacy ProductData: synthesize offers from the single platform entry
+  const legacy = input as LegacyProduct;
+  const price = legacy.price ?? legacy.lowestPrice ?? 0;
+  const platform = (legacy.platform ?? 'unknown') as PlatformOffer['platform'];
+  const url = legacy.url ?? '';
+
+  const syntheticOffer: PlatformOffer = {
+    platform: (['flipkart', 'myntra', 'amazon', 'meesho', 'ajio'].includes(platform) ? platform : 'flipkart') as PlatformOffer['platform'],
+    price,
+    originalPrice: legacy.originalPrice,
+    url,
+  };
+
+  return {
+    id: legacy.id ?? `legacy-${Date.now()}`,
+    title: legacy.title ?? '',
+    brand: legacy.brand,
+    imageUrl: legacy.imageUrl ?? '',
+    offers: legacy.offers && legacy.offers.length > 0 ? legacy.offers : [syntheticOffer],
+    lowestPrice: legacy.lowestPrice ?? price,
+    highestPrice: legacy.highestPrice ?? price,
+    highestOriginalPrice: legacy.highestOriginalPrice ?? legacy.originalPrice,
+    discountPercent: legacy.discountPercent ?? legacy.discount,
+  };
+}
+
+// ─── Shimmer Keyframes (injected once) ───
+
+const SHIMMER_STYLE_ID = 'product-card-shimmer';
+
+function ensureShimmerStyle() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(SHIMMER_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = SHIMMER_STYLE_ID;
+  style.textContent = `
+    @keyframes pc-shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// ─── Component ───
+
+export function ProductCard({ product: rawProduct, eagerLoad = false, priority = false, onTap }: ProductCardProps) {
   const navigate = useNavigate();
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  const discount =
-    product.discount ||
-    (product.originalPrice && product.originalPrice > product.price
-      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-      : 0);
+  // Normalize input to ValidatedProduct shape
+  const product = normalizeProduct(rawProduct);
 
-  const priceDelta = product.originalPrice
-    ? product.originalPrice - product.price
-    : 0;
+  // Ensure shimmer keyframes exist in document
+  ensureShimmerStyle();
 
-  async function handleSave(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (!user) { navigate('/login'); return; }
-    if (saved || saving) return;
-    setSaving(true);
-    try {
-      await api.post('/wishlist', {
-        productTitle: product.title,
-        imageUrl: product.imageUrl,
-        brand: product.brand,
-        lowestPrice: product.price,
-        lowestPlatform: product.platform,
-        sourceUrl: product.url,
-      });
-      setSaved(true);
-      onSave?.();
-    } catch { /* already saved */ }
-    finally { setSaving(false); }
-  }
+  // Sort offers by ascending price
+  const sortedOffers = [...product.offers].sort((a, b) => a.price - b.price);
+  const isMultiPlatform = sortedOffers.length > 1;
 
-  function handleCardClick() {
-    navigate(`/compare?q=${encodeURIComponent(product.title)}`);
-  }
+  // Navigation handler
+  const handleTap = () => {
+    if (onTap) {
+      onTap(product);
+    }
+    navigate(`/compare?id=${encodeURIComponent(product.id)}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleTap();
+    }
+  };
+
+  // Image handlers
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    setImageLoaded(true); // Stop shimmer
+  }, []);
+
+  // Format price with Indian locale
+  const formatPrice = (amount: number): string =>
+    `₹${amount.toLocaleString('en-IN')}`;
 
   return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
-      onClick={handleCardClick}
+    <div
+      onClick={handleTap}
+      onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
+      aria-label={`${product.title} - ${formatPrice(product.lowestPrice)}`}
       className={[
-        'group bg-white rounded-2xl overflow-hidden cursor-pointer flex flex-col',
-        'shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_-8px_rgba(0,0,0,0.08)]',
-        'hover:shadow-[0_4px_12px_rgba(0,0,0,0.06),0_20px_40px_-12px_rgba(0,0,0,0.12)]',
-        'transition-all duration-200',
-        className,
+        'group relative flex flex-col bg-white rounded-xl overflow-hidden cursor-pointer',
+        'border border-neutral-100',
+        'hover:shadow-[0_2px_12px_rgba(0,0,0,0.08)]',
+        'hover:scale-[1.02]',
+        'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
       ].join(' ')}
     >
-      {/* Image — consistent 3:4 aspect, unified bg treatment */}
-      <div className="relative aspect-[3/4] bg-neutral-50 overflow-hidden">
-        {product.imageUrl && !product.imageUrl.includes('placehold.co') ? (
-          <>
-            <img
-              src={product.imageUrl}
-              alt={product.title}
-               className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                img.style.display = 'none';
-                const fallback = img.nextElementSibling as HTMLElement;
-                if (fallback) fallback.style.display = 'flex';
-              }}
-            />
-            <div className="w-full h-full items-center justify-center absolute inset-0 bg-neutral-50" style={{ display: 'none' }}>
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="text-4xl">🛍️</span>
-                <span className="text-[10px] text-neutral-400 font-medium tracking-wide">{product.brand || product.title.slice(0, 24)}</span>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-4xl">🛍️</span>
-              <span className="text-[10px] text-neutral-400 font-medium tracking-wide">{product.brand || product.title.slice(0, 24)}</span>
-            </div>
+      {/* ─── Image Container ─── */}
+      <div className="relative aspect-[3/4] overflow-hidden rounded-t-xl">
+        {/* Shimmer skeleton — visible while loading */}
+        {!imageLoaded && !imageError && (
+          <div
+            className="absolute inset-0 rounded-t-xl"
+            style={{
+              background: 'linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%)',
+              backgroundSize: '800px 100%',
+              animation: 'pc-shimmer 1.5s ease-in-out infinite',
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Actual image */}
+        {!imageError && (
+          <img
+            src={product.imageUrl}
+            alt={product.title}
+            loading={eagerLoad || priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : undefined}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            className={[
+              'w-full h-full object-cover rounded-[12px]',
+              'transition-opacity duration-300',
+              imageLoaded ? 'opacity-100' : 'opacity-0',
+            ].join(' ')}
+          />
+        )}
+
+        {/* Error placeholder — neutral-200 with ShoppingBag icon */}
+        {imageError && (
+          <div className="absolute inset-0 bg-neutral-200 flex items-center justify-center rounded-t-xl">
+            <ShoppingBag className="w-10 h-10 text-neutral-400" strokeWidth={1.5} />
           </div>
         )}
 
-        {/* Subtle top gradient to unify scraped image edges */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/[0.03] to-transparent" />
-
-        {/* Platform Badge — top left */}
-        <div className="absolute top-3 left-3">
-          <PlatformBadge platform={product.platform} size="sm" />
-        </div>
-
-        {/* Save Button — top right */}
-        <button
-          onClick={handleSave}
-          aria-label={saved ? 'Saved' : 'Save to wishlist'}
-          className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        >
-          <Heart className={`w-4 h-4 transition-colors ${saved ? 'fill-red-400 text-red-400' : 'text-neutral-500'}`} />
-        </button>
-
-        {/* Discount — bottom left, only if significant */}
-        {discount >= 20 && (
-          <div className="absolute bottom-3 left-3">
-            <DiscountBadge percentage={discount} size="sm" />
-          </div>
+        {/* Discount badge — top-left */}
+        {product.discountPercent != null && product.discountPercent > 0 && (
+          <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+            −{product.discountPercent}%
+          </span>
         )}
       </div>
 
-      {/* Content — asymmetric padding, price as hero */}
-      <div className="px-4 pt-3 pb-4 flex flex-col gap-1 flex-1 overflow-hidden min-w-0">
+      {/* ─── Content ─── */}
+      <div className="p-3 flex flex-col gap-0.5">
+        {/* Brand */}
         {product.brand && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+          <p className="text-[11px] uppercase tracking-[0.5px] text-neutral-400 leading-tight">
             {product.brand}
           </p>
         )}
-        <p className="text-[13px] font-medium text-neutral-800 line-clamp-2 leading-[1.35]">
+
+        {/* Title */}
+        <p className="text-[14px] font-medium text-neutral-800 line-clamp-2 leading-snug">
           {product.title}
         </p>
 
-        {/* Price — unified component */}
-        <div className="mt-auto pt-3">
-          <PriceDisplay
-            price={product.price}
-            originalPrice={product.originalPrice}
-            size="lg"
-            showDiscount={discount >= 20}
-            showSavings={priceDelta > 0}
-            platform={product.platform}
-            layout="stacked"
-          />
+        {/* Primary price (lowest) */}
+        <p className="text-[16px] font-bold font-serif text-neutral-900 mt-1">
+          {formatPrice(product.lowestPrice)}
+        </p>
+
+        {/* Price range — only for multi-platform products */}
+        {isMultiPlatform && (
+          <p className="text-[12px] text-neutral-500">
+            {formatPrice(product.lowestPrice)} – {formatPrice(product.highestPrice)}
+          </p>
+        )}
+
+        {/* Platform badges — sorted by ascending price, max 5 */}
+        <div className="flex gap-1 mt-2">
+          {sortedOffers.slice(0, 5).map((offer, i) => (
+            <PlatformBadge
+              key={offer.platform}
+              platform={offer.platform}
+              size="sm"
+              isLowest={isMultiPlatform && i === 0}
+              showName={false}
+            />
+          ))}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

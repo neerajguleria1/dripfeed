@@ -16,10 +16,10 @@ import { cacheGet, cacheSet, CACHE_CONFIG } from '../cache.js';
 import {
   mapDealApiToHomeFeed,
   mapTrendingApiToHomeFeed,
-  mapSeedToHomeFeed,
 } from '../mappers/homeFeed.js';
 import type { HomeFeedProduct } from '../mappers/homeFeed.js';
-import { SEED_PRODUCTS, SEED_PRODUCTS_EXTENDED, SEED_PRODUCTS_PREMIUM } from '../seed-data.js';
+// NOTE: seed-data.ts kept for reference only — no longer used in rendering paths
+// import { SEED_PRODUCTS, SEED_PRODUCTS_EXTENDED, SEED_PRODUCTS_PREMIUM } from '../seed-data.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -93,18 +93,14 @@ async function home(req: VercelRequest, res: VercelResponse) {
       geo: { country, isIndia },
     });
   } catch (e: any) {
-    // Final fallback: seed products (never fail the user)
-    const seedProducts = SEED_PRODUCTS
-      .map(mapSeedToHomeFeed)
-      .sort((a, b) => b.discount - a.discount)
-      .slice(0, HOME_FEED_MAX_PRODUCTS);
-
-    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=1800');
+    // No fallback to seed data — return empty state per Requirement 1.1
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
     return res.json({
-      products: seedProducts,
-      source: 'seed' as const,
+      products: [],
+      source: 'empty' as const,
       cachedAt: new Date().toISOString(),
       geo: { country, isIndia },
+      message: 'No products are currently available. Results are being indexed.',
     });
   }
 }
@@ -253,13 +249,8 @@ async function fetchHomeFeedData(category: string): Promise<{ products: HomeFeed
     // Fall through to seed
   }
 
-  // ─── Final fallback: seed products ──────────────────────────────────────────
-  const seedProducts = SEED_PRODUCTS
-    .map(mapSeedToHomeFeed)
-    .sort((a, b) => b.discount - a.discount)
-    .slice(0, HOME_FEED_MAX_PRODUCTS);
-
-  return { products: seedProducts, source: 'seed' };
+  // ─── Final fallback: return empty (no seed data in rendering paths) ──────────
+  return { products: [], source: 'seed' as 'deals' | 'trending' | 'seed' };
 }
 
 /**
@@ -375,25 +366,21 @@ async function discover(req: VercelRequest, res: VercelResponse) {
     // DB unavailable — fall through to seed fallback
   }
 
-  // Fallback to seed data if DB returned nothing
+  // No seed data fallback — return empty products if DB returned nothing
   if (products.length === 0) {
-    const allSeeds = [
-      ...SEED_PRODUCTS,
-      ...(SEED_PRODUCTS_EXTENDED || []),
-      ...(SEED_PRODUCTS_PREMIUM || []),
-    ];
-    let filtered = allSeeds;
-    if (category) {
-      filtered = allSeeds.filter(
-        (s) => s.category.toLowerCase().includes(category.toLowerCase())
-      );
-      // If category filter yields nothing, use all seeds
-      if (filtered.length === 0) filtered = allSeeds;
-    }
+    const response = {
+      sections: [{
+        id: DISCOVER_SECTION_THEMES[(page - 1) % DISCOVER_SECTION_THEMES.length]?.id || 'todays-deals',
+        title: DISCOVER_SECTION_THEMES[(page - 1) % DISCOVER_SECTION_THEMES.length]?.title || "Today's Deals",
+        products: [],
+      }],
+      page,
+      hasMore: false,
+      totalPages: DISCOVER_MAX_PAGES,
+    };
 
-    const skip = (page - 1) * DISCOVER_PRODUCTS_PER_PAGE;
-    const sliced = filtered.slice(skip, skip + DISCOVER_PRODUCTS_PER_PAGE);
-    products = sliced.map(mapSeedToHomeFeed);
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+    return res.json(response);
   }
 
   // Apply page-specific theming (sort/prioritize products based on section theme)

@@ -1,8 +1,14 @@
 /**
+ * @deprecated — DO NOT IMPORT IN USER-FACING PAGES OR COMPONENTS.
+ *
  * Seed data — manually curated product information based on publicly known
  * Indian fashion brands, typical pricing, and product categories.
  * This is editorial/reference data, not scraped content.
  * Images use Unsplash (free commercial license).
+ *
+ * This file is kept for reference and testing only. All rendering paths
+ * must use real product data from the Search_Cache or live scraping APIs.
+ * See Requirement 1.1, 1.6 in the tagcheck-premium-overhaul spec.
  */
 
 export interface SeedProduct {

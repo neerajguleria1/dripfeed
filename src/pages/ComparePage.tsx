@@ -13,7 +13,6 @@ import AffiliateButton from '../components/ui/AffiliateButton';
 import { staggerChildren, staggerItem } from '../design-system/animations';
 import { formatPrice } from '../utils/formatPrice';
 import api from '../services/api';
-import { searchSeedProducts } from '../utils/seedSearch';
 import type { ProductData } from '../types/product';
 import type { AIAdvice } from '../components/product/AIAdviceCard';
 
@@ -261,15 +260,12 @@ export default function ComparePage() {
           size: o.size,
         }))
       );
-      const final = flat.length > 0 ? flat : searchSeedProducts(searchQ);
-      final.sort((a, b) => a.price - b.price);
-      setPlatforms(final);
-      if (final.length > 0) fetchAiAdvice(final[0]?.title || searchQ, final);
+      flat.sort((a, b) => a.price - b.price);
+      setPlatforms(flat);
+      if (flat.length > 0) fetchAiAdvice(flat[0]?.title || searchQ, flat);
+      else setError('Could not fetch comparison. Please try again.');
     } catch {
-      const fallback = searchSeedProducts(searchQ);
-      fallback.sort((a, b) => a.price - b.price);
-      setPlatforms(fallback);
-      if (fallback.length === 0) setError('Could not fetch comparison. Please try again.');
+      setError('Could not fetch comparison. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SEOHead } from '../components/common/SEOHead';
 import StickyHeader from '../components/homepage/StickyHeader';
@@ -9,6 +9,8 @@ import BackToTopButton from '../components/homepage/BackToTopButton';
 import { useHomeFeed } from '../hooks/useHomeFeed';
 import { useGeoRegion } from '../hooks/useGeoRegion';
 import { HOMEPAGE_CATEGORIES } from '../data/categories';
+import type { HomeFeedProduct } from '../types/homeFeed';
+import type { ValidatedProduct } from '../utils/validateProduct';
 
 // Lazy-load DiscoveryFeed — it's below the fold and not needed for initial render
 const DiscoveryFeed = React.lazy(() => import('../components/homepage/DiscoveryFeed'));
@@ -48,10 +50,39 @@ export default function HomePage() {
     HOMEPAGE_CATEGORIES.find((c) => c.id === activeCategory)?.query ?? '';
 
   // Fetch home feed products based on selected category
-  const { products, loading, geo } = useHomeFeed(categoryQuery);
+  const { products, loading } = useHomeFeed(categoryQuery);
+
+  // Map ValidatedProduct[] → HomeFeedProduct[] for HomeProductGrid compatibility
+  const homeFeedProducts: HomeFeedProduct[] = useMemo(() => {
+    return products.map((p: ValidatedProduct): HomeFeedProduct => {
+      const cheapest = p.offers[0] ?? { platform: 'unknown', price: p.lowestPrice, url: '' };
+      return {
+        id: p.id,
+        title: p.title,
+        brand: p.brand,
+        imageUrl: p.imageUrl,
+        price: p.lowestPrice,
+        originalPrice: p.highestOriginalPrice,
+        discount: p.discountPercent ?? 0,
+        savings: p.highestOriginalPrice && p.highestOriginalPrice > p.lowestPrice
+          ? p.highestOriginalPrice - p.lowestPrice
+          : undefined,
+        platform: cheapest.platform,
+        url: cheapest.url,
+        offers: p.offers.map((o) => ({
+          platform: o.platform,
+          price: o.price,
+          originalPrice: o.originalPrice,
+          url: o.url,
+          affiliateUrl: o.affiliateUrl,
+          imageUrl: o.imageUrl,
+        })),
+      };
+    });
+  }, [products]);
 
   // Geo detection for banner visibility
-  const { isIndia, dismissed, dismiss } = useGeoRegion(geo);
+  const { isIndia, dismissed, dismiss } = useGeoRegion();
 
   // Preload first 8 product images when products are served from cache (not during skeleton state)
   useEffect(() => {
@@ -126,7 +157,7 @@ export default function HomePage() {
 
         {/* Above-the-fold product grid */}
         <section aria-label="Products" className="px-4">
-          <HomeProductGrid products={products} loading={loading} />
+          <HomeProductGrid products={homeFeedProducts} loading={loading} />
         </section>
 
         {/* Infinite scroll discovery feed (lazy-loaded below the fold) */}

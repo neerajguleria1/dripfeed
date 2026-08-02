@@ -1,3 +1,9 @@
+/**
+ * @deprecated — DO NOT USE IN RENDERING PATHS.
+ * This module is kept for reference and testing only.
+ * All user-facing pages must use real product data from APIs.
+ * See Requirement 1.1, 1.6 in the tagcheck-premium-overhaul spec.
+ */
 import { ALL_SEED_PRODUCTS, type SeedProduct } from '../../api/_lib/seed-data';
 import type { ProductData } from '../types/product';
 

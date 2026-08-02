@@ -3,3 +3,4 @@ export { Header } from './Header';
 export { Footer } from './Footer';
 export { ErrorBoundary } from './ErrorBoundary';
 export { default as BottomNav } from './BottomNav';
+export { MasonryGrid } from './MasonryGrid';
