@@ -525,7 +525,7 @@ function parseFlipkartHtml(html: string, query: string): SearchProduct[] {
     if (Array.isArray(p)) rawProducts.push(...p);
   }
   if (!rawProducts.length) return [];
-  return rawProducts.slice(0, 20).map((p: any, i: number) => {
+  return rawProducts.slice(0, 40).map((p: any, i: number) => {
     const info = p.productInfo?.value || p;
     const prices: any[] = info.pricing?.prices || [];
     const mrpEntry = prices.find((x: any) => x.strikeOff === true);
@@ -636,7 +636,7 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
     const products: any[] = json?.searchData?.results?.products || [];
     console.log(`[Myntra] ${products.length} products via ScraperAPI`);
 
-    return products.slice(0, 20).map((p: any) => {
+    return products.slice(0, 40).map((p: any) => {
       const price = p.price || 0;
       const mrp = p.mrp || 0;
       const imageUrl = (p.searchImage || '').replace(/^http:\/\//, 'https://').replace(/w_\d+(?=[,\/]|$)/, 'w_800');
@@ -754,7 +754,7 @@ async function fetchAjio(query: string): Promise<SearchProduct[]> {
     const products: any[] = data?.products || [];
     if (!products.length) return [];
 
-    return products.slice(0, 20).map((p: any, i: number) => {
+    return products.slice(0, 40).map((p: any, i: number) => {
       const price = parsePrice(p.price?.value ?? 0);
       const mrp = parsePrice(p.wasPriceData?.value ?? 0);
       const imageUrl = (p.images?.[0]?.url || p.fnlColorVariantData?.outfitPictureURL || '').replace(/^http:\/\//, 'https://');
@@ -1043,6 +1043,7 @@ export async function searchProductsStreaming(
 
   const platformPromises: Promise<void>[] = [
     withTimeout(fetchAmazonPage(searchTerm, 1), AMAZON_BUDGET_MS).catch(() => []).then(r => processed('amazon', r)),
+    withTimeout(fetchAmazonPage(searchTerm, 2), AMAZON_BUDGET_MS).catch(() => []).then(r => processed('amazon', r)),
     fetchFlipkart(searchTerm).catch(() => []).then(r => processed('flipkart', r)),
     fetchAjio(searchTerm).catch(() => []).then(r => processed('ajio', r)),
     withTimeout(fetchMyntra(searchTerm), 30000).catch(() => []).then(r => processed('myntra', r)),
