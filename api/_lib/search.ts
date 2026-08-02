@@ -583,12 +583,12 @@ async function fetchFlipkart(query: string): Promise<SearchProduct[]> {
     console.warn('[Flipkart] direct failed:', e?.message?.slice(0, 60));
   }
 
-  // Fallback: ScraperAPI plain tier — 1 credit
+  // Fallback: ScraperAPI with render=true — 5 credits, but much more reliable
   if (!SCRAPER_KEYS.length) return [];
   try {
-    const url = scraperUrl(`https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`);
+    const url = scraperUrl(`https://www.flipkart.com/search?q=${encodeURIComponent(query)}&sort=price_asc`, { render: true });
     const { data: html } = await withScraperSlot(() => axios.get(url, {
-      timeout: 15000,
+      timeout: 30000,
       transformResponse: [(d) => d],
     }));
     if (typeof html !== 'string' || !html.includes('window.__INITIAL_STATE__')) {
@@ -608,12 +608,12 @@ async function fetchMyntra(query: string): Promise<SearchProduct[]> {
   if (!SCRAPER_KEYS.length) return [];
   try {
     const encoded = encodeURIComponent(query);
-    // Myntra blocks Vercel datacenter IPs — route through ScraperAPI with Indian IP
-    // Uses plain tier (1 credit) since window.__myx is server-rendered, no JS needed
-    const url = scraperUrl(`https://www.myntra.com/${encoded}`);
+    // Myntra blocks Vercel datacenter IPs — route through ScraperAPI with render=true
+    // Uses render tier (5 credits) since plain tier is now being blocked
+    const url = scraperUrl(`https://www.myntra.com/${encoded}`, { render: true });
     const { data: html } = await withScraperSlot(() => axios.get(url, {
       responseType: 'text',
-      timeout: 25000,
+      timeout: 40000,
     }));
 
     if (typeof html !== 'string' || !html.includes('window.__myx =')) {
